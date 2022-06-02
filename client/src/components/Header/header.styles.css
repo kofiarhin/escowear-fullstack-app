@@ -1,0 +1,17 @@
+.main-header .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0rem;
+}
+
+.main-header a {
+    color: black;
+    display: inline-block;
+    margin-left: 0.8rem;
+    text-transform: capitalize;
+}
+.categories {
+    text-align: center;
+    margin-bottom: 1rem;
+}

@@ -1,0 +1,13 @@
+.order-list-wrapper {
+    width: 540px;
+    max-width: 100%;
+    margin: 0 auto;
+}
+.order-unit {
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.order-unit p {
+    margin-bottom: 0.5rem;
+}

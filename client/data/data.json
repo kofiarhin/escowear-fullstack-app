@@ -1,0 +1,199 @@
+{
+     "hoodies": [
+            {
+                "name": "OVERSIZED LIMITED HEAVYWEIGHT SWEATSHIRT",
+                "color": "black",
+                "price": 45,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+
+             {
+                "name": "OVERSIZED STATUE GRAPHIC ZIP THROUGH HOODIE",
+                "color": "black",
+                "price": 28,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+            {
+                "name": "OVERSIZED FLAME PRINT LONG SLEEVE T-SHIRT",
+                "color": "black",
+                "price": 18,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+
+            {
+                "name": "SKULL PRINT ZIP THROUGH HOODIE",
+                "color": "black",
+                "price": 28,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+            {
+                "name": "OVERSIZED FLORAL BACK GRAPHIC HOODIE",
+                "color": "white",
+                "price": 25,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+            {
+                "name": "OVERSIZED HARMONY SYMBOL SWEATSHIRT",
+                "color": "black",
+                "price": 22,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+            {
+                "name": "OVERSIZED OFCL HOMME APPLIQUE VARSITY HOODIE",
+                "color": "black",
+                "price": 25,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+             {
+                "name": "OVERSIZED MONO FLORAL BACK GRAPHIC HOODIE",
+                "color": "black",
+                "price": 25,
+                "sizes": ["s", "m", "l", "xl"]
+            }
+        ],
+        "shirts": [
+            {
+                "name": "REGULAR CHECK SHIRT",
+                "color": "khaki",
+                "price": 18,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+
+             {
+                "name": "OVERSIZED OMBRE CHECK SHIRT",
+                "color": "green",
+                "price": 22,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+            {
+                "name": "HEAVYWEIGHT BRUSHED CHECK OVERSHIRT",
+                "color": "light blue",
+                "price": 25,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+            {
+                "name": "MUSCLE FIT GRANDAD COLLAR LONG SLEEVE SHIRT",
+                "color": "black",
+                "price": 22,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+            {
+                "name": "MUSCLE FIT LONG SLEEVE GRANDAD JERSEY SHIRT",
+                "color": "navy",
+                "price": 20,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+            {
+                "name": "MUSCLE FIT LONG SLEEVE DENIM SHIRT",
+                "color": "true black",
+                "price": 20,
+                "sizes": ["s", "m", "l", "xl"]
+            },
+            {
+                "name": "SLIM FIT GRANDAD COLLAR SHORT SLEEVE SHIRT",
+                "color": "navy",
+                "price": 20,
+                "sizes": ["s", "m", "l", "xl"]
+            }
+            
+        ],
+        "shoes": [
+
+             {
+                "name": "ADIDAS YEEZY 700 V3 CLAY BROWN",
+                "color": "black",
+                "price": 200,
+                "sizes": ["34", "35", "40", "45"]
+            },
+
+             {
+                "name": "ADIDAS YEEZY BOOST 700 ‘SUN'",
+                "color": "black",
+                "price": 400,
+                "sizes": ["34", "35", "40", "45"]
+            },
+
+             {
+                "name": "AIR JORDAN 1 MID PS BANNED",
+                "color": "black",
+                "price": 400,
+                "sizes": ["34", "35", "40", "45"]
+            },
+
+            {
+                "name": "AIR JORDAN 1 MID PS HYPER ROYAL",
+                "color": "black",
+                "price": 400,
+                "sizes": ["34", "35", "40", "45"]
+            },
+
+            {
+                "name": "AIR JORDAN 4 WMNS RETRO 'STARFISH'",
+                "color": "black",
+                "price": 400,
+                "sizes": ["34", "35", "40", "45"]
+            },
+
+
+            {
+                "name": "DQM X NIKE AIR MAX 90 'BACON' 2021",
+                "color": "black",
+                "price": 400,
+                "sizes": ["34", "35", "40", "45"]
+            },
+
+            {
+                "name": "FRAGMENT DESIGN X AIR JORDAN 3 RETRO SP 'WHITE'",
+                "color": "black",
+                "price": 400,
+                "sizes": ["34", "35", "40", "45"]
+            },
+
+            {
+                "name": "NIKE DUNK HIGH SP 'MICHIGAN' 2020",
+                "color": "black",
+                "price": 400,
+                "sizes": ["34", "35", "40", "45"]
+            },
+            {
+                "name": "SUPREME X NIKE AIR FORCE 1 LOW 'BOX LOGO - BLACK'",
+                "color": "black",
+                "price": 400,
+                "sizes": ["34", "35", "40", "45"]
+            }
+          
+            
+        ],
+        "gym": [
+            {
+                "name": "New Look sport running leggings in black",
+                "color": "black",
+                "price": 50,
+                "sizes": ["34", "35", "40", "45"]
+            },
+             {
+                "name": "Nike Running Challenger Dri-FIT knitted joggers in black",
+                "color": "black",
+                "price": 100,
+                "sizes": ["34", "35", "40", "45"]
+            },
+            {
+                "name": "Nike Running Element track",
+                "color": "black",
+                "price": 100,
+                "sizes": ["34", "35", "40", "45"]
+            },
+            {
+                "name": "Nike Running Flex Stride 5 inch",
+                "color": "black",
+                "price": 100,
+                "sizes": ["34", "35", "40", "45"]
+            },
+             {
+                "name": "Nike Running miler tank in white",
+                "color": "black",
+                "price": 50,
+                "sizes": ["34", "35", "40", "45"]
+            }
+        ]
+}

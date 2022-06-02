@@ -1,0 +1,30 @@
+.details {
+        text-align: center;
+        padding-bottom: 4rem;
+}
+
+.details img {
+    width: 200px;
+    max-width: 100%;
+    margin: 0 auto 1rem;
+    display: block;
+}
+
+.details h1 {
+    font-size: 1rem;
+}
+
+.details h2 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.details button {
+    display: inline-block;
+    padding: 0.8rem 3rem;
+    outline: none;
+    border: none;
+    cursor: pointer;
+    background-color: black;
+    color: white; 
+}

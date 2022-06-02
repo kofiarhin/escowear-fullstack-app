@@ -1,0 +1,51 @@
+.cart {
+    width: 540px;
+    max-width: 90%;
+    margin: 0 auto;
+    padding-bottom: 4rem;
+}
+
+.cart img  {
+ width: 150px;
+}
+
+.cart .item-unit {
+    display: flex;
+    margin-bottom: 2rem;
+}
+
+.cart .item-unit .content {
+    margin-left: 1rem; 
+}
+
+.cart h1 {
+    font-size: 1rem; 
+    margin-bottom: 0.8rem;
+}
+
+.cart h2 {
+    margin-bottom: 0.5rem;
+}
+
+.cart .item-unit button {
+
+    background-color: red;
+    color: white;
+    font-size: 0.5rem;
+}
+.cart .button-wrapper {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 20px;
+    height: 40px;
+}
+
+.cart .clear-cart {
+    background-color: red;
+    color: white;
+}
+
+.cart .place-order {
+    background-color: black;
+    color: white;
+}

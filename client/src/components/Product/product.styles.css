@@ -1,0 +1,23 @@
+.product {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+.name {
+font-size: 0.8rem;
+margin-bottom: 0.5rem;
+}
+.product img  {
+    width: 150px;
+    display: block;
+    margin: 0 auto 1rem;
+}
+
+.price {
+    font-size: 1rem;
+}
+
+@media(max-width: 800px) {
+    .product img {
+        width: 200px;
+    }
+}
