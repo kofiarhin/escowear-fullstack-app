@@ -10,7 +10,7 @@ const dotenv = require("dotenv").config();
 const path = require("path");
 
 // connect to database
-mongoose.connect(process.env.MONGO_URL, () =>
+mongoose.connect(process.env.MONGO_REMOTE, () =>
   console.log("connected to database")
 );
 

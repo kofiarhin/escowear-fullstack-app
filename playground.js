@@ -1,5 +1,7 @@
 const { setUpDatabase } = require("./server/utils/helper");
 const mongoose = require("mongoose");
-const connect = mongoose.connect("mongodb://localhost:27017/escowear");
+const dotenv = require("dotenv").config();
+
+mongoose.connect(process.env.MONGO_REMOTE, () => console.log("connected"));
 
 setUpDatabase();

@@ -29,6 +29,7 @@ const Login = ({ setIsLoggedIn }) => {
         .then((data) => {
           if (data.error) {
             // set error message
+            console.log("error");
             setError(data.error);
           } else {
             // set user token and redirect to dashboard
@@ -67,6 +68,8 @@ const Login = ({ setIsLoggedIn }) => {
               value={password}
             />
           </div>
+
+          <p className="error"> {error ? error : null} </p>
 
           <button type="submit">Login</button>
         </form>

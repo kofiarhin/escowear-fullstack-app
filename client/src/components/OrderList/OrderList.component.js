@@ -8,8 +8,11 @@ const OrderList = ({ data }) => {
         return (
           <div className="order-unit">
             <h2> {index + 1}. Order Details</h2>
-            {item.products.map((product) => (
-              <p> {product.name} </p>
+            {item.products.map((product, index) => (
+              <p>
+                {" "}
+                {index + 1}. {product.name}{" "}
+              </p>
             ))}
             <p>Created At: {item.createdAt} </p>
             <p>Status: {item.status} </p>
