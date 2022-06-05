@@ -23,7 +23,7 @@ app.use("/api/users", usersRoute);
 
 // production setup
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static("client/build"));
+  app.use(express.static("../client/build"));
 
   app.get("*", (req, res) => {
     const filePath = path.resolve(
