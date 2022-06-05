@@ -4,6 +4,7 @@
   "description": "",
   "main": "node server/server.js",
   "scripts": {
+    "start": "node server/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "server": "nodemon server/server.js",
     "client": "npm start --prefix client",
