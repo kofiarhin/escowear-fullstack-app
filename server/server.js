@@ -6,19 +6,13 @@ const imagesRoute = require("./routes/imagesRoute");
 const ordersRoute = require("./routes/ordersRoute");
 const usersRoute = require("./routes/usersRoute");
 const User = require("./Models/User.model");
+const dotenv = require("dotenv").config();
+const path = require("path");
 
 // connect to database
-mongoose.connect("mongodb://localhost:27017/escowear", () =>
+mongoose.connect(process.env.MONGO_URL, () =>
   console.log("connected to database")
 );
-
-const clearDb = async () => {
-  await User.deleteMany();
-
-  console.log("db cleared");
-};
-
-// clearDb();
 
 // setup middlewares
 app.use(express.json());
@@ -26,6 +20,22 @@ app.use("/api/products", productsRoutes);
 app.use("/api/orders", ordersRoute);
 app.use("/images", imagesRoute);
 app.use("/api/users", usersRoute);
+
+// production setup
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static("/client/build"));
+
+  app.get("*", (req, res) => {
+    const filePath = path.resolve(
+      __dirname,
+      "..",
+      "client",
+      "build",
+      "index.html"
+    );
+    res.sendFile(filePath);
+  });
+}
 
 // setup port
 const port = process.env.PORT || 5000;

@@ -1,14 +1,18 @@
 const Product = require("../Models/Product.model");
 const data = require("../data.json");
 
-const dataTransform = () => {
+const dataTransform = async () => {
   const fields = Object.keys(data);
 
   let flattened = [];
 
+  const products = await Product.find();
+
   fields.forEach((field) => {
     data[field].forEach((item) => flattened.push({ ...item, category: field }));
   });
+
+  return;
 
   flattened.forEach(async (item) => {
     const product = new Product(item);
@@ -16,11 +20,14 @@ const dataTransform = () => {
   });
 };
 
-const setUpDatabase = async () => {
+const clearDB = () => {
+  console.log("clear db");
+};
+const setUpDatabase = async (connect) => {
   const products = await Product.find();
-  console.log(products);
 };
 
 module.exports = {
   setUpDatabase,
+  dataTransform,
 };
