@@ -17,9 +17,6 @@ const Store = ({ category, setCategory }) => {
         <button onClick={() => setCategory("hoodies")}>Hoodies</button>
         <button onClick={() => setCategory("shirts")}>shirts</button>
         <button onClick={() => setCategory("gym")}>Gym</button>
-        {/* <a href="/store/hoodies">Hoodies</a>
-        <a href="/store/gym">Gym</a>
-        <a href="/store/shirts">Shirts</a> */}
       </div>
       <ProductList data={data} category={category} />
     </div>

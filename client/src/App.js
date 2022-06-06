@@ -17,6 +17,7 @@ import {
   DashBoard,
 } from "./Pages";
 import Logout from "./components/Logout/Logout.component";
+import Footer from "./components/Footer/Footer.component";
 
 const App = () => {
   const initialState = () => {
@@ -58,6 +59,8 @@ const App = () => {
             element={<Logout setIsLoggedIn={isLoggedIn} />}
           />
         </Routes>
+
+        <Footer />
       </BrowserRouter>
     </div>
   );
