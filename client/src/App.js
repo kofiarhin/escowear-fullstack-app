@@ -46,7 +46,10 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login setIsLoggedIn={isLoggedIn} />} />
-          <Route path="/store" element={<Store category={category} />} />
+          <Route
+            path="/store"
+            element={<Store category={category} setCategory={onSetCategory} />}
+          />
           <Route path="/cart" element={<Cart user={user} />} />
           <Route path="/details/:id" element={<Details />} />
           <Route path="/dashboard" element={<DashBoard user={user} />} />
