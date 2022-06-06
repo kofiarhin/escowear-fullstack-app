@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ProductList from "../../components/ProductList/ProductList.component";
-const Store = () => {
+const Store = ({ category }) => {
   const [data, setData] = useState([]);
-
-  const { category } = useParams();
 
   useEffect(() => {
     fetch("/api/products")

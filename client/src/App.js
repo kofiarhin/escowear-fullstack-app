@@ -28,20 +28,25 @@ const App = () => {
     return JSON.parse(user);
   };
   const [user, setUser] = useState(initialState);
+  const [category, setCategory] = useState("hoodies");
 
   const isLoggedIn = (data) => {
     setUser(data);
   };
 
+  const onSetCategory = (category) => {
+    setCategory(category);
+  };
+
   return (
     <div>
       <BrowserRouter>
-        <Header user={user} />
+        <Header user={user} setCategory={onSetCategory} />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login setIsLoggedIn={isLoggedIn} />} />
-          <Route path="/store/:category" element={<Store />} />
+          <Route path="/store" element={<Store category={category} />} />
           <Route path="/cart" element={<Cart user={user} />} />
           <Route path="/details/:id" element={<Details />} />
           <Route path="/dashboard" element={<DashBoard user={user} />} />

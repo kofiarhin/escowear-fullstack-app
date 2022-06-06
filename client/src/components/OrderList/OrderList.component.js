@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import "./orderList.styles.css";
 const OrderList = ({ data }) => {
-  console.log(data);
   return (
     <div className="order-list-wrapper">
       {data.map((item, index) => {
