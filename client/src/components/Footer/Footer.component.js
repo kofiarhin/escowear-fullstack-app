@@ -7,7 +7,26 @@ const Footer = () => {
         <div className="footer-unit">
           <ul>
             <li>
-              {" "}
+              <Link to="/"> Home</Link>
+            </li>
+            <li>
+              <Link to="/"> Help</Link>
+            </li>
+            <li>
+              <Link to="/"> About</Link>
+            </li>
+            <li>
+              <Link to="/"> Services</Link>
+            </li>
+            <li>
+              <Link to="/"> Legal Info</Link>
+            </li>
+          </ul>
+        </div>
+
+        <div className="footer-unit">
+          <ul>
+            <li>
               <Link to="/"> Home</Link>
             </li>
             <li>
@@ -19,11 +38,9 @@ const Footer = () => {
               <Link to="/"> About</Link>
             </li>
             <li>
-              {" "}
               <Link to="/"> Services</Link>
             </li>
             <li>
-              {" "}
               <Link to="/"> Legal Info</Link>
             </li>
           </ul>
@@ -32,36 +49,9 @@ const Footer = () => {
         <div className="footer-unit">
           <ul>
             <li>
-              {" "}
               <Link to="/"> Home</Link>
             </li>
             <li>
-              {" "}
-              <Link to="/"> Help</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> About</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> Services</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> Legal Info</Link>
-            </li>
-          </ul>
-        </div>
-
-        <div className="footer-unit">
-          <ul>
-            <li>
-              {" "}
-              <Link to="/"> Home</Link>
-            </li>
-            <li>
-              {" "}
               <Link to="/"> Help</Link>
             </li>
             <li>
@@ -105,11 +95,13 @@ const Footer = () => {
         </div>
       </div>
 
-      <p className="slug">
-        Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolorum
-        dignissimos, est error hic minus esse maiores magnam odio voluptatem
-        sequi.
-      </p>
+      <div className="container">
+        <p className="slug">
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolorum
+          dignissimos, est error hic minus esse maiores magnam odio voluptatem
+          sequi.
+        </p>
+      </div>
     </div>
   );
 };
