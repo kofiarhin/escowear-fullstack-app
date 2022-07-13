@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import "./header.styles.css";
-const Header = ({ user, setCategory, setShowSideNav }) => {
+import Search from "../Search/Search.conponent";
+const Header = ({ user, setCategory, setShowSideNav, onHandleSearch }) => {
   return (
     <div className="main-header">
       <div className="container">
@@ -8,6 +9,7 @@ const Header = ({ user, setCategory, setShowSideNav }) => {
           <h1>Escowear</h1>
         </Link>
 
+        <Search onSearch={onHandleSearch} />
         <nav>
           <Link to="/">Home</Link>
           <Link to="/store">store</Link>

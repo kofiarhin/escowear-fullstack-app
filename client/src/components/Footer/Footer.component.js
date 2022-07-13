@@ -5,93 +5,12 @@ const Footer = () => {
     <div className="footer">
       <div className="footer-wrapper">
         <div className="footer-unit">
-          <ul>
-            <li>
-              <Link to="/"> Home</Link>
-            </li>
-            <li>
-              <Link to="/"> Help</Link>
-            </li>
-            <li>
-              <Link to="/"> About</Link>
-            </li>
-            <li>
-              <Link to="/"> Services</Link>
-            </li>
-            <li>
-              <Link to="/"> Legal Info</Link>
-            </li>
-          </ul>
-        </div>
-
-        <div className="footer-unit">
-          <ul>
-            <li>
-              <Link to="/"> Home</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> Help</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> About</Link>
-            </li>
-            <li>
-              <Link to="/"> Services</Link>
-            </li>
-            <li>
-              <Link to="/"> Legal Info</Link>
-            </li>
-          </ul>
-        </div>
-
-        <div className="footer-unit">
-          <ul>
-            <li>
-              <Link to="/"> Home</Link>
-            </li>
-            <li>
-              <Link to="/"> Help</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> About</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> Services</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> Legal Info</Link>
-            </li>
-          </ul>
-        </div>
-
-        <div className="footer-unit">
-          <ul>
-            <li>
-              {" "}
-              <Link to="/"> Home</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> Help</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> About</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> Services</Link>
-            </li>
-            <li>
-              {" "}
-              <Link to="/"> Legal Info</Link>
-            </li>
-          </ul>
+          <div className="socials">
+            <i className="fa fa-facebook"></i>
+            <i className="fa fa-instagram"></i>
+            <i className="fa fa-twitter"></i>
+            <i className="fa fa-linkedin"></i>
+          </div>
         </div>
       </div>
 

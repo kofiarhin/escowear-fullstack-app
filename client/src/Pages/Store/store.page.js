@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./store.styles.css";
 import { useParams } from "react-router-dom";
 import ProductList from "../../components/ProductList/ProductList.component";
-const Store = ({ category, setCategory }) => {
+const Store = ({ category, setCategory, searchField }) => {
   const [data, setData] = useState([]);
 
   useEffect(() => {

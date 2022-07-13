@@ -3,6 +3,7 @@
     max-width: 90%;
     margin: 0 auto;
     padding-bottom: 4rem;
+    min-height: 70vh;
 }
 
 .cart img  {

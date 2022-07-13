@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -5,7 +6,9 @@ import {
   BrowserRouter,
 } from "react-router-dom";
 import Header from "./components/Header/Header.component";
-import { useState, useEffect } from "react";
+import Logout from "./components/Logout/Logout.component";
+import Footer from "./components/Footer/Footer.component";
+import SideNav from "./components/SideNav/SideNav.component";
 import {
   Register,
   Login,
@@ -15,9 +18,6 @@ import {
   Details,
   DashBoard,
 } from "./Pages";
-import Logout from "./components/Logout/Logout.component";
-import Footer from "./components/Footer/Footer.component";
-import SideNav from "./components/SideNav/SideNav.component";
 
 const App = () => {
   const initialState = () => {
@@ -30,7 +30,8 @@ const App = () => {
   };
   const [user, setUser] = useState(initialState);
   const [category, setCategory] = useState("hoodies");
-  const [showSideNav, setShowSideNav] = useState(true);
+  const [showSideNav, setShowSideNav] = useState(false);
+  const [search, setSearch] = useState("");
 
   const isLoggedIn = (data) => {
     setUser(data);
@@ -40,6 +41,10 @@ const App = () => {
     setCategory(category);
   };
 
+  const handleSearch = (searchField) => {
+    setSearch(searchField);
+  };
+
   return (
     <div>
       <BrowserRouter>
@@ -47,6 +52,7 @@ const App = () => {
           user={user}
           setCategory={onSetCategory}
           setShowSideNav={setShowSideNav}
+          onHandleSearch={handleSearch}
         />
         {showSideNav && <SideNav setShowSideNav={setShowSideNav} />}
         <Routes>
@@ -55,7 +61,13 @@ const App = () => {
           <Route path="/login" element={<Login setIsLoggedIn={isLoggedIn} />} />
           <Route
             path="/store"
-            element={<Store category={category} setCategory={onSetCategory} />}
+            element={
+              <Store
+                category={category}
+                setCategory={onSetCategory}
+                searchField={search}
+              />
+            }
           />
           <Route path="/cart" element={<Cart user={user} />} />
           <Route path="/details/:id" element={<Details />} />

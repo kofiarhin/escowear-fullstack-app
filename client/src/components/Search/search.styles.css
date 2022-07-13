@@ -1,0 +1,13 @@
+.search {
+    flex: 1;
+    margin: 0rem 1rem;
+}
+
+.search input {
+    width: 100%;
+    text-indent: 20px;
+    font-size: 1rem;
+    padding: 0.5rem 0rem;
+    border-radius: 50px;
+    outline: none;
+}

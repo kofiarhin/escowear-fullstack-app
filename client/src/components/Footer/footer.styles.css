@@ -2,17 +2,15 @@
   padding: 2rem 0rem;
 }
 
-.footer-wrapper {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-gap: 20px;
-  margin-bottom: 2rem;
+.footer .socials {
+  margin-bottom: 1rem;
+  text-align: center;
 }
 
-.footer-unit li {
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
-  text-align: center;
+.footer .socials i {
+  font-size: 1.8rem;
+  display: inline-block;
+  margin-left: 0.8rem;
 }
 
 .footer .slug {
@@ -26,11 +24,5 @@
   }
   .footer .slug {
     text-align: center;
-  }
-}
-
-@media (max-width: 500px) {
-  .footer-wrapper {
-    grid-template-columns: 1fr;
   }
 }
