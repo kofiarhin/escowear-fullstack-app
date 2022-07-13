@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import "./header.styles.css";
-import Search from "../Search/Search.conponent";
+import Search from "../Search/Search.component";
 const Header = ({ user, setCategory, setShowSideNav, onHandleSearch }) => {
   return (
     <div className="main-header">

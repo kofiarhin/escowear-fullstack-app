@@ -1,11 +1,14 @@
 import "./search.styles.css";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { setSearchField } from "../../redux/actions/search.action";
+import { useDispatch, useSelector } from "react-redux";
 
 // search component
-const Search = ({ onSearch }) => {
+const Search = () => {
   const [search, setSearch] = useState("");
 
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -14,7 +17,11 @@ const Search = ({ onSearch }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSearch(search);
+    setSearch("");
+    dispatch(setSearchField(search));
+    if (window.location.pathname !== "/store") {
+      navigate("/store");
+    }
   };
   return (
     <div className="search">

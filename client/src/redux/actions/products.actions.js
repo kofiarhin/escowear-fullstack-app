@@ -8,4 +8,18 @@ export const getProducts = () => (dispatch) => {
   dispatch({
     type: GET_PRODUCTS_PENDING,
   });
+
+  fetch("/api/products")
+    .then((response) => response.json())
+    .then((data) => {
+      dispatch({
+        type: GET_PRODUCTS_SUCCESS,
+        payload: data,
+      });
+    })
+    .catch((error) => {
+      dispatch({
+        type: GET_PRODUCTS_FAILED,
+      });
+    });
 };
