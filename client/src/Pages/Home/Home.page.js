@@ -1,4 +1,5 @@
 import "./home.styles.css";
+import Categories from "../../components/Categories/Categories.component";
 const Home = () => {
   return (
     <div className="home">
@@ -12,6 +13,7 @@ const Home = () => {
           }}
         ></div>
       </div>
+      {/* end container */}
     </div>
   );
 };

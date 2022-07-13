@@ -16,8 +16,18 @@
     margin-bottom: 1rem;
 }
 
+.main-header .menu {
+    font-size: 1.6rem;
+    cursor: pointer;
+    display: none;
+}
+
 @media(max-width: 800px) {
-    .main-header {
+    .main-header nav  {
         display: none;
+    }
+
+    .main-header .menu {
+        display: block;
     }
 }

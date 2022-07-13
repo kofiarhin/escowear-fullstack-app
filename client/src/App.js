@@ -4,7 +4,6 @@ import {
   Route,
   BrowserRouter,
 } from "react-router-dom";
-import ProductList from "./components/ProductList/ProductList.component";
 import Header from "./components/Header/Header.component";
 import { useState, useEffect } from "react";
 import {
@@ -18,6 +17,7 @@ import {
 } from "./Pages";
 import Logout from "./components/Logout/Logout.component";
 import Footer from "./components/Footer/Footer.component";
+import SideNav from "./components/SideNav/SideNav.component";
 
 const App = () => {
   const initialState = () => {
@@ -30,6 +30,7 @@ const App = () => {
   };
   const [user, setUser] = useState(initialState);
   const [category, setCategory] = useState("hoodies");
+  const [showSideNav, setShowSideNav] = useState(true);
 
   const isLoggedIn = (data) => {
     setUser(data);
@@ -42,7 +43,12 @@ const App = () => {
   return (
     <div>
       <BrowserRouter>
-        <Header user={user} setCategory={onSetCategory} />
+        <Header
+          user={user}
+          setCategory={onSetCategory}
+          setShowSideNav={setShowSideNav}
+        />
+        {showSideNav && <SideNav setShowSideNav={setShowSideNav} />}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />

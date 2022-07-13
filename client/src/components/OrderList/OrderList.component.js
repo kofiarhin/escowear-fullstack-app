@@ -9,7 +9,6 @@ const OrderList = ({ data }) => {
             <h2> {index + 1}. Order Details</h2>
             {item.products.map((product, index) => (
               <p>
-                {" "}
                 {index + 1}. {product.name}{" "}
               </p>
             ))}

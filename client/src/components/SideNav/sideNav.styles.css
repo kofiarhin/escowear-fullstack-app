@@ -1,0 +1,26 @@
+.sideNav {
+    position: fixed;
+    padding-top: 3rem;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: black;
+    color: white;
+}
+
+.sideNav .close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+.sideNav span {
+    color: white;
+    display: block;
+    text-align: center;
+    margin-bottom: 1rem;
+    cursor: pointer;
+}

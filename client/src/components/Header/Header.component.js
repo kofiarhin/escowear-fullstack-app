@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import "./header.styles.css";
-const Header = ({ user, setCategory }) => {
+const Header = ({ user, setCategory, setShowSideNav }) => {
   return (
     <div className="main-header">
       <div className="container">
@@ -24,6 +24,10 @@ const Header = ({ user, setCategory }) => {
             </span>
           )}
         </nav>
+
+        <div className="menu" onClick={() => setShowSideNav(true)}>
+          <i className="fa fa-bars"></i>
+        </div>
       </div>
     </div>
   );
