@@ -6,8 +6,8 @@ import { loginUser } from "../../redux/actions/user.action";
 
 // login component
 const Login = ({ setIsLoggedIn }) => {
-  const [email, setEmail] = useState("lebron@gmail.com");
-  const [password, setPassword] = useState("passwordsss");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, isPending, error } = useSelector((state) => state.userReducer);
@@ -15,7 +15,7 @@ const Login = ({ setIsLoggedIn }) => {
   useEffect(() => {
     if (user) {
       navigate("/dashboard");
-    } 
+    }
   }, [user]);
 
   const handleSubmit = (e) => {
