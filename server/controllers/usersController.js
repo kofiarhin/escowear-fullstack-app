@@ -6,19 +6,31 @@ const createToken = (id) => {
 };
 
 // @desc create users
-// @router /api/users
-// #access public
+// @router /api/users/register
+// @access public
 const createUser = async (req, res) => {
   const user = new User(req.body);
+
   try {
     await user.save();
     return res.status(201).json(user);
   } catch (error) {
-    return res.status(400).json({ error: "there was a problem creating user" });
-  }
+    const handleError = (error) => {
+      let message = "There was a problem registering user";
 
-  res.status(200).json(user);
+      if (error.code === 11000) {
+        message = "Email already in use";
+      }
+
+      return message;
+    };
+    return res.status(400).json({ error: handleError(error) });
+  }
 };
+
+// login user
+// @router /api/users/login
+// @access public
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -40,7 +52,7 @@ const loginUser = async (req, res) => {
           .status(200)
           .json({ id: _id, email, name, token: createToken(_id) });
       } else {
-        return res.status(400).json({ error: "invaild email/password" });
+        return res.status(400).json({ error: "invaild email/password xxxx" });
       }
     }
   } catch (error) {

@@ -1,11 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import "./login.styles.css";
+import { loginUser } from "../../redux/actions/user.action";
 
+// login component
 const Login = ({ setIsLoggedIn }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState("lebron@gmail.com");
+  const [password, setPassword] = useState("passwordsss");
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user, isPending, error } = useSelector((state) => state.userReducer);
+
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    } 
+  }, [user]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -13,66 +24,48 @@ const Login = ({ setIsLoggedIn }) => {
     if (!email || !password) {
       console.log("please fill out all fields");
     } else {
-      const dataToSubmit = {
-        email,
-        password,
-      };
-
-      fetch("/api/users/login", {
-        method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify(dataToSubmit),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.error) {
-            // set error message
-            console.log("error");
-            setError(data.error);
-          } else {
-            // set user token and redirect to dashboard
-
-            localStorage.setItem("user", JSON.stringify(data));
-            setIsLoggedIn(data);
-            // redirect to dashboard
-            navigate("/dashboard");
-          }
-        })
-        .catch((error) => console.log("yyyyy", error));
+      dispatch(loginUser(email, password));
     }
   };
 
   return (
-    <div className="container">
-      <h1 className="title">Login</h1>
-      <div className="form-wrapper">
-        <form onSubmit={handleSubmit}>
-          <div className="form-unit">
-            <label htmlFor="email">Email</label>
-            <input
-              type="text"
-              placeholder="Enter Email"
-              onChange={(e) => setEmail(e.target.value)}
-              value={email}
-            />
-          </div>
+    <div className="login">
+      <div className="container">
+        <h1 className="title">Login</h1>
+        <div className="form-wrapper">
+          <form onSubmit={handleSubmit}>
+            <div className="form-unit">
+              <label htmlFor="email">Email</label>
+              <input
+                type="text"
+                placeholder="Enter Email"
+                onChange={(e) => setEmail(e.target.value)}
+                value={email}
+              />
+            </div>
 
-          <div className="form-unit">
-            <label htmlFor="email">Password</label>
-            <input
-              type="password"
-              placeholder="Enter Password"
-              onChange={(e) => setPassword(e.target.value)}
-              value={password}
-            />
-          </div>
+            <div className="form-unit">
+              <label htmlFor="email">Password</label>
+              <input
+                type="password"
+                placeholder="Enter Password"
+                onChange={(e) => setPassword(e.target.value)}
+                value={password}
+              />
+            </div>
 
-          <p className="error"> {error ? error : null} </p>
+            <p className="error"> {error ? error : null} </p>
 
-          <button type="submit">Login</button>
-        </form>
+            <button
+              type="submit"
+              style={{
+                backgroundColor: isPending ? "green" : "",
+              }}
+            >
+              {isPending ? "Loging in User " : "Login"}{" "}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
