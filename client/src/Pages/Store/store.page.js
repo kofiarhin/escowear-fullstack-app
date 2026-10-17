@@ -19,7 +19,7 @@ const Store = () => {
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSearch = searchParams.get("search") || "";
-  const requestedCategory = searchParams.get("category") || "shoes";
+  const requestedCategory = searchParams.get("category") || "";
   const requestedPage = Math.max(1, Number(searchParams.get("page")) || 1);
   const { products, status, error, pagination } = useSelector(
     (state) => state.productsReducer
@@ -47,14 +47,15 @@ const Store = () => {
     dispatch(setSearchField(value));
     setSearchParams(
       value
-        ? { category: "shoes", search: value, page: "1" }
-        : { category: "shoes", page: "1" }
+        ? { search: value, page: "1" }
+        : { page: "1" }
     );
   };
 
   const handlePage = (page) => {
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("category", requestedCategory);
+    if (requestedCategory) nextParams.set("category", requestedCategory);
+    else nextParams.delete("category");
     nextParams.set("page", String(page));
     setSearchParams(nextParams);
     window.scrollTo({ top: 0, behavior: "smooth" });
