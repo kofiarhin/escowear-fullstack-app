@@ -1,26 +1,148 @@
 .sideNav {
-    position: fixed;
-    padding-top: 3rem;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: black;
-    color: white;
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow-y: auto;
+  padding: 22px clamp(20px, 5vw, 72px) 32px;
+  background: var(--ink);
+  color: var(--white);
+  animation: nav-enter 420ms var(--ease-out) both;
+}
+
+@keyframes nav-enter {
+  from { opacity: 0; transform: translateY(-14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sideNav-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sideNav-wordmark {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  transform: skewX(-7deg);
 }
 
 .sideNav .close {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    font-size: 2rem;
-    cursor: pointer;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
 }
 
-.sideNav span {
-    color: white;
-    display: block;
-    text-align: center;
-    margin-bottom: 1rem;
-    cursor: pointer;
+.sideNav .close svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.links-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: 42px;
+}
+
+.links-wrapper > a {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  align-items: baseline;
+  width: max-content;
+  max-width: 100%;
+  padding-block: clamp(5px, 0.8vh, 12px);
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 7vw, 7.2rem);
+  font-weight: 900;
+  letter-spacing: -0.07em;
+  line-height: 0.88;
+  text-transform: uppercase;
+  transition: color 220ms ease, transform 300ms var(--ease-out);
+}
+
+.links-wrapper > a:hover {
+  color: #b8b8b8;
+  transform: translateX(10px);
+}
+
+.links-wrapper > a span {
+  color: #888;
+  font-family: var(--font-condensed);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.sideNav-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 26px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.62);
+  font-family: var(--font-condensed);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.sideNav-footer > a {
+  color: var(--white);
+}
+
+.sideNav-account {
+  display: flex;
+  gap: 22px;
+  color: var(--white);
+}
+
+.sideNav-account a,
+.sideNav-account button {
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+@media (max-width: 680px) {
+  .sideNav {
+    padding: 17px 18px 22px;
+  }
+
+  .links-wrapper {
+    padding-block: 30px;
+  }
+
+  .links-wrapper > a {
+    grid-template-columns: 34px 1fr;
+    padding-block: 8px;
+    font-size: clamp(2.3rem, 10vw, 3.4rem);
+  }
+
+  .sideNav-footer {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 14px 28px;
+  }
+
+  .sideNav-footer > p {
+    width: 100%;
+  }
+
+  .sideNav-account {
+    margin-left: auto;
+  }
 }

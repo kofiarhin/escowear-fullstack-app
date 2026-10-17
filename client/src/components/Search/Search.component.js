@@ -2,10 +2,10 @@ import "./search.styles.css";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { setSearchField } from "../../redux/actions/search.action";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 // search component
-const Search = () => {
+const Search = ({ onSearchComplete }) => {
   const [search, setSearch] = useState("");
 
   const dispatch = useDispatch();
@@ -17,21 +17,28 @@ const Search = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const query = search.trim();
     setSearch("");
-    dispatch(setSearchField(search));
-    if (window.location.pathname !== "/store") {
-      navigate("/store");
-    }
+    dispatch(setSearchField(query));
+    navigate(
+      query
+        ? `/store?category=shoes&search=${encodeURIComponent(query)}`
+        : "/store?category=shoes"
+    );
+    onSearchComplete?.();
   };
   return (
     <div className="search">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} role="search">
+        <label htmlFor="site-search">Search sneakers</label>
         <input
+          id="site-search"
           type="text"
-          placeholder="Search Product"
+          placeholder="Search by model or brand"
           value={search}
           onChange={(e) => handleChange(e)}
         />
+        <button type="submit">Search</button>
       </form>
     </div>
   );

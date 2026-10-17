@@ -3,8 +3,8 @@ const ProductList = ({ data }) => {
   return (
     <div className="container">
       <div className="wrapper">
-        {data.map((item) => (
-          <Product data={item} key={item._id} />
+        {data.map((item, index) => (
+          <Product data={item} key={item._id} index={index} />
         ))}
       </div>
     </div>

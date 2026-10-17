@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  formatProductPrice,
+  getProductImage,
+  useFallbackProductImage,
+} from "../../utils/product";
 import "./cart.styles.css";
 const Cart = ({ user }) => {
   const [cartData, setCartData] = useState([]);
@@ -48,12 +53,16 @@ const Cart = ({ user }) => {
 
   const renderTotals = () => {
     let sum = 0;
-    cartData.forEach((item) => (sum += parseInt(item.price)));
+    cartData.forEach((item) => {
+      const price = Number(item.price);
+      if (Number.isFinite(price)) sum += price;
+    });
 
-    return sum.toFixed(2);
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: "GBP",
+    }).format(sum);
   };
-
-  console.log(cartData);
 
   return (
     <div className="cart">
@@ -67,12 +76,13 @@ const Cart = ({ user }) => {
               return (
                 <div className="item-unit" key={index}>
                   <img
-                    src={`/images/${item.category}/${item.name}/1.jpg`}
-                    alt=""
+                    src={getProductImage(item)}
+                    alt={item.name}
+                    onError={useFallbackProductImage}
                   />
                   <div className="content">
                     <h1> {item.name} </h1>
-                    <h2>${item.price.toFixed(2)} </h2>
+                    <h2>{formatProductPrice(item)} </h2>
                     <button onClick={() => removeItem(index)}>Remove</button>
                   </div>
                 </div>
@@ -83,7 +93,7 @@ const Cart = ({ user }) => {
             <div className="totals">
               <h1>
                 {" "}
-                Total: $<span>{renderTotals()}</span>{" "}
+                Total: <span>{renderTotals()}</span>{" "}
               </h1>
             </div>
             {/* cta */}

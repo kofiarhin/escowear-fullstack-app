@@ -8,6 +8,9 @@
 
 .cart img  {
  width: 150px;
+ height: 150px;
+ background: #f0f0ee;
+ object-fit: contain;
 }
 
 .cart .item-unit {
