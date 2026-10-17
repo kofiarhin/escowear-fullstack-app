@@ -6,7 +6,7 @@ import { logoutUser } from "../../redux/actions/user.action";
 
 const navigation = [
   { label: "Home", to: "/" },
-  { label: "Shop", to: "/store?category=shoes" },
+  { label: "Shop", to: "/store" },
   { label: "New Releases", to: "/#latest-releases" },
   { label: "Collections", to: "/#collections" },
   { label: "About", to: "/#about" },
