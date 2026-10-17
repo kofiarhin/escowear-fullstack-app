@@ -13,7 +13,9 @@ const createUser = async (req, res) => {
 
   try {
     await user.save();
-    return res.status(201).json(user);
+    const responseUser = user.toObject ? user.toObject() : { ...user };
+    delete responseUser.password;
+    return res.status(201).json(responseUser);
   } catch (error) {
     const handleError = (error) => {
       let message = "There was a problem registering user";

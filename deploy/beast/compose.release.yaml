@@ -1,0 +1,5 @@
+# Layer over compose.yaml after approval. Uses the fixed 2026-10-17 release image.
+services:
+  web:
+    image: escowear:release-2026-10-17
+    pull_policy: never

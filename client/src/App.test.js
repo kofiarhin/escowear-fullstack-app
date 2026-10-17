@@ -55,11 +55,11 @@ test("renders the sneaker homepage and products from the API", async () => {
   renderApp();
 
   expect(
-    screen.getByRole("heading", { name: /sneakers that move you/i })
+    screen.getByRole("heading", { name: /uk sneakers to ghana/i })
   ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /shop new arrivals/i })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Shop Sneakers" })).toHaveAttribute(
     "href",
-    "/store?category=shoes"
+    "/store"
   );
 
   expect(await screen.findByText("Nike Air Max Dn8")).toBeInTheDocument();
@@ -70,7 +70,7 @@ test("renders the sneaker homepage and products from the API", async () => {
   );
   await waitFor(() =>
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/products?category=shoes&limit=8&page=1"
+      "/api/products?limit=8&page=1"
     )
   );
 });
@@ -87,7 +87,7 @@ test("opens and closes the accessible navigation menu", async () => {
   expect(navigation).toBeInTheDocument();
   expect(within(navigation).getByRole("link", { name: /shop/i })).toHaveAttribute(
     "href",
-    "/store?category=shoes"
+    "/store"
   );
   expect(within(navigation).getByRole("link", { name: /new releases/i })).toHaveAttribute(
     "href",
@@ -102,11 +102,11 @@ test("opens and closes the accessible navigation menu", async () => {
   ).not.toBeInTheDocument();
 });
 
-test("loads the store from category, search, and page query parameters", async () => {
+test("loads the store from search and page query parameters", async () => {
   window.history.pushState(
     {},
     "",
-    "/store?category=shoes&search=nike&page=2"
+    "/store?search=nike&page=2"
   );
   global.fetch.mockResolvedValue({
     ok: true,
@@ -125,7 +125,7 @@ test("loads the store from category, search, and page query parameters", async (
   expect(screen.getByText("25 sneakers")).toBeInTheDocument();
   expect(screen.getByText("Page 2 of 4")).toBeInTheDocument();
   expect(global.fetch).toHaveBeenCalledWith(
-    "/api/products?category=shoes&search=nike&limit=24&page=2"
+    "/api/products?search=nike&limit=24&page=2"
   );
 });
 

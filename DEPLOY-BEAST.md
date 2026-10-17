@@ -1,5 +1,8 @@
 # Escowear — Beast deployment checklist
 
+Updated preparation and approval-gated commands: [deploy/beast/README.md](deploy/beast/README.md).
+Results from this preparation: [deploy/beast/REPORT.md](deploy/beast/REPORT.md).
+
 Target: `escowear.com` / `www.escowear.com`. This repository prepares the container **only**. No DNS, Nginx, certificate or VPS service change has been performed.
 
 ## Matches Beast's existing architecture
@@ -8,7 +11,7 @@ Target: `escowear.com` / `www.escowear.com`. This repository prepares the contai
 - Node/Express serves the built React website and same-origin `/api` routes.
 - Published only on `127.0.0.1:5080` by default. Existing host Nginx will proxy HTTPS to this address **after separately approved configuration**.
 - Does not start MongoDB or affect other Docker services, PM2 apps, or systemd units.
-- Existing MongoDB database: **`escowear-sneaker-import-test`** (user-approved for the public site); no migration, data copy or database creation.
+- Existing MongoDB database: **`escowear-sneaker-import-test`** (configured target; public launch still requires approval); no migration, data copy or database creation.
 - Production requires `ESCOWEAR_MONGO_URI` and `JWT_SECRET`. Store them in a private, gitignored `.env` on Beast. Never print secrets or check them into Git.
 - Runtime limit: 512 MiB RAM, 1 CPU; verify capacity before the build, which needs more memory than runtime.
 
@@ -18,10 +21,8 @@ Verify the registered Escowear workspace and repository identity first. Do not g
 
 ```bash
 git status --short
-git remote -v
-git fetch origin
-git switch ide-112-docker-beast
-git pull --ff-only origin ide-112-docker-beast
+git config --get remote.origin.url
+git rev-parse --short HEAD
 sudo docker --version
 sudo docker compose version
 sudo docker ps --format 'table {{.Names}}\t{{.Ports}}'
@@ -42,7 +43,7 @@ sudo docker compose config --quiet
 sudo docker compose build
 ```
 
-Building an image does not start the service. The frontend currently has an empty lockfile; its build stage uses `npm install --no-package-lock` until a real `client/package-lock.json` is committed.
+Building an image does not start the service. Both build stages now use `npm ci` and committed lockfiles. TypeScript is pinned to 4.9.5 to match React Scripts 5 tooling. The frontend validation target now passes all four frontend tests.
 
 ## Starting the service — requires separate production approval
 
