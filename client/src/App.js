@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, BrowserRouter, useLocation } from "react-router-dom";
+import { Routes, Route, BrowserRouter, useLocation, useNavigationType } from "react-router-dom";
 import Header from "./components/Header/Header.component";
 import Logout from "./components/Logout/Logout.component";
 import Footer from "./components/Footer/Footer.component";
@@ -15,17 +15,23 @@ import {
 } from "./Pages";
 
 const ScrollToHash = () => {
-  const { hash } = useLocation();
+  const { pathname, hash, key } = useLocation();
+  const navigationType = useNavigationType();
 
   useEffect(() => {
-    if (!hash) return undefined;
+    // Let the browser restore scroll when going Back or Forward.
+    if (navigationType === "POP" && !hash) return undefined;
 
     const frame = window.requestAnimationFrame(() => {
-      document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
+      if (hash) {
+        document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "instant" });
+      }
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [hash]);
+  }, [pathname, hash, key, navigationType]);
 
   return null;
 };
