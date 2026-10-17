@@ -1,18 +1,12 @@
 const express = require("express");
 const app = express();
-const mongoose = require("mongoose");
+const { connectDB } = require("./db/db");
 const productsRoutes = require("./routes/productsRoute");
 const imagesRoute = require("./routes/imagesRoute");
 const ordersRoute = require("./routes/ordersRoute");
 const usersRoute = require("./routes/usersRoute");
-const User = require("./Models/User.model");
-const dotenv = require("dotenv").config();
+require("dotenv").config();
 const path = require("path");
-
-// connect to database
-mongoose.connect(process.env.MONGO_REMOTE, () =>
-  console.log("connected to database")
-);
 
 // setup middlewares
 app.use(express.json());
@@ -39,4 +33,17 @@ if (process.env.NODE_ENV === "production") {
 
 // setup port
 const port = process.env.PORT || 5000;
-app.listen(port, () => console.log(`Listening on port ${port}`));
+
+const startServer = async () => {
+  await connectDB();
+  return app.listen(port, () => console.log(`Listening on port ${port}`));
+};
+
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error(`Server startup failed: ${error.message}`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { app, startServer };

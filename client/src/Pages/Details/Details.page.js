@@ -1,50 +1,165 @@
-import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  formatProductCategory,
+  formatProductPrice,
+  formatProductSize,
+  getAvailabilityLabel,
+  getProductImage,
+  useFallbackProductImage,
+} from "../../utils/product";
 import "./details.styles.css";
-// details
+
 const Details = () => {
-  const [product, setProduct] = useState();
+  const [product, setProduct] = useState(null);
+  const [status, setStatus] = useState("loading");
+  const [error, setError] = useState("");
+  const [selectedImage, setSelectedImage] = useState("");
   const { id } = useParams();
   const navigate = useNavigate();
-  useEffect(() => {
-    fetch(`/api/products/${id}`)
-      .then((response) => response.json())
-      .then((data) => setProduct(data));
-  }, []);
 
-  let imgUrl = "";
-  if (product) {
-    const { category, name, _id, price } = product;
-    imgUrl = `/images/${category}/${name}/1.jpg`;
+  useEffect(() => {
+    const controller = new AbortController();
+    setStatus("loading");
+    setError("");
+
+    fetch(`/api/products/${id}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Product request failed");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        setProduct(data);
+        setSelectedImage(getProductImage(data));
+        setStatus("success");
+      })
+      .catch((requestError) => {
+        if (requestError.name === "AbortError") return;
+        setError(requestError.message);
+        setStatus("failed");
+      });
+
+    return () => controller.abort();
+  }, [id]);
+
+  const images = useMemo(() => {
+    if (!product) return [];
+    return [...new Set([product.image, ...(product.images || [])].filter(Boolean))];
+  }, [product]);
+
+  const addToCart = () => {
+    const storedCart = sessionStorage.getItem("cartData");
+    const cartData = storedCart ? JSON.parse(storedCart) : [];
+    sessionStorage.setItem("cartData", JSON.stringify([product, ...cartData]));
+    navigate("/cart");
+  };
+
+  if (status === "loading") {
+    return (
+      <main className="details-state container" aria-live="polite">
+        <span className="details-state-line" aria-hidden="true"></span>
+        <p>Loading sneaker details</p>
+      </main>
+    );
   }
 
-  const addToCart = (data) => {
-    // get cart details
-    let cartData = sessionStorage.getItem("cartData");
+  if (status === "failed" || !product) {
+    return (
+      <main className="details-state container" role="alert">
+        <p>We couldn't load this sneaker.</p>
+        {error && <span>{error}</span>}
+        <Link to="/store?category=shoes">Return to the store</Link>
+      </main>
+    );
+  }
 
-    if (!cartData) {
-      cartData = [data];
-      sessionStorage.setItem("cartData", JSON.stringify(cartData));
-      navigate("/cart");
-    } else {
-      let parsedData = JSON.parse(sessionStorage.getItem("cartData"));
-      parsedData = [data, ...parsedData];
-      sessionStorage.setItem("cartData", JSON.stringify(parsedData));
-      navigate("/cart");
-    }
-  };
+  const formattedPrice = formatProductPrice(product);
+  const retailerName = product.retailer?.name || "the retailer";
+  const sizes = (product.sizes || []).map(formatProductSize).filter(Boolean);
+
   return (
-    <div>
-      {product ? (
-        <div className="details">
-          <img src={imgUrl} alt="" />
-          <h1 className="product-name"> {product.name} </h1>
-          <h2 className="product-price"> ${product.price.toFixed(2)} </h2>
-          <button onClick={() => addToCart(product)}>Add To Cart</button>
-        </div>
-      ) : null}
-    </div>
+    <main className="details container">
+      <Link className="details-back" to="/store?category=shoes">
+        Back to sneakers
+      </Link>
+
+      <div className="details-layout">
+        <section className="details-media" aria-label="Product images">
+          <div className="details-main-image">
+            <img
+              src={selectedImage || getProductImage(product)}
+              alt={product.name}
+              onError={useFallbackProductImage}
+            />
+          </div>
+          {images.length > 1 && (
+            <div className="details-thumbnails" aria-label="Choose product image">
+              {images.slice(0, 5).map((image) => (
+                <button
+                  type="button"
+                  className={selectedImage === image ? "is-active" : ""}
+                  aria-label={`View ${product.name}`}
+                  aria-pressed={selectedImage === image}
+                  onClick={() => setSelectedImage(image)}
+                  key={image}
+                >
+                  <img src={image} alt="" onError={useFallbackProductImage} />
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="details-copy">
+          <div className="details-meta">
+            <span>{formatProductCategory(product)}</span>
+            <span className={product.inStock === false ? "is-sold-out" : ""}>
+              {getAvailabilityLabel(product)}
+            </span>
+          </div>
+          <h1 className="product-name">{product.name}</h1>
+          {product.brand && <p className="details-brand">{product.brand}</p>}
+          {formattedPrice && <p className="product-price">{formattedPrice}</p>}
+
+          <div className="details-sizes">
+            <div>
+              <h2>Available sizes</h2>
+              <span>UK sizing</span>
+            </div>
+            {sizes.length ? (
+              <ul>
+                {sizes.map((size) => <li key={size}>{size}</li>)}
+              </ul>
+            ) : (
+              <p>Size information is unavailable for this product.</p>
+            )}
+          </div>
+
+          <button
+            className="details-cart-button"
+            type="button"
+            onClick={addToCart}
+            disabled={product.inStock === false}
+          >
+            {product.inStock === false ? "Currently unavailable" : "Add to cart"}
+          </button>
+
+          {product.productUrl && (
+            <a
+              className="details-retailer-link"
+              href={product.productUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View at {retailerName}
+            </a>
+          )}
+        </section>
+      </div>
+    </main>
   );
 };
 

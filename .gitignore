@@ -1,4 +1,36 @@
-/node_modules
-/frontend
-/client/node_modules
-playground.js
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+/node_modules/
+/client/node_modules/
+
+# Generated builds and coverage
+/client/build/
+/dist/
+/coverage/
+
+# Test and browser artifacts
+/.playwright-mcp/
+/output/
+/playwright-report/
+/test-results/
+/blob-report/
+
+# Generated product exports
+/client/public/data/
+
+# Temporary and local files
+*.log
+*.tmp
+*.temp
+.cache/
+tmp/
+Thumbs.db
+.DS_Store
+
+# Existing local-only paths
+/frontend/
+/playground.js
