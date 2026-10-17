@@ -1,37 +1,62 @@
-# Escowear on Beast (pre-deployment checklist)
+# Escowear — Beast deployment checklist
 
-This branch prepares a Docker image and Compose service. It does **not** configure Beast's reverse proxy, DNS, TLS certificates, or production credentials.
+Target: `escowear.com` / `www.escowear.com`. This repository prepares the container **only**. No DNS, Nginx, certificate or VPS service change has been performed.
 
-## Requirements
+## Matches Beast's existing architecture
 
-- Confirm the registered Beast workspace and deployment conventions before pulling.
-- Docker Engine and Compose plugin available on Beast.
-- A private MongoDB connection URI for database `escowear-sneaker-import-test` accessible from Beast. **This repository currently requires that exact database name**, even in production. Review whether using the test database for public traffic is acceptable before launch.
-- A strong `JWT_SECRET` value. Never commit secrets.
-- Confirm `127.0.0.1:5080` is free and the reverse proxy will target that port.
+- One Docker Compose application, with a unique `escowear` project name.
+- Node/Express serves the built React website and same-origin `/api` routes.
+- Published only on `127.0.0.1:5080` by default. Existing host Nginx will proxy HTTPS to this address **after separately approved configuration**.
+- Does not start MongoDB or affect other Docker services, PM2 apps, or systemd units.
+- Existing MongoDB database: **`escowear-sneaker-import-test`** (user-approved for the public site); no migration, data copy or database creation.
+- Production requires `ESCOWEAR_MONGO_URI` and `JWT_SECRET`. Store them in a private, gitignored `.env` on Beast. Never print secrets or check them into Git.
+- Runtime limit: 512 MiB RAM, 1 CPU; verify capacity before the build, which needs more memory than runtime.
 
-## Build and local-only smoke test on Beast
+## Read-only preflight on Beast
+
+Verify the registered Escowear workspace and repository identity first. Do not guess its absolute path or overwrite an existing checkout. In the verified repository directory, inspect the state:
 
 ```bash
+git status --short
+git remote -v
 git fetch origin
 git switch ide-112-docker-beast
 git pull --ff-only origin ide-112-docker-beast
-# Create a private .env in this workspace, never commit it.
-# Required: ESCOWEAR_MONGO_URI, JWT_SECRET
-chmod 600 .env
-docker compose config --quiet
-docker compose build
-docker compose config --quiet
-# STOP: request explicit production deployment approval before running:
-# docker compose up -d
-# docker compose ps
-# curl -fsSI http://127.0.0.1:5080/
+sudo docker --version
+sudo docker compose version
+sudo docker ps --format 'table {{.Names}}\t{{.Ports}}'
+ss -ltn | grep ':5080 ' || true
+free -h
+df -h /
 ```
 
-Do not run the final `docker compose up -d` until the production deployment is explicitly approved and existing services/ports have been checked.
+Stop if Git has unrelated changes, if the origin is not `kofiarhin/escowear-fullstack-app`, or if port 5080 is in use. Beast currently uses `sudo docker`; do not alter Docker group membership.
 
-## Public launch (separate approval required)
+## Local-only verification (no public traffic)
 
-Use Beast's existing reverse-proxy/TLS deployment pattern for `escowear.com`, redirect `www.escowear.com` to the apex domain, and change Namecheap DNS only after verifying the VPS address and obtaining approval. Do not expose the container port publicly. Verify the homepage, product API, images, authentication and order flows before announcing launch.
+After confirming port/resource availability, create the private `.env` securely, containing `ESCOWEAR_MONGO_URI` (existing DB) and `JWT_SECRET` (strong random value). Do not paste secret values in chat or Linear.
 
-Rollback should use the previously verified image/commit and proxy configuration; keep database backups before public launch.
+```bash
+chmod 600 .env
+sudo docker compose config --quiet
+sudo docker compose build
+```
+
+Building an image does not start the service. The frontend currently has an empty lockfile; its build stage uses `npm install --no-package-lock` until a real `client/package-lock.json` is committed.
+
+## Starting the service — requires separate production approval
+
+```bash
+sudo docker compose up -d --no-build
+sudo docker compose ps
+curl -fsS http://127.0.0.1:5080/health
+curl -fsS http://127.0.0.1:5080/api/products?page=1\&limit=1
+```
+
+Do **not** run these production startup commands before approval and a live check of other services.
+
+## Public launch — separate approval
+
+Review Namecheap A/AAAA records, Beast's existing Nginx sites and Certbot pattern, then request permission for any DNS, Nginx, HTTPS or public launch changes. Reverse proxy `escowear.com` to `http://127.0.0.1:5080`; redirect `www.escowear.com` to apex. Never publish port 5080 publicly.
+
+Verify HTTPS, homepage, catalogue, product images, auth, and order flows. Retain the previous image/commit and MongoDB backup before release. After permanent VPS changes, reconcile the canonical Beast profile and Linear issue.
