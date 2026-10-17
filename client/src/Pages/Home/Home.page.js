@@ -7,11 +7,11 @@ import { getProducts } from "../../redux/actions/products.actions";
 
 const categories = [
   { name: "New Releases", to: "/#latest-releases", number: "01" },
-  { name: "Air Jordan", to: "/store?category=shoes&search=air%20jordan", number: "02" },
-  { name: "Nike", to: "/store?category=shoes&search=nike", number: "03" },
-  { name: "Adidas", to: "/store?category=shoes&search=adidas", number: "04" },
-  { name: "New Balance", to: "/store?category=shoes&search=new%20balance", number: "05" },
-  { name: "Yeezy", to: "/store?category=shoes&search=yeezy", number: "06" },
+  { name: "Air Jordan", to: "/store?search=air%20jordan", number: "02" },
+  { name: "Nike", to: "/store?search=nike", number: "03" },
+  { name: "Adidas", to: "/store?search=adidas", number: "04" },
+  { name: "New Balance", to: "/store?search=new%20balance", number: "05" },
+  { name: "Yeezy", to: "/store?search=yeezy", number: "06" },
 ];
 
 const ArrowIcon = () => (
@@ -37,10 +37,10 @@ const Home = () => {
   );
 
   useEffect(() => {
-    dispatch(getProducts({ category: "shoes", limit: 8, page: 1 }));
+    dispatch(getProducts({ limit: 8, page: 1 }));
   }, [dispatch]);
 
-  const sneakers = products.filter((product) => product.category === "shoes");
+  const sneakers = products;
   const featuredSneakers = sneakers.slice(0, 4);
   const latestSneakers = sneakers.slice(4, 8);
 
@@ -55,7 +55,7 @@ const Home = () => {
           <p>We couldn't load the sneaker edit.</p>
           <button
             type="button"
-            onClick={() => dispatch(getProducts({ category: "shoes", limit: 8, page: 1 }))}
+            onClick={() => dispatch(getProducts({ limit: 8, page: 1 }))}
           >
             Try again
           </button>
@@ -68,7 +68,7 @@ const Home = () => {
       return (
         <div className="products-message">
           <p>No sneakers are available in this edit yet.</p>
-          <Link to="/store?category=shoes">Browse all sneakers</Link>
+          <Link to="/store">Browse all sneakers</Link>
         </div>
       );
     }
@@ -87,24 +87,23 @@ const Home = () => {
       <section className="sneaker-hero" aria-labelledby="hero-title">
         <div className="hero-grid-lines" aria-hidden="true"></div>
         <div className="sneaker-hero-copy">
-          <p className="eyebrow">Escowear / Premium sneaker store</p>
+          <p className="eyebrow">Escowear / UK sneakers to Ghana</p>
           <h1 id="hero-title">
-            <span>Sneakers</span>
-            <span>that move you</span>
+            <span>UK sneakers</span>
+            <span>to Ghana</span>
           </h1>
           <div className="hero-lower">
             <p>
-              Statement silhouettes, archival colourways and everyday icons.
-              Discover the Escowear sneaker edit.
+              Shop authentic sneakers from trusted UK retailers. Pay in Ghana cedis; we buy your pair in the UK and deliver it to Ghana.
             </p>
-            <Link to="/store?category=shoes" className="button button-dark">
-              Shop New Arrivals <ArrowIcon />
+            <Link to="/store" className="button button-dark">
+              Shop Sneakers <ArrowIcon />
             </Link>
           </div>
         </div>
 
         <div className="sneaker-hero-media">
-          <span className="hero-vertical-copy">Selected for movement</span>
+          <span className="hero-vertical-copy">Sourced in the UK / Delivered to Ghana</span>
           <img
             src="/images/shoes/SUPREME X NIKE AIR FORCE 1 LOW 'BOX LOGO - BLACK'/1.jpg"
             alt="Supreme x Nike Air Force 1 Low in black"
@@ -132,7 +131,7 @@ const Home = () => {
             <p className="eyebrow">The current rotation</p>
             <h2 id="featured-title">Featured sneakers</h2>
           </div>
-          <Link to="/store?category=shoes" className="text-link">Shop all sneakers</Link>
+          <Link to="/store" className="text-link">Shop all sneakers</Link>
         </div>
         {renderProducts(featuredSneakers, "Loading featured sneakers")}
       </section>
@@ -145,7 +144,7 @@ const Home = () => {
             The pairs that set the pace. Explore defining basketball shapes,
             court staples and enduring Nike design.
           </p>
-          <Link to="/store?category=shoes&search=nike" className="button button-light">
+          <Link to="/store?search=nike" className="button button-light">
             Shop the classics <ArrowIcon />
           </Link>
         </div>
@@ -178,14 +177,26 @@ const Home = () => {
         {renderProducts(latestSneakers, "Loading latest releases")}
       </section>
 
+      <section className="how-it-works section container" id="how-it-works" aria-labelledby="how-title">
+        <p className="eyebrow">From the UK to your doorstep</p>
+        <h2 id="how-title">How Escowear works</h2>
+        <div className="how-steps">
+          <article><span>01</span><h3>Browse</h3><p>Choose authentic sneakers from our curated UK retailer selection.</p></article>
+          <article><span>02</span><h3>Pay in GHS</h3><p>See your total before checkout and pay Escowear in Ghana cedis.</p></article>
+          <article><span>03</span><h3>We buy in the UK</h3><p>After payment, we confirm availability and purchase your pair from a trusted retailer.</p></article>
+          <article><span>04</span><h3>Delivered in Ghana</h3><p>We arrange shipping and keep you updated until delivery.</p></article>
+        </div>
+        <p className="how-note">Items are sourced after payment; UK retailer stock is subject to availability.</p>
+        <Link to="/store" className="button button-dark">Explore sneakers <ArrowIcon /></Link>
+      </section>
+
       <section className="about-strip" id="about" aria-labelledby="about-title">
         <p className="eyebrow">About Escowear</p>
-        <h2 id="about-title">Sneakers first.<br />Everything else second.</h2>
+        <h2 id="about-title">Authentic UK sneakers.<br />Delivered to Ghana.</h2>
         <p className="about-copy">
-          Escowear is a focused sneaker store built around recognisable
-          silhouettes and standout releases. No distractions—just the pairs.
+          Choose your pair from our UK retailer selection, pay Escowear in GHS, and we handle purchasing, shipping and delivery in Ghana.
         </p>
-        <Link to="/store?category=shoes" className="text-link">Enter the store</Link>
+        <Link to="/store" className="text-link">Enter the store</Link>
       </section>
     </main>
   );
