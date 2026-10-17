@@ -2,7 +2,7 @@ const User = require("../Models/User.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const createToken = (id) => {
-  return jwt.sign({ id }, "jwtsecret", { expiresIn: "30d" });
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
 };
 
 // @desc create users
