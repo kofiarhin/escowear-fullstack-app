@@ -19,7 +19,9 @@ const Store = () => {
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSearch = searchParams.get("search") || "";
-  const requestedCategory = searchParams.get("category") || "";
+  const requestedCategory = (searchParams.get("category") || "").toLowerCase() === "shoes"
+    ? ""
+    : searchParams.get("category") || "";
   const requestedPage = Math.max(1, Number(searchParams.get("page")) || 1);
   const { products, status, error, pagination } = useSelector(
     (state) => state.productsReducer
