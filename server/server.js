@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+const mongoose = require("mongoose");
 const { connectDB } = require("./db/db");
 const productsRoutes = require("./routes/productsRoute");
 const imagesRoute = require("./routes/imagesRoute");
@@ -7,6 +8,12 @@ const ordersRoute = require("./routes/ordersRoute");
 const usersRoute = require("./routes/usersRoute");
 require("dotenv").config();
 const path = require("path");
+
+// Health includes database readiness, not just whether Express is listening.
+app.get("/health", (req, res) => {
+  const ready = mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({ status: ready ? "ok" : "unavailable" });
+});
 
 // setup middlewares
 app.use(express.json());
