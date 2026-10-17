@@ -21,9 +21,11 @@ git pull --ff-only origin ide-112-docker-beast
 chmod 600 .env
 docker compose config --quiet
 docker compose build
-docker compose up -d
-docker compose ps
-curl -fsSI http://127.0.0.1:5080/
+docker compose config --quiet
+# STOP: request explicit production deployment approval before running:
+# docker compose up -d
+# docker compose ps
+# curl -fsSI http://127.0.0.1:5080/
 ```
 
 Do not run the final `docker compose up -d` until the production deployment is explicitly approved and existing services/ports have been checked.
