@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+const mongoose = require("mongoose");
 const { connectDB } = require("./db/db");
 const productsRoutes = require("./routes/productsRoute");
 const imagesRoute = require("./routes/imagesRoute");
@@ -7,6 +8,12 @@ const ordersRoute = require("./routes/ordersRoute");
 const usersRoute = require("./routes/usersRoute");
 require("dotenv").config();
 const path = require("path");
+
+// Health includes database readiness, not just whether Express is listening.
+app.get("/health", (req, res) => {
+  const ready = mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({ status: ready ? "ok" : "unavailable" });
+});
 
 // setup middlewares
 app.use(express.json());
@@ -26,8 +33,7 @@ if (process.env.NODE_ENV === "production") {
       "build",
       "index.html"
     );
-    // res.sendFile(filePath);
-    res.json({ message: "testing production" });
+    res.sendFile(filePath);
   });
 }
 
@@ -35,6 +41,9 @@ if (process.env.NODE_ENV === "production") {
 const port = process.env.PORT || 5000;
 
 const startServer = async () => {
+  if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+    throw new Error("Missing required environment variable JWT_SECRET");
+  }
   await connectDB();
   return app.listen(port, () => console.log(`Listening on port ${port}`));
 };

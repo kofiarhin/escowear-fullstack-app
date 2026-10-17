@@ -6,7 +6,7 @@ const auth = (req, res, next) => {
     token = req.headers.authorization;
     token = token.split(" ")[1];
 
-    jwt.verify(token, "jwtsecret", async (error, payload) => {
+    jwt.verify(token, process.env.JWT_SECRET, async (error, payload) => {
       if (error) {
         return res.status(401).json({ error: "Unauthorized - invalid token" });
       } else {
