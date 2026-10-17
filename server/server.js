@@ -26,8 +26,7 @@ if (process.env.NODE_ENV === "production") {
       "build",
       "index.html"
     );
-    // res.sendFile(filePath);
-    res.json({ message: "testing production" });
+    res.sendFile(filePath);
   });
 }
 
