@@ -34,6 +34,9 @@ if (process.env.NODE_ENV === "production") {
 const port = process.env.PORT || 5000;
 
 const startServer = async () => {
+  if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+    throw new Error("Missing required environment variable JWT_SECRET");
+  }
   await connectDB();
   return app.listen(port, () => console.log(`Listening on port ${port}`));
 };
