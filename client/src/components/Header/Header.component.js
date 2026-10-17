@@ -52,7 +52,7 @@ const Header = ({ setShowSideNav }) => {
 
         <nav className="desktop-nav" aria-label="Primary navigation">
           <Link to="/">Home</Link>
-          <Link to="/store?category=shoes">Shop</Link>
+          <Link to="/store">Shop</Link>
           <Link to="/#latest-releases">New Releases</Link>
           <Link to="/#collections">Collections</Link>
           <Link to="/#about">About</Link>
