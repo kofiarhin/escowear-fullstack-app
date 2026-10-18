@@ -1,63 +1,58 @@
-# Escowear — Beast deployment checklist
+# Escowear — Beast production operations
 
-Updated preparation and approval-gated commands: [deploy/beast/README.md](deploy/beast/README.md).
-Results from this preparation: [deploy/beast/REPORT.md](deploy/beast/REPORT.md).
+**Live deployment reported and browser-checked October 2026.** This is an operations guide for an **existing** deployment, not an instruction to perform a fresh public launch.
 
-Target: `escowear.com` / `www.escowear.com`. This repository prepares the container **only**. No DNS, Nginx, certificate or VPS service change has been performed.
+- Public: https://escowear.com (primary) and https://www.escowear.com (redirect to primary, as reported by Codex)
+- VPS checkout: `/home/ubuntu/projects/escowear` (verify live)
+- GitHub repository: `kofiarhin/escowear-fullstack-app`, release code on `master`
+- Container: `escowear-web-1`, Compose project `escowear`
+- Release image at initial launch: `escowear:release-2026-10-17` (do not assume it is always current)
+- Private upstream: `127.0.0.1:5080` to container port `5000`
+- Web server: Beast host Nginx, HTTPS via Let's Encrypt/Certbot
+- DB: existing `escowear-sneaker-import-test`, not a newly provisioned MongoDB container
 
-## Matches Beast's existing architecture
+## Read-only status checks
 
-- One Docker Compose application, with a unique `escowear` project name.
-- Node/Express serves the built React website and same-origin `/api` routes.
-- Published only on `127.0.0.1:5080` by default. Existing host Nginx will proxy HTTPS to this address **after separately approved configuration**.
-- Does not start MongoDB or affect other Docker services, PM2 apps, or systemd units.
-- Existing MongoDB database: **`escowear-sneaker-import-test`** (configured target; public launch still requires approval); no migration, data copy or database creation.
-- Production requires `ESCOWEAR_MONGO_URI` and `JWT_SECRET`. Store them in a private, gitignored `.env` on Beast. Never print secrets or check them into Git.
-- Runtime limit: 512 MiB RAM, 1 CPU; verify capacity before the build, which needs more memory than runtime.
-
-## Read-only preflight on Beast
-
-Verify the registered Escowear workspace and repository identity first. Do not guess its absolute path or overwrite an existing checkout. In the verified repository directory, inspect the state:
+First verify the current checkout and remote. Do not discard local changes.
 
 ```bash
+cd /home/ubuntu/projects/escowear
 git status --short
+git branch --show-current
 git config --get remote.origin.url
 git rev-parse --short HEAD
-sudo docker --version
-sudo docker compose version
-sudo docker ps --format 'table {{.Names}}\t{{.Ports}}'
-ss -ltn | grep ':5080 ' || true
-free -h
-df -h /
-```
-
-Stop if Git has unrelated changes, if the origin is not `kofiarhin/escowear-fullstack-app`, or if port 5080 is in use. Beast currently uses `sudo docker`; do not alter Docker group membership.
-
-## Local-only verification (no public traffic)
-
-After confirming port/resource availability, create the private `.env` securely, containing `ESCOWEAR_MONGO_URI` (existing DB) and `JWT_SECRET` (strong random value). Do not paste secret values in chat or Linear.
-
-```bash
-chmod 600 .env
-sudo docker compose config --quiet
-sudo docker compose build
-```
-
-Building an image does not start the service. Both build stages now use `npm ci` and committed lockfiles. TypeScript is pinned to 4.9.5 to match React Scripts 5 tooling. The frontend validation target now passes all four frontend tests.
-
-## Starting the service — requires separate production approval
-
-```bash
-sudo docker compose up -d --no-build
-sudo docker compose ps
+sudo docker compose -f compose.yaml -f deploy/beast/compose.release.yaml ps
+sudo docker ps --filter name=escowear --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 curl -fsS http://127.0.0.1:5080/health
-curl -fsS http://127.0.0.1:5080/api/products?page=1\&limit=1
+sudo nginx -t
 ```
 
-Do **not** run these production startup commands before approval and a live check of other services.
+External checks (avoid creating test customers/orders on production):
 
-## Public launch — separate approval
+```bash
+curl -fsSI https://escowear.com/
+curl -fsS https://escowear.com/health
+curl -fsSI https://www.escowear.com/
+```
 
-Review Namecheap A/AAAA records, Beast's existing Nginx sites and Certbot pattern, then request permission for any DNS, Nginx, HTTPS or public launch changes. Reverse proxy `escowear.com` to `http://127.0.0.1:5080`; redirect `www.escowear.com` to apex. Never publish port 5080 publicly.
+A successful health endpoint confirms that the backend currently sees its MongoDB connection as ready; verify catalogue behavior separately. Inspect logs without dumping environment variables:
 
-Verify HTTPS, homepage, catalogue, product images, auth, and order flows. Retain the previous image/commit and MongoDB backup before release. After permanent VPS changes, reconcile the canonical Beast profile and Linear issue.
+```bash
+sudo docker logs --tail 100 escowear-web-1
+```
+
+## Deployment and rollback rules
+
+Any future application release needs a reviewed Git commit, a versioned/tested image, and **separate approval** before changing the running container or host Nginx/DNS/HTTPS. Never automatically run `docker compose up -d --build` against production. Use the existing [release overlay and instructions](deploy/beast/README.md) as a reference, but re-check the actual live image, ports, disk, Compose config, and Nginx site first.
+
+For rollback, preserve the previously tested image identifier and deployment configuration. Roll back only the Escowear Compose service and its Nginx site after approval; never restart unrelated services, prune shared images/volumes, or overwrite MongoDB.
+
+## Launch verification and known limits
+
+At launch, Codex reported: Docker health green; read-only MongoDB smoke with 3,258 products; frontend tests 4/4; backend tests 6/6; isolated auth/order smoke passed; public HTTPS homepage, product API, image and health endpoint successful; `www` operational; Certbot renewal dry-run successful. Owner browser screenshots independently confirmed homepage and `/store` sneaker images, GBP prices and sizes. See [the preparation report](deploy/beast/REPORT.md) for pre-launch findings, which are historical and should not be treated as today's state.
+
+**Outstanding:** independently verify product details, account and checkout flow, resource monitoring, and a recoverable database backup. Owner accepted launch without a verified MongoDB backup. Credentials were rotated by the owner before deployment. Do not store credentials in logs, docs or issues.
+
+## Infrastructure reconciliation
+
+A permanent Nginx site/container was added to Beast. Reconcile the canonical `kofiarhin/beast/VPS-Beast-AI-Agent-Profile.md` using the **existing** profile updater and live VPS evidence; do not reconstruct or manually override runtime facts. Record state and verification in Linear issue **IDE-112**.
