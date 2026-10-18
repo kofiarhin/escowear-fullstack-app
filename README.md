@@ -1,69 +1,117 @@
-# EscoWear---FullStack-App
+# Escowear
 
-# A simple Fullstack application using Express Js for backend and React Js for Frontend
+**Live MVP:** https://escowear.com  
+**Shop:** https://escowear.com/store
 
-# [Live Demo](https://calm-peak-91849.herokuapp.com/)
+Escowear is a UK-to-Ghana sneaker storefront built with **React**, **Express/Node.js** and **MongoDB**. Shoppers can browse, search and view sneaker details. The public site is deployed on the **Beast VPS** using Docker Compose, with host Nginx and Let's Encrypt HTTPS.
 
-## Banging Prices sneaker importer
+## Current state (October 2026)
 
-The importer reads sneaker products from Banging Prices and prepares insert-only
-Escowear product documents. It requires these variables in the root `.env`:
+- The owner verified the HTTPS homepage and shop in a browser. The shop displayed sneaker images, GBP prices and available sizes.
+- Beast's Codex deployment report confirmed a healthy `escowear-web-1` container, working product API/images/health checks, and successful HTTPS configuration for `escowear.com` and `www.escowear.com`.
+- The application connects to the existing MongoDB database `escowear-sneaker-import-test`. At launch, read-only checks found **3,258 products**.
+- Automated checks reported **4 frontend tests** and **6 backend tests** passing. Auth/order behavior passed **isolated in-memory tests**, not real customer checkout testing.
+- **Still to verify in-browser:** individual product detail pages, registration/login, cart, and complete order/checkout journey. A database backup was intentionally deferred for this MVP.
 
-- `BANGING_PRICES_MONGO_URI` must select the `price_pulse_test` database.
-- `ESCOWEAR_MONGO_URI` must select the `escowear-sneaker-import-test` database.
+These are recorded deployment observations, not a guarantee of current service availability.
 
-URI values and credentials are never printed. The importer rejects unexpected
-database names before reading product collections.
+## Project structure
 
-Run the required read-only preview from PowerShell:
+| Path | Purpose |
+| --- | --- |
+| `client/` | React storefront |
+| `server/` | Express API, models, database connection and importer |
+| `Dockerfile` | Multi-stage production container and frontend test stage |
+| `compose.yaml` | Escowear Compose service, resource limits and localhost port |
+| `deploy/beast/` | Release overlay, Nginx templates, smoke tests, operations guide and reports |
+| `DEPLOY-BEAST.md` | Short production operations checklist |
 
-```powershell
-npm.cmd run import:sneakers -- --dry-run
+## Local development
+
+Requires Node.js, npm and a MongoDB URI selecting `escowear-sneaker-import-test`.
+
+```bash
+npm ci
+npm ci --prefix client
 ```
 
-The preview checks both connections, reports sneaker and duplicate counts, and
-does not create collections or indexes. Do not run the write mode until the
-dry-run output has been reviewed and import approval has been given.
+Create a private **root** `.env` (never commit it):
 
-After explicit approval, the insert-only mode is:
-
-```powershell
-npm.cmd run import:sneakers -- --execute
+```dotenv
+ESCOWEAR_MONGO_URI=<private MongoDB URI ending in /escowear-sneaker-import-test>
+JWT_SECRET=<strong random secret>
+PORT=5000
+NODE_ENV=development
 ```
 
-The write mode creates a unique source-identity index and inserts only products
-whose Banging Prices canonical keys are not already present. It does not update
-or delete existing Escowear products.
+`JWT_SECRET` is required in production. The database connection refuses to use a database with a different name.
 
-Run the focused importer tests with:
+Run the backend and frontend development servers:
 
-```powershell
-npm.cmd run test:importer
+```bash
+npm run dev
 ```
 
-## Product API and local test database
+React development server: `http://localhost:3000`; backend: `http://localhost:5000`.
 
-The Express application reads products from the MongoDB database selected by
-`ESCOWEAR_MONGO_URI`. For local sneaker integration, that URI must select
-`escowear-sneaker-import-test`; the server refuses to start with any other
-database name and never prints the URI or credentials.
+### Tests
 
-Start the API and React application with:
-
-```powershell
-npm.cmd run dev
+```bash
+npm run test:server
+CI=true npm test --prefix client -- --watchAll=false
 ```
 
-Available product endpoints:
+For Windows PowerShell, set `$env:CI='true'` before the frontend command.
 
-- `GET /api/products?page=1&limit=24` returns a paginated product envelope.
-- `GET /api/products?category=shoes` filters by exact product category.
-- `GET /api/products?search=nike` searches names, brands, retailers, and source categories.
-- `GET /api/products/:id` returns one product or a `404` response.
+## Product API
 
-Run the focused backend and frontend tests with:
+- `GET /health` — application/database readiness
+- `GET /api/products?page=1&limit=24` — paginated product catalogue
+- `GET /api/products?search=nike` — search sneaker name, brand and related fields
+- `GET /api/products?category=trainers` — category filter (the stored category must match)
+- `GET /api/products/:id` — one product
 
-```powershell
-npm.cmd run test:server
-$env:CI='true'; npm.cmd test --prefix client -- --watchAll=false
+Shop navigation uses `/store`, without a hard-coded `category=shoes` filter. The storefront normalizes legacy `category=shoes` links so the catalogue still appears.
+
+## Deployment on Beast
+
+The deployed setup is:
+
+```text
+escowear.com / www.escowear.com
+        -> Namecheap DNS
+        -> Beast host Nginx + Let's Encrypt HTTPS
+        -> Docker Compose service escowear-web-1
+        -> 127.0.0.1:5080 (Express serves React and /api)
+        -> MongoDB: escowear-sneaker-import-test
 ```
+
+Runtime Compose limits: **512 MiB RAM**, **1 CPU**, **128 processes**. The application port is bound to localhost, not exposed publicly. Other Beast applications have independent services.
+
+**Do not redeploy simply because documentation changes.** For safe checks, release procedures, rollback and evidence, read [DEPLOY-BEAST.md](DEPLOY-BEAST.md), [Beast operations guide](deploy/beast/README.md), and [initial preparation report](deploy/beast/REPORT.md).
+
+### Production safety
+
+Keep `.env` private (mode `600` on Beast). Never commit or paste MongoDB credentials or JWT secrets. Verify database connectivity and the running image before making changes. Production Nginx, DNS, Docker startup, certificates, and database writes require owner approval. **A MongoDB backup/recovery plan was not verified at MVP launch** and remains a risk to address.
+
+## Sneaker importer (separate, approval-gated workflow)
+
+The importer reads sneakers from Banging Prices and prepares insert-only documents. It needs both:
+
+- `BANGING_PRICES_MONGO_URI` selecting `price_pulse_test`;
+- `ESCOWEAR_MONGO_URI` selecting `escowear-sneaker-import-test`.
+
+Always preview first:
+
+```bash
+npm run import:sneakers -- --dry-run
+npm run test:importer
+```
+
+Only after reviewing the preview and obtaining explicit data-write approval:
+
+```bash
+npm run import:sneakers -- --execute
+```
+
+The importer inserts only unseen canonical product keys; it does not update or delete existing products. Never run it as part of routine deployment.
