@@ -1,70 +1,35 @@
-# Getting Started with Create React App
+# Escowear React storefront
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The frontend for [Escowear](https://escowear.com), a UK-to-Ghana sneaker-store MVP.
 
-## Available Scripts
+The React app is in `client/`; the Express API is in `../server/`. In development the React server proxies API requests to `http://localhost:5000`. In production, Express serves the compiled React app and API from the same origin behind the Beast VPS's Nginx and HTTPS.
 
-In the project directory, you can run:
+## Run locally
 
-### `yarn start`
+From the repository root:
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```bash
+npm ci
+npm ci --prefix client
+npm run dev
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Then open `http://localhost:3000`. The API requires a private root `.env` with `ESCOWEAR_MONGO_URI` selecting `escowear-sneaker-import-test`. See [the root README](../README.md).
 
-### `yarn test`
+## Verify
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```bash
+CI=true npm test --prefix client -- --watchAll=false
+npm run build --prefix client
+```
 
-### `yarn build`
+The frontend test suite had four passing tests during Beast deployment preparation in October 2026. That does not replace live browser checkout verification.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Routes and behaviour
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- `/`: UK-to-Ghana sneakers homepage.
+- `/store`: paginated catalogue with search and product cards.
+- `/details/:id`: individual product detail route.
+- Account, cart and other store views use React Router; these need full live buyer-flow testing.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `yarn eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `yarn build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+The public catalogue was observed showing sneaker images, available sizes and prices in GBP. For deployment, see [Beast operations guide](../deploy/beast/README.md). Do not modify the production application just to update frontend documentation.
