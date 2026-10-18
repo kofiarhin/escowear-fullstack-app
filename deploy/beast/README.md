@@ -1,63 +1,65 @@
-# Beast deployment preparation
+# Escowear on Beast — operating guide
 
-Nothing in this directory is installed automatically. Public launch, production
-container startup, DNS edits, certificate issuance and Nginx changes require the
-owner's explicit approval.
+**Current phase: live MVP (October 2026).** The steps below distinguish what was completed at launch from what would require a **new approval** for later releases.
 
-## Prepared files
+## Deployment architecture
 
-- `compose.release.yaml`: overlay selecting the tested local image; run with the root `compose.yaml`.
-- `escowear.http.conf`: certificate bootstrap vhost, serving only ACME challenges and otherwise HTTP 503.
-- `escowear.https.conf`: apex HTTPS proxy to localhost:5080 and www redirect.
-- `smoke.cjs`: read-only database/application smoke test, run inside a disposable container without published ports.
-
-## Safe verification
-
-From `/home/ubuntu/projects/escowear`:
-
-```sh
-sudo docker build -t escowear:release-2026-10-17 .
-# The separate validation target runs all frontend tests before returning success.
-sudo docker build --target frontend-test -t escowear:frontend-test .
-sudo docker run --rm --network none --memory 512m --cpus 1 --pids-limit 128 escowear:release-2026-10-17 npm run test:server
-sudo docker run --rm --memory 512m --cpus 1 --pids-limit 128 --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges --read-only --mount type=bind,src="$PWD/.env",dst=/run/escowear.env,readonly --mount type=bind,src="$PWD/deploy/beast/smoke.cjs",dst=/tmp/smoke.cjs,readonly escowear:release-2026-10-17 node /tmp/smoke.cjs
-sudo docker run --rm --network none --memory 512m --cpus 1 --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges --read-only --mount type=bind,src="$PWD/deploy/beast/auth-orders-smoke.cjs",dst=/tmp/auth-orders-smoke.cjs,readonly escowear:release-2026-10-17 node /tmp/auth-orders-smoke.cjs
+```text
+Namecheap DNS: @ -> 51.68.196.59, www -> escowear.com
+      Beast host Nginx / Let's Encrypt HTTPS
+                   |
+              127.0.0.1:5080
+                   |
+       Compose: escowear-web-1
+          Express + built React
+                   |
+   MongoDB: escowear-sneaker-import-test
 ```
 
-The smoke container runs with the workspace owner UID to read the owner-only
-secret file, drops all capabilities, has a read-only filesystem, and exposes no host port. It uses
-a temporary JWT key and never prints credentials or database records. It uses
-the application's DB connection guard and disables automatic index/collection
-creation. Registration/order writes are deliberately outside this test.
+`compose.yaml` sets a 512 MiB RAM / 1 CPU / 128 PID limit and localhost-only publishing. `compose.release.yaml` selects the **initial release** image tag `escowear:release-2026-10-17`; that tag is historical, not a moving latest release. The live image digest and currently deployed revision should be checked before changes. Beast's other services are separate and must not be affected.
 
-The auth/orders smoke test does not connect to MongoDB. It injects in-memory
-test models, uses a random test JWT secret, and discards all test data when the
-container exits. It covers registration, login/JWT issuance, authenticated empty
-orders, order creation, order retrieval, and confirms registration does not
-return a password hash.
+## Files in this folder
 
-## Approval-gated launch sequence
+- `compose.release.yaml`: fixed-image overlay for the initial Beast release.
+- `escowear.http.conf`: temporary HTTP/ACME site template used before HTTPS was issued.
+- `escowear.https.conf`: HTTPS proxy and www redirect template; **verify installed Nginx files against live configuration before reusing**.
+- `smoke.cjs`: read-only MongoDB / storefront smoke tests.
+- `auth-orders-smoke.cjs`: isolated in-memory authentication and order tests, **not** a live checkout test.
+- `REPORT.md`: original preparation evidence (2026-10-17); it deliberately preserves the state **before** launch.
 
-1. A strong random persistent `JWT_SECRET` has been created in the gitignored mode-600 `.env`. Preserve it securely; never print or paste the value. Use only the Escowear DB URI in runtime configuration; do not forward the importer source URI. Confirm backup/recovery arrangements for the existing database.
-2. Recheck memory, disk, localhost port 5080 and existing service health. Preserve the tested image ID and git commit. Validate the fixed release image and Compose configuration with `sudo docker compose -f compose.yaml -f deploy/beast/compose.release.yaml config --quiet` (never print expanded config).
-3. After explicit production-start approval, run `sudo docker compose -f compose.yaml -f deploy/beast/compose.release.yaml up -d --no-build --pull never`. Verify localhost health/catalogue before public routing. No MongoDB service or shared Docker network is required.
-4. After DNS approval, point apex and www to Beast's verified public address. Remove conflicting A/AAAA/CNAME/forwarding records as appropriate. Do not guess IPv6. Check both names resolve correctly externally.
-5. After Nginx/HTTPS approval, ensure neither name is configured elsewhere; back up current Nginx configuration. Create `/var/www/escowear-acme`, install the HTTP template as a new site and enable only that site. Run `sudo nginx -t` before a graceful reload; never replace the main configuration or another application's vhost.
-6. Issue a certificate using `sudo certbot certonly --webroot -w /var/www/escowear-acme -d escowear.com -d www.escowear.com`. This scoped webroot method avoids automatic edits to other vhosts. Existing sites use Certbot's Nginx plugin; verify a deploy hook reloads Nginx after successful renewals for this webroot certificate.
-7. Install the HTTPS template only after certificate issuance. Test Nginx, then reload. Verify HTTPS certificate names, www redirect, homepage, catalogue, product images and authorized auth/order flows. Test certificate renewal with `sudo certbot renew --cert-name escowear.com --dry-run`.
-8. Check all pre-existing sites and containers still operate. Record the deployment in the host's operational inventory.
+## Verify the running site (read-only)
 
-Rollback: remove only the new Escowear enabled-site link, validate and reload
-Nginx, then stop only the Escowear Compose project. Restore DNS only if changed
-for this release. Do not prune Docker, remove shared volumes, or modify MongoDB.
-For subsequent releases retain a previous immutable image tag and roll back to
-it; this first launch has no previous Escowear production deployment.
+```bash
+cd /home/ubuntu/projects/escowear
+git status --short
+sudo docker compose -f compose.yaml -f deploy/beast/compose.release.yaml ps
+curl -fsS http://127.0.0.1:5080/health
+curl -fsSI https://escowear.com/
+sudo nginx -t
+```
 
-## Validation limits
+Use `sudo docker` on Beast. Inspect current container name, image, and release settings before assuming they match this document. The public site and product catalogue were browser-checked in October 2026; run current checks for live health.
 
-The isolated Nginx syntax checks use a temporary self-signed certificate, not a
-real domain certificate. They do not establish DNS, ACME or public TLS readiness.
-The frontend lockfile now fixes dependency versions and TypeScript 4.9.5
-resolves the observed build failure. A successful image build is not a
-dependency/security audit or a load test. Backend runtime uses the existing Node 20 base; runtime lifecycle and
-dependency upgrades should be reviewed before launch.
+## Subsequent deployments (approval required)
+
+1. Confirm clean Git state, intended commit and repository identity; keep unrelated work.
+2. Review code, tests, locked dependencies, build and image tag; retain the previous working image for rollback.
+3. Check free disk/memory, container health and occupied ports. Do **not** prune Docker caches/volumes or restart other apps.
+4. Confirm private root `.env` remains mode 600, with the required `ESCOWEAR_MONGO_URI` and `JWT_SECRET`. Never show or copy values into logs or issues.
+5. After owner approves **deployment separately from code changes**, update only Escowear's Compose service using a reviewed fixed image reference. Validate `docker compose ... config --quiet` before applying changes.
+6. Check localhost `/health`, catalogue, product images, public HTTPS, `www` redirect and existing Beast sites; record results.
+7. For Nginx, certificates, DNS, domain or port changes, request **new explicit approval**. Run `nginx -t` before any approved reload. Certbot renewal is managed by Beast's host configuration; check live renewal status rather than assuming it works indefinitely.
+
+Do not use the initial launch instructions to overwrite the current host virtual host or reissue an existing certificate.
+
+## Rollback
+
+On a failed application release, first inspect symptoms and preserve logs. With approval, restore the last verified Escowear image/configuration and validate its health. Touch only the Escowear container and vhost; do not change shared Docker services, PM2, firewall, MongoDB or other applications.
+
+## Verified launch evidence vs. outstanding checks
+
+**Reported by Codex:** Escowear container healthy on localhost 5080; read-only DB/product checks for 3,258 records; Nginx and two-domain HTTPS configured; certificate renewal dry-run passed; existing Beast apps stayed healthy. **Confirmed by owner's browser screenshots:** HTTPS homepage and store catalogue display sneaker photos, GBP prices and sizes.
+
+**Not yet end-to-end verified:** product details in browser, real registration/login, cart/order or payment flows. The MVP was launched without a verified MongoDB backup by owner decision; backup/recovery remains outstanding. Dependence on older Node/React packages and limited shared VPS disk are maintenance concerns.
+
+After permanent VPS changes, run and verify Beast's established profile reconciliation workflow and update the Linear execution record.
