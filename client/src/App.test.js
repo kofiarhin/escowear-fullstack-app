@@ -148,7 +148,14 @@ test("renders imported product details and preserves cart navigation", async () 
     "https://example.test/products/nike-air-max-dn8"
   );
 
+  await userEvent.click(screen.getByRole("button", { name: "UK 8" }));
   await userEvent.click(screen.getByRole("button", { name: /add to cart/i }));
   expect(window.location.pathname).toBe("/cart");
-  expect(JSON.parse(sessionStorage.getItem("cartData"))).toHaveLength(1);
+  expect(JSON.parse(localStorage.getItem("escowear-cart-v1"))).toEqual([
+    expect.objectContaining({
+      productId: "product-1",
+      size: "UK 8",
+      quantity: 1,
+    }),
+  ]);
 });
