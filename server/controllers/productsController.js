@@ -34,6 +34,7 @@ const buildProductFilter = ({ search, category }) => {
     clauses.push({
       $or: [
         { name: expression },
+        { title: expression },
         { brand: expression },
         { "retailer.name": expression },
         { "source.category": expression },
@@ -44,6 +45,13 @@ const buildProductFilter = ({ search, category }) => {
   if (clauses.length === 0) return {};
   if (clauses.length === 1) return clauses[0];
   return { $and: clauses };
+};
+
+// Existing catalogue documents may use title; normalize responses without writes.
+const withProductName = (product) => {
+  if (typeof product.name === "string" && product.name.trim()) return product;
+  if (typeof product.title !== "string" || !product.title.trim()) return product;
+  return { ...product, name: product.title };
 };
 
 const createProductsController = (ProductModel) => {
@@ -61,7 +69,7 @@ const createProductsController = (ProductModel) => {
       ]);
 
       return res.status(200).json({
-        items,
+        items: items.map(withProductName),
         pagination: {
           total,
           page,
@@ -82,7 +90,7 @@ const createProductsController = (ProductModel) => {
         return res.status(404).json({ error: "Product not found" });
       }
 
-      return res.status(200).json(product);
+      return res.status(200).json(withProductName(product));
     } catch (error) {
       if (error?.name === "CastError") {
         return res.status(400).json({ error: "Invalid product id" });

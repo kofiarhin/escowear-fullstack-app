@@ -32,7 +32,8 @@ test("buildProductFilter escapes search input and matches category exactly", () 
   assert.equal(filter.$and[0].category.flags, "i");
 
   const searchFilters = filter.$and[1].$or;
-  assert.equal(searchFilters.length, 4);
+  assert.equal(searchFilters.length, 5);
+  assert.ok(searchFilters.some((entry) => Object.hasOwn(entry, "title")));
   searchFilters.forEach((entry) => {
     const regex = Object.values(entry)[0];
     assert.equal(regex.source, "Air Max\\.\\*");
@@ -84,4 +85,33 @@ test("getProducts returns a paginated response", async () => {
     items: [{ _id: "product-1", name: "Air Max Dn8" }],
     pagination: { total: 25, page: 2, limit: 12, pages: 3 },
   });
+});
+
+test("catalogue exposes legacy titles as names without changing stored products", async () => {
+  const legacy = { _id: "legacy-1", title: "ASICS GEL-KAYANO 14 Women's", price: 165 };
+  const named = { _id: "named-1", name: "Canonical name", title: "Old title" };
+  const query = { sort() { return this; }, skip() { return this; }, limit() { return this; }, lean: async () => [legacy, named] };
+  const { getProducts } = createProductsController({ find: () => query, countDocuments: async () => 2 });
+  let body;
+  const res = { status(code) { assert.equal(code, 200); return this; }, json(value) { body = value; } };
+  await getProducts({ query: {} }, res);
+  assert.equal(body.items[0].name, legacy.title);
+  assert.equal(body.items[1].name, named.name);
+  assert.equal(Object.hasOwn(legacy, "name"), false);
+});
+
+test("product details normalize legacy titles and preserve canonical names", async () => {
+  for (const product of [
+    { _id: "legacy-1", title: "Nike Air Force 1 Low Women's", price: 120 },
+    { _id: "blank-1", name: "  ", title: "Legacy sneaker" },
+    { _id: "named-1", name: "Canonical name", title: "Old title" },
+  ]) {
+    const before = { ...product };
+    const { getProduct } = createProductsController({ findById: () => ({ lean: async () => product }) });
+    let body;
+    const res = { status(code) { assert.equal(code, 200); return this; }, json(value) { body = value; } };
+    await getProduct({ params: { id: product._id } }, res);
+    assert.equal(body.name, product.name?.trim() ? product.name : product.title);
+    assert.deepEqual(product, before);
+  }
 });

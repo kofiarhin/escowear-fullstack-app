@@ -20,6 +20,8 @@ const sourceSchema = new mongoose.Schema(
 
 const productSchema = new mongoose.Schema(
   {
+    // Legacy imported documents retain title; no migration is required.
+    title: String,
     name: {
       type: String,
       required: true,
