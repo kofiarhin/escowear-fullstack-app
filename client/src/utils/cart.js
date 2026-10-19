@@ -9,7 +9,7 @@ export const readCart = () => {
 };
 export const saveCart = items => localStorage.setItem(CART_KEY, JSON.stringify(items));
 export const addCartItem = (items, product, size, quantity) => {
-  if (!product?._id || !size || !Array.isArray(product.sizes) || !product.sizes.map(String).includes(size) || product.inStock === false || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY || !Number.isFinite(Number(product.price)) || Number(product.price) < 0 || (product.currency && product.currency !== "GBP")) return items;
+  if (!product?._id || !size || !Array.isArray(product.sizes) || !product.sizes.map(value => { const label = String(value).trim(); return /^UK\b/i.test(label) ? label : `UK ${label}`; }).includes(size) || product.inStock === false || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY || !Number.isFinite(Number(product.price)) || Number(product.price) < 0 || (product.currency && product.currency !== "GBP")) return items;
   const key = String(product._id);
   const existing = items.find(item => item.productId === key && item.size === size);
   if (existing) return items.map(item => item === existing ? { ...item, quantity: Math.min(MAX_QUANTITY, item.quantity + quantity) } : item);
