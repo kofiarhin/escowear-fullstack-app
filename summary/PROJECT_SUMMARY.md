@@ -2,15 +2,16 @@
 
 ## Last Task
 
-Created the local environment placeholder configuration.
+Fixed the IDE-113 app-level cart test for required size selection and localStorage persistence.
 
 ## Progress
 
-- Added the ignored root `.env` with placeholders for both MongoDB connections.
-- Included the optional local port and development-mode defaults.
-- API startup remains blocked until the placeholder connection details are replaced privately.
+- Updated the cart navigation test to select `UK 8` and assert the versioned localStorage cart.
+- Client tests and production build pass; local browser checks verified cart selection, quantities, merge, persistence, removal, and GBP subtotals.
 
 ## Files
 
-- `.env` (ignored, local only)
-- `summary/PROJECT_SUMMARY.md`
+- `client/src/App.test.js`
+- `client/src/utils/cart.js`
+- `client/src/Pages/Details/Details.page.js`
+- `client/src/Pages/Cart/Cart.page.js`

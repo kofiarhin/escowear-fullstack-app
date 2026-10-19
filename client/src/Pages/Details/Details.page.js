@@ -9,12 +9,15 @@ import {
   useFallbackProductImage,
 } from "../../utils/product";
 import "./details.styles.css";
+import { addCartItem, readCart, saveCart, MAX_CART_QUANTITY } from "../../utils/cart";
 
 const Details = () => {
   const [product, setProduct] = useState(null);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [quantity, setQuantity] = useState(1);
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -33,6 +36,8 @@ const Details = () => {
       })
       .then((data) => {
         setProduct(data);
+        setSelectedSize("");
+        setQuantity(1);
         setSelectedImage(getProductImage(data));
         setStatus("success");
       })
@@ -51,9 +56,9 @@ const Details = () => {
   }, [product]);
 
   const addToCart = () => {
-    const storedCart = sessionStorage.getItem("cartData");
-    const cartData = storedCart ? JSON.parse(storedCart) : [];
-    sessionStorage.setItem("cartData", JSON.stringify([product, ...cartData]));
+    if (!selectedSize) return;
+    const updated = addCartItem(readCart(), product, selectedSize, quantity);
+    saveCart(updated);
     navigate("/cart");
   };
 
@@ -131,18 +136,20 @@ const Details = () => {
             </div>
             {sizes.length ? (
               <ul>
-                {sizes.map((size) => <li key={size}>{size}</li>)}
+                {sizes.map((size) => <li key={size}><button type="button" aria-pressed={selectedSize === size} onClick={() => setSelectedSize(size)}>{size}</button></li>)}
               </ul>
             ) : (
               <p>Size information is unavailable for this product.</p>
             )}
           </div>
 
+          <label htmlFor="details-quantity">Quantity</label>
+          <input id="details-quantity" type="number" min="1" max={MAX_CART_QUANTITY} value={quantity} onChange={event => setQuantity(Number(event.target.value))} />
           <button
             className="details-cart-button"
             type="button"
             onClick={addToCart}
-            disabled={product.inStock === false}
+            disabled={product.inStock === false || !selectedSize || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_CART_QUANTITY}
           >
             {product.inStock === false ? "Currently unavailable" : "Add to cart"}
           </button>
