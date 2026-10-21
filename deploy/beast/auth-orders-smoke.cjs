@@ -1,5 +1,7 @@
 // Exercises registration, login, and orders with in-memory test models only.
 // It never connects to MongoDB and cannot modify customer data.
+// Orders use the guest-checkout contract (IDE-114): server-priced items and an
+// Idempotency-Key header; the legacy raw-product POST is no longer accepted.
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const express = require("/app/node_modules/express");
@@ -9,13 +11,11 @@ const jwt = require("/app/node_modules/jsonwebtoken");
 process.env.JWT_SECRET = crypto.randomBytes(32).toString("hex");
 
 const users = new Map();
-const orders = [];
 let nextUserId = 1;
-let nextOrderId = 1;
 
 class TestUser {
   constructor(data) {
-    this._id = `test-user-${nextUserId++}`;
+    this._id = (nextUserId++).toString(16).padStart(24, "0");
     this.name = data.name;
     this.email = String(data.email).toLowerCase();
     this.password = data.password;
@@ -43,26 +43,8 @@ class TestUser {
 
   static async findOne(query) {
     if (query.email) return users.get(String(query.email).toLowerCase()) || null;
-    if (query._id) return [...users.values()].find((user) => user._id === query._id) || null;
+    if (query._id) return [...users.values()].find((user) => user._id === String(query._id)) || null;
     return null;
-  }
-}
-
-class TestOrder {
-  constructor(data) {
-    this._id = `test-order-${nextOrderId++}`;
-    this.user = data.user;
-    this.products = data.products;
-    this.status = "Pending";
-  }
-
-  async save() {
-    orders.push(this);
-    return this;
-  }
-
-  static async find(query) {
-    return orders.filter((order) => order.user === query.user);
   }
 }
 
@@ -77,10 +59,23 @@ const replaceModule = (path, exports) => {
 };
 
 replaceModule("/app/server/Models/User.model", TestUser);
-replaceModule("/app/server/Models/Order.model", TestOrder);
 
 const usersRoutes = require("/app/server/routes/usersRoute");
-const ordersRoutes = require("/app/server/routes/ordersRoute");
+const { Types } = require("/app/node_modules/mongoose");
+const { createMemoryModel } = require("/app/server/tests/helpers/memoryModel");
+const { createOrdersRouter } = require("/app/server/routes/ordersRoute");
+const { getOrderConfig } = require("/app/server/config/orders");
+
+const orderModels = {
+  Order: createMemoryModel({ uniques: ["orderNumber", "idempotencyKeyHash"] }),
+  OrderEvent: createMemoryModel(),
+  EmailOutbox: createMemoryModel({ uniques: ["dedupeKey"] }),
+  Product: createMemoryModel(),
+  User: TestUser,
+};
+const productId = new Types.ObjectId();
+orderModels.Product.docs.push({ _id: productId, name: "Smoke sneaker", price: 99, currency: "GBP", sizes: ["9"], inStock: true, status: "active" });
+const ordersRoutes = createOrdersRouter({ models: orderModels, config: getOrderConfig({}) });
 const app = express();
 app.use(express.json());
 app.use("/api/users", usersRoutes);
@@ -118,22 +113,30 @@ let server;
   const authorization = { authorization: `Bearer ${credentials.token}` };
   const before = await fetch(`${base}/api/orders`, { headers: authorization });
   assert.equal(before.status, 200);
-  assert.deepEqual(await before.json(), []);
+  assert.deepEqual((await before.json()).items, []);
   console.log("PASS authenticated empty orders");
 
   const create = await fetch(`${base}/api/orders`, {
     method: "POST",
-    headers: { ...authorization, "content-type": "application/json" },
-    body: JSON.stringify([{ productId: "507f1f77bcf86cd799439011", size: "9", name: "Smoke sneaker", price: 99 }]),
+    headers: { ...authorization, "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
+    body: JSON.stringify({
+      customer: { name: "Escowear Smoke Test", email, phone: "0241234567" },
+      shippingAddress: { line1: "1 Smoke Test Street", city: "Accra", region: "Greater Accra" },
+      items: [{ productId: String(productId), size: "UK 9", quantity: 1, price: 0.01 }],
+      termsAccepted: true,
+      termsVersion: "smoke",
+    }),
   });
   assert.equal(create.status, 201);
-  console.log("PASS order creation");
+  assert.equal((await create.json()).status, "pending_contact");
+  console.log("PASS server-priced order creation");
 
   const after = await fetch(`${base}/api/orders`, { headers: authorization });
   assert.equal(after.status, 200);
   const createdOrders = await after.json();
-  assert.equal(createdOrders.length, 1);
-  assert.equal(createdOrders[0].products[0].productId, "507f1f77bcf86cd799439011");
+  assert.equal(createdOrders.items.length, 1);
+  assert.equal(createdOrders.items[0].items[0].productId, String(productId));
+  assert.equal(createdOrders.items[0].pricing.subtotalGBPMinor, 9900);
   console.log("PASS authenticated order retrieval");
 })()
   .catch((error) => {

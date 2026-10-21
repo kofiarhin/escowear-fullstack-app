@@ -9,7 +9,10 @@ const createToken = (id) => {
 // @router /api/users/register
 // @access public
 const createUser = async (req, res) => {
-  const user = new User(req.body);
+  // Only these fields are accepted; role and other privileged fields never come
+  // from public input.
+  const { name, email, password } = req.body || {};
+  const user = new User({ name, email, password });
 
   try {
     await user.save();

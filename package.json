@@ -11,8 +11,9 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "import:sneakers": "node server/scripts/importBangingPricesSneakers.js",
     "test:importer": "node --test server/tests/bangingPricesSneakers.test.js",
-    "test:server": "node --test server/tests/bangingPricesSneakers.test.js server/tests/productsController.test.js",
-    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client"
+    "test:server": "node --test server/tests/*.test.js",
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client",
+    "db:ensure-order-indexes": "node server/scripts/ensureOrderIndexes.js"
   },
   "keywords": [],
   "author": "",
