@@ -47,8 +47,10 @@ const loginUser = async (req, res) => {
   try {
     const user = await User.findOne({ email: email.trim().toLowerCase() });
 
+    // One message for unknown email and wrong password, so the login form
+    // cannot be used to discover which accounts (including admins) exist.
     if (!user) {
-      return res.status(400).json({ error: "user not found" });
+      return res.status(400).json({ error: "Invalid email or password" });
     } else {
       const auth = await bcrypt.compare(password, user.password);
 
@@ -59,11 +61,11 @@ const loginUser = async (req, res) => {
           .status(200)
           .json({ id: _id, email, name, role: user.role || "customer", token: createToken(_id) });
       } else {
-        return res.status(400).json({ error: "invaild email/password xxxx" });
+        return res.status(400).json({ error: "Invalid email or password" });
       }
     }
   } catch (error) {
-    return res.status(400).json({ error: "user not found" });
+    return res.status(400).json({ error: "Invalid email or password" });
   }
 };
 

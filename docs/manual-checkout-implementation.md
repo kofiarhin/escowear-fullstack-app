@@ -92,8 +92,8 @@ Order status and payment status are tracked separately (`payment.status`: `not_r
 | pending_contact | awaiting_customer, awaiting_payment, cancelled |
 | awaiting_customer | awaiting_payment, cancelled |
 | awaiting_payment | awaiting_payment (re-quote), awaiting_customer, payment_review, payment_issue, confirmed, cancelled |
-| payment_review | payment_issue, confirmed |
-| payment_issue | awaiting_payment, payment_review, confirmed, cancelled |
+| payment_review | payment_issue, confirmed, cancelled, refund_pending |
+| payment_issue | awaiting_payment, payment_review, confirmed, cancelled, refund_pending |
 | confirmed | processing, sourcing_failed, refund_pending |
 | processing | dispatched, sourcing_failed, refund_pending |
 | dispatched → delivered → completed | — |
@@ -106,13 +106,13 @@ Every action sends `expectedStatus`. The update is an atomic compare-and-set on 
 
 | Endpoint | Rules |
 |---|---|
-| `payment-instructions` | The admin enters items, fees, shipping and duties in GHS pesewas (integers) plus a future `expiresAt`. The server computes the total, bumps `quoteVersion` and queues the payment-instructions email (deduplicated per version). Refused with `409 PAYMENT_CHANNEL_NOT_CONFIGURED` unless `ESCOWEAR_PAYMENT_INSTRUCTIONS` is set. |
+| `payment-instructions` | The admin enters items, fees, shipping and duties in GHS pesewas (integers) plus a future `expiresAt`. The server computes the total, bumps `quoteVersion` and queues the payment-instructions email (deduplicated per version). A re-quote must also send `expectedQuoteVersion`, otherwise it gets `409 STALE_QUOTE`, because re-quoting keeps the same status. Refused with `409 PAYMENT_CHANNEL_NOT_CONFIGURED` unless `ESCOWEAR_PAYMENT_INSTRUCTIONS` is set. |
 | `awaiting-customer` | Requires a note. |
 | `payment-review` | The customer's screenshot arrived by email. This only moves the order to review; nothing is uploaded or stored. |
 | `verify-payment` | Requires `bankReceiptConfirmed: true`, `amountReceivedGHSMinor` equal to the quote total (otherwise `422 AMOUNT_MISMATCH`, so use payment-issue), `bankReference`, and a `receivedAt` that is not in the future. Records `verifiedBy` and `verifiedAt` and queues the confirmation email. This is the only way to reach `confirmed`. |
 | `payment-issue` | Requires a customer message, which is emailed. The internal note is not emailed. |
 | `fulfilment` | `toStatus` is processing, dispatched, delivered, completed or sourcing_failed. Requires verified payment. Accepts the supplier reference, carrier, tracking number and link. Sourcing failure needs a note. Processing, dispatched and delivered each email the customer once. |
-| `cancel` | Requires a reason. Unpaid orders become `cancelled`; paid orders become `refund_pending`. No refund is made automatically. |
+| `cancel` | Requires a reason. Unpaid orders become `cancelled`; verified-paid orders become `refund_pending`. From `payment_review` or `payment_issue` the admin must send `refundRequired` (true or false), so money that arrived is never left unrefunded. No refund is made automatically. |
 | `refund` | Records a refund that was sent manually. Requires `refundSentConfirmed`, a reference and an amount. |
 | `notes` | Internal only, never shown to customers. |
 | `events/:eventId/requeue-email` | Re-queues the email for an event if the queue was down. The dedupe key prevents duplicates. |
