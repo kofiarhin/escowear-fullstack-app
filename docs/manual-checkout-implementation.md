@@ -127,6 +127,31 @@ Every action sends `expectedStatus`. The update is an atomic compare-and-set on 
 - `EMAIL_TRANSPORT=none` is the default; the worker does not run and mail stays queued. `log` exists for development only and is refused in production. A real provider adapter needs decision D3 and an approved dependency.
 - Each worker tick also re-queues acknowledgements that were never queued.
 
+## Order tracking and customer history (IDE-117)
+
+### API
+
+| Endpoint | Behaviour |
+|---|---|
+| `POST /api/orders/tracking/request` `{orderNumber, email}` | Always returns `202` with the same message, whether or not the order exists. The lookup runs after the response, so response time does not reveal it either. If the order number and email match, it creates a 6-digit code. Only an HMAC of the code is stored, in `trackingchallenges`, with a TTL. Any earlier unused code is superseded, and the code is queued in a `tracking_code` email. Malformed input returns `422`. Rate limits: 10 per 15 minutes per IP, 5 per hour per order number, plus a database cap of 5 codes per order per hour. |
+| `POST /api/orders/tracking/verify` `{orderNumber, email, code}` | Each attempt is counted atomically before comparing (5 per code, with a timing-safe comparison). Too many attempts lock the code. A matching code is consumed atomically, so it cannot be replayed. Wrong, expired, reused and unknown codes all return the same `400 INVALID_CODE`. On success it returns `{orderId, accessToken, expiresInMinutes}`: a read-only token for that order only. Rate limit: 20 per 15 minutes per IP. |
+| `GET /api/orders/:id` | Unchanged (IDE-114). Customers see the status label, a customer-visible history (status changes only), items, the GBP estimate, the GHS quote total and expiry, carrier, tracking number and link, and dispatch and delivery dates. Internal notes, bank and supplier references, payment-channel text, phone numbers and admin events are never serialized. |
+
+- Tracking codes that are still queued after they expire are marked `failed` and their body is dropped, so an expired code is never delivered.
+- Expired challenges are removed by a TTL index one day after expiry (`npm run db:ensure-order-indexes`).
+
+### UI
+
+- `/track-order` (also linked in the footer and in emails as `?order=EW-…`): enter the order number and email, then the code. On success the token goes into `sessionStorage` and the page opens `/orders/:id`.
+- `/orders/:id` shows progress for the owner or a verified token holder. Without access it links to `/track-order` and sends no request. If there are no shipping details yet, it says so. Carrier links are shown only for http(s) URLs and open with `rel="noopener noreferrer"`.
+- `/dashboard` now loads the signed-in customer's own orders (`GET /api/orders`), including legacy orders, and links to each new order.
+- Status emails come from committed admin transitions (IDE-116): processing, dispatched (with carrier and tracking details), delivered, sourcing failed, cancelled, refund pending and refunded. Each is sent at most once per order and status.
+
+### Not included
+
+- Guest orders placed before an account existed are not linked to that account later. The spec requires verified email control first, which needs its own flow.
+- There is no courier API integration.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -137,6 +162,10 @@ Every action sends `expectedStatus`. The update is an atomic compare-and-set on 
 | `REACT_APP_ORDER_TERMS_VERSION` (client build) | `draft-2026-10` | Terms version recorded on each order |
 | `ESCOWEAR_PAYMENT_INSTRUCTIONS` | unset | **Private.** The payment-channel text inserted into payment-instruction emails (`\n` for new lines). Must never be committed. Quotes cannot be sent while it is unset. |
 | `EMAIL_TRANSPORT` | `none` | `none` or `log` (development only) |
+| `ORDER_TRACKING_CODE_TTL_MINUTES` | 10 | One-time code lifetime (provisional, D6) |
+| `ORDER_TRACKING_CODE_MAX_ATTEMPTS` | 5 | Guesses per code |
+| `ORDER_TRACKING_CODES_PER_HOUR` | 5 | Codes per order per hour |
+| `ORDER_TRACKING_ACCESS_TTL_MINUTES` | 30 | Lifetime of the order access token after verification (provisional, D6) |
 
 ## Database changes
 
@@ -155,6 +184,7 @@ Indexes added:
   - `user_created`
   - `status_created`
 - `orderevents`: `order_created`
+- `trackingchallenges`: `order_created`, `expire_challenges` (TTL)
 - `emailoutboxes`:
   - `unique_email_dedupe_key`
   - `state_next_attempt`

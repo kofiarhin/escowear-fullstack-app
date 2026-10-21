@@ -1,23 +1,29 @@
 import { Link } from "react-router-dom";
+import { formatGBP } from "../../utils/money";
 import "./orderList.styles.css";
+
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB", { dateStyle: "medium" }) : "");
+
 const OrderList = ({ data }) => {
   return (
-    <div className="order-list-wrapper">
-      {data.map((item, index) => {
-        return (
-          <div className="order-unit">
-            <h2> {index + 1}. Order Details</h2>
-            {item.products.map((product, index) => (
-              <p>
-                {index + 1}. {product.name}{" "}
-              </p>
+    <ul className="order-list-wrapper">
+      {data.map((order) => (
+        <li className="order-unit" key={order.id}>
+          <h3>{order.orderNumber ? `Order ${order.orderNumber}` : "Earlier order"}</h3>
+          <p>Placed: {formatDate(order.createdAt)}</p>
+          <p>Status: {order.statusLabel || order.status}</p>
+          <ul>
+            {order.items.map((item, index) => (
+              <li key={`${item.productId || index}:${item.size}`}>
+                {item.name} {item.size ? `(${item.size})` : ""} × {item.quantity}
+              </li>
             ))}
-            <p>Created At: {item.createdAt} </p>
-            <p>Status: {item.status} </p>
-          </div>
-        );
-      })}
-    </div>
+          </ul>
+          {order.pricing && <p>Indicative subtotal: {formatGBP(order.pricing.subtotalGBPMinor)}</p>}
+          {!order.legacy && <Link to={`/orders/${order.id}`}>View order</Link>}
+        </li>
+      ))}
+    </ul>
   );
 };
 

@@ -4,7 +4,13 @@ const { processOutboxBatch } = require("./emailOutbox");
 // One worker tick: repair any guest order whose acknowledgement was never
 // queued (e.g. the outbox write failed after the order was saved), then send
 // due messages.
-const runEmailWorkerTick = async ({ Order, EmailOutbox, orderService, transport, logger = console, now }) => {
+const runEmailWorkerTick = async ({ Order, EmailOutbox, orderService, transport, logger = console, now = () => new Date(), trackingCodeTtlMinutes = 10 }) => {
+  // Never deliver a tracking code after it has expired; drop its body.
+  await EmailOutbox.updateMany(
+    { kind: "tracking_code", state: "queued", createdAt: { $lte: new Date(now().getTime() - trackingCodeTtlMinutes * 60 * 1000) } },
+    { $set: { state: "failed", lastError: "Code expired before it could be sent", "payload.text": "[removed: expired]" } }
+  );
+
   const missing = await Order.find({ source: "guest_checkout", "email.acknowledgementState": EMAIL_STATE.NOT_QUEUED })
     .limit(20)
     .lean();

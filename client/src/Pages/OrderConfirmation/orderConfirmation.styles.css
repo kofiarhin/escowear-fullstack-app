@@ -78,3 +78,9 @@
   outline: 2px solid var(--ink);
   outline-offset: 4px;
 }
+
+.order-confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}

@@ -79,9 +79,10 @@ const startEmailDelivery = () => {
     EmailOutbox: require("./Models/EmailOutbox.model"),
     Product: require("./Models/Product.model"),
   };
-  const orderService = createOrderService({ ...models, config: getOrderConfig() });
+  const config = getOrderConfig();
+  const orderService = createOrderService({ ...models, config });
   console.log(`Email transport: ${transport.name}`);
-  return startEmailWorker({ ...models, orderService, transport });
+  return startEmailWorker({ ...models, orderService, transport, trackingCodeTtlMinutes: config.trackingCodeTtlMinutes });
 };
 
 // setup port
