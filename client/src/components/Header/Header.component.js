@@ -72,6 +72,11 @@ const Header = ({ setShowSideNav }) => {
 
           {user ? (
             <div className="account-actions">
+              {user.role === "admin" && (
+                <Link to="/admin/orders" className="icon-action">
+                  <span>Admin</span>
+                </Link>
+              )}
               <Link to="/dashboard" className="icon-action">
                 <AccountIcon />
                 <span>{user.name.split(" ")[0]}</span>
