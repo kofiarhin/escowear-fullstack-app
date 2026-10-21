@@ -25,7 +25,8 @@ const ACTIONS = {
       { name: "rateSnapshot", label: "Rate / calculation note (internal, optional)", type: "text" },
       { name: "message", label: "Message to customer (optional)", type: "textarea" },
     ],
-    build: (v) => ({
+    build: (v, order) => ({
+      expectedQuoteVersion: order.pricing?.finalGHS?.quoteVersion || undefined,
       quote: {
         subtotalMinor: toMinorUnits(v.subtotal),
         feesMinor: toMinorUnits(v.fees),
@@ -108,9 +109,19 @@ const ACTIONS = {
     submit: "Cancel order",
     fields: [
       { name: "reason", label: "Reason (internal)", type: "textarea", required: true },
+      {
+        name: "refundRequired",
+        label: "Money was received for this order and must be refunded",
+        type: "checkbox",
+        when: (v, order) => ["payment_review", "payment_issue"].includes(order?.status),
+      },
       { name: "customerMessage", label: "Message to customer (optional)", type: "textarea" },
     ],
-    build: (v) => ({ reason: v.reason, customerMessage: v.customerMessage || undefined }),
+    build: (v, order) => ({
+      reason: v.reason,
+      customerMessage: v.customerMessage || undefined,
+      refundRequired: ["payment_review", "payment_issue"].includes(order.status) ? v.refundRequired === true : undefined,
+    }),
   },
   refund: {
     title: "Record refund sent",
@@ -145,7 +156,7 @@ const ActionForm = ({ action, order, user, onDone }) => {
     event.preventDefault();
     const fieldErrors = {};
     definition.fields.forEach((field) => {
-      if (field.when && !field.when(values)) return;
+      if (field.when && !field.when(values, order)) return;
       const value = values[field.name];
       if (field.type === "money" && (value || field.required) && toMinorUnits(value) === null) fieldErrors[field.name] = "Enter an amount like 1250.00";
       else if (field.required && (value === undefined || value === "" || value === false)) fieldErrors[field.name] = "Required";
@@ -158,7 +169,7 @@ const ActionForm = ({ action, order, user, onDone }) => {
       const response = await apiRequest(`/api/admin/orders/${order.id}/${action}`, {
         method: "POST",
         headers: authHeader(user),
-        body: { expectedStatus: order.status, ...definition.build(values) },
+        body: { expectedStatus: order.status, ...definition.build(values, order) },
       });
       if (response.ok) {
         const emailNote = response.data?.email
@@ -190,7 +201,7 @@ const ActionForm = ({ action, order, user, onDone }) => {
         </p>
       )}
       {definition.fields
-        .filter((field) => !field.when || field.when(values))
+        .filter((field) => !field.when || field.when(values, order))
         .map((field) => {
           const id = `${prefix}-${field.name}`;
           const error = errors[field.name];

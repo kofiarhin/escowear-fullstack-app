@@ -114,3 +114,11 @@ test("signed-in owners load their order with their login", async () => {
   await screen.findByRole("heading", { name: "Dispatched" });
   await waitFor(() => expect(global.fetch.mock.calls[0][1].headers.Authorization).toBe("Bearer user-token"));
 });
+
+test("order page prefers the scoped token over a stored (possibly stale) login", async () => {
+  saveOrderAccess(order.id, "scoped", 30);
+  global.fetch.mockImplementation(() => json(200, order));
+  renderAt(`/orders/${order.id}`, { name: "Ama", email: "ama@example.test", token: "stale-login" });
+  await screen.findByRole("heading", { name: "Dispatched" });
+  expect(global.fetch.mock.calls[0][1].headers).toEqual({ "X-Order-Access-Token": "scoped" });
+});

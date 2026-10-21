@@ -234,7 +234,12 @@ test("payment instructions require a configured channel and a valid future quote
 test("re-quotes create a new version and a new email; a stale re-quote is rejected", async (t) => {
   const ctx = await setup(t);
   await sendQuote(ctx);
-  const revised = await ctx.act("payment-instructions", { expectedStatus: "awaiting_payment", quote: quote({ shippingMinor: 40000 }) });
+  const stale = await ctx.act("payment-instructions", { expectedStatus: "awaiting_payment", quote: quote({ shippingMinor: 40000 }) });
+  assert.equal(stale.status, 409);
+  assert.equal(stale.body.code, "STALE_QUOTE");
+  const revised = await ctx.act("payment-instructions", { expectedStatus: "awaiting_payment", expectedQuoteVersion: 1, quote: quote({ shippingMinor: 40000 }) });
+  // A duplicate click with the same expected version cannot send a third quote.
+  assert.equal((await ctx.act("payment-instructions", { expectedStatus: "awaiting_payment", expectedQuoteVersion: 1, quote: quote({ shippingMinor: 40000 }) })).status, 409);
   assert.equal(revised.status, 200);
   const order = ctx.models.Order.docs[0];
   assert.equal(order.pricing.finalGHS.quoteVersion, 2);
@@ -463,4 +468,28 @@ test("users default to customer role, reject unknown roles, and re-saving does n
   });
   assert.equal(nextCalled, true);
   assert.equal(existing.password, "$2a$10$existinghash");
+});
+
+test("cancelling while funds are uncertain requires an explicit refund decision", async (t) => {
+  const ctx = await setup(t);
+  await sendQuote(ctx);
+  await ctx.act("payment-review", { expectedStatus: "awaiting_payment" });
+  await ctx.act("payment-issue", { expectedStatus: "payment_review", customerMessage: "We received less than the quoted amount." });
+  const undecided = await ctx.act("cancel", { expectedStatus: "payment_issue", reason: "Customer cannot pay the balance" });
+  assert.equal(undecided.status, 422);
+  assert.ok(undecided.body.fields.refundRequired);
+  const withRefund = await ctx.act("cancel", { expectedStatus: "payment_issue", reason: "Customer cannot pay the balance", refundRequired: true });
+  assert.equal(withRefund.status, 200);
+  assert.equal(ctx.models.Order.docs[0].status, "refund_pending");
+  assert.equal(ctx.models.Order.docs[0].payment.status, "refund_pending");
+  const refunded = await ctx.act("refund", { expectedStatus: "refund_pending", refundReference: "RF-9", amountRefundedGHSMinor: 500000, refundSentConfirmed: true });
+  assert.equal(refunded.status, 200);
+  assert.equal(ctx.models.Order.docs[0].payment.amountRefundedGHSMinor, 500000);
+
+  const other = await setup(t);
+  await sendQuote(other);
+  await other.act("payment-review", { expectedStatus: "awaiting_payment" });
+  const noMoney = await other.act("cancel", { expectedStatus: "payment_review", reason: "Screenshot was for another order", refundRequired: false });
+  assert.equal(noMoney.status, 200);
+  assert.equal(other.models.Order.docs[0].status, "cancelled");
 });

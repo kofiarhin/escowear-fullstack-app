@@ -14,8 +14,8 @@ const TRANSITIONS = Object.freeze({
   [S.PENDING_CONTACT]: [S.AWAITING_CUSTOMER, S.AWAITING_PAYMENT, S.CANCELLED],
   [S.AWAITING_CUSTOMER]: [S.AWAITING_PAYMENT, S.CANCELLED],
   [S.AWAITING_PAYMENT]: [S.AWAITING_PAYMENT, S.AWAITING_CUSTOMER, S.PAYMENT_REVIEW, S.PAYMENT_ISSUE, S.CONFIRMED, S.CANCELLED],
-  [S.PAYMENT_REVIEW]: [S.PAYMENT_ISSUE, S.CONFIRMED],
-  [S.PAYMENT_ISSUE]: [S.AWAITING_PAYMENT, S.PAYMENT_REVIEW, S.CONFIRMED, S.CANCELLED],
+  [S.PAYMENT_REVIEW]: [S.PAYMENT_ISSUE, S.CONFIRMED, S.CANCELLED, S.REFUND_PENDING],
+  [S.PAYMENT_ISSUE]: [S.AWAITING_PAYMENT, S.PAYMENT_REVIEW, S.CONFIRMED, S.CANCELLED, S.REFUND_PENDING],
   [S.CONFIRMED]: [S.PROCESSING, S.SOURCING_FAILED, S.REFUND_PENDING],
   [S.PROCESSING]: [S.DISPATCHED, S.SOURCING_FAILED, S.REFUND_PENDING],
   [S.DISPATCHED]: [S.DELIVERED],
@@ -212,6 +212,11 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
     if (totalMinor <= 0 || !Number.isSafeInteger(totalMinor)) fail({ "quote.subtotalMinor": "The quote total must be more than zero" });
 
     const previousVersion = order.pricing?.finalGHS?.quoteVersion || 0;
+    // Re-quoting keeps the same status, so expectedStatus alone cannot catch a
+    // duplicate click; the caller must also name the quote it is replacing.
+    if (previousVersion && body.expectedQuoteVersion !== previousVersion) {
+      throw new OrderError(409, "STALE_QUOTE", `Quote v${previousVersion} is current; reload before re-quoting`, { currentQuoteVersion: previousVersion });
+    }
     const quote = {
       currency: "GHS",
       ...amounts,
@@ -384,10 +389,19 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
     });
   };
 
+  // States where a transfer may have arrived without being verified (e.g. a
+  // short payment). Cancelling from them requires the admin to say explicitly
+  // whether money was received, so funds are never left without a refund.
+  const UNCERTAIN_FUNDS = [S.PAYMENT_REVIEW, S.PAYMENT_ISSUE];
+
   const cancelOrder = async (orderId, admin, body = {}) => {
     const order = await loadOrder(orderId);
-    const paid = order.payment?.status === P.VERIFIED;
-    const toStatus = paid ? S.REFUND_PENDING : S.CANCELLED;
+    const verified = order.payment?.status === P.VERIFIED;
+    if (UNCERTAIN_FUNDS.includes(order.status) && typeof body.refundRequired !== "boolean") {
+      fail({ refundRequired: "State whether any money was received and needs refunding" });
+    }
+    const refund = verified || body.refundRequired === true;
+    const toStatus = refund ? S.REFUND_PENDING : S.CANCELLED;
     assertTransition(order, body.expectedStatus, toStatus);
     const reason = multiline(body.reason, 2000);
     const customerMessage = multiline(body.customerMessage, 2000);
@@ -396,9 +410,9 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       order,
       admin,
       toStatus,
-      set: paid ? { "payment.status": P.REFUND_PENDING } : {},
-      type: paid ? "cancelled_refund_pending" : "cancelled",
-      details: { reason },
+      set: refund ? { "payment.status": P.REFUND_PENDING } : {},
+      type: refund ? "cancelled_refund_pending" : "cancelled",
+      details: { reason, refundRequired: refund },
       email: statusEmail(order, toStatus, customerMessage),
     });
   };
@@ -417,7 +431,12 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       order,
       admin,
       toStatus: S.REFUNDED,
-      set: { "payment.status": P.REFUNDED, "payment.refundReference": refundReference, "payment.refundedAt": now() },
+      set: {
+        "payment.status": P.REFUNDED,
+        "payment.refundReference": refundReference,
+        "payment.amountRefundedGHSMinor": amount,
+        "payment.refundedAt": now(),
+      },
       type: "refunded",
       details: { refundReference, amountRefundedGHSMinor: amount, note: multiline(body.note, 2000) || undefined },
       email: statusEmail(order, S.REFUNDED, multiline(body.customerMessage, 2000)),

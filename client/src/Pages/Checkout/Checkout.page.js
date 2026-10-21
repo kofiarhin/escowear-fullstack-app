@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { logoutUser } from "../../redux/actions/user.action";
 import { readCart, saveCart, cartSubtotal } from "../../utils/cart";
 import { getProductImage, useFallbackProductImage } from "../../utils/product";
 import { formatGBP } from "../../utils/money";
@@ -41,6 +42,7 @@ const describedBy = (id, hint, error) => [hint && `${id}-hint`, error && `${id}-
 const Checkout = () => {
   const { user } = useSelector((state) => state.userReducer);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [items] = useState(readCart);
   const [form, setForm] = useState(() => emptyCheckoutForm(user));
   const [errors, setErrors] = useState({});
@@ -121,6 +123,13 @@ const Checkout = () => {
               : data?.error || "Please correct the highlighted fields.",
         });
         focusFirstError(mapped.formErrors);
+      } else if (httpStatus === 401 && user) {
+        // A stored sign-in that has expired must not block checkout.
+        dispatch(logoutUser());
+        setStatus({
+          state: "error",
+          message: "Your sign-in has expired, so you have been signed out. Submit again to order as a guest, or sign in again first.",
+        });
       } else if (httpStatus === 409) {
         forgetCheckoutAttempt();
         setStatus({ state: "error", message: "Your details changed since the last attempt. Please submit again." });

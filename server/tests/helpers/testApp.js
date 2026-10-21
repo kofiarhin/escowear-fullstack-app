@@ -14,7 +14,7 @@ const silentLogger = { error() {}, warn() {}, info() {}, log() {} };
 
 const createModels = () => ({
   Order: createMemoryModel({ uniques: ["orderNumber", "idempotencyKeyHash"] }),
-  OrderEvent: createMemoryModel(),
+  OrderEvent: createMemoryModel({ uniques: ["dedupeKey"] }),
   EmailOutbox: createMemoryModel({ uniques: ["dedupeKey"] }),
   Product: createMemoryModel(),
   User: createMemoryModel({ uniques: ["email"] }),
@@ -54,8 +54,8 @@ const validOrderBody = (productId, overrides = {}) => ({
 
 const userToken = (userId) => jwt.sign({ id: String(userId) }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-const startTestApp = async ({ config: configOverrides = {}, deps = {} } = {}) => {
-  const models = createModels();
+// `models` may be real Mongoose models (see realDb.js); defaults to in-memory.
+const startTestApp = async ({ config: configOverrides = {}, deps = {}, models = createModels() } = {}) => {
   const config = { ...getOrderConfig({}), publicBaseUrl: "https://shop.example.test", ...configOverrides };
   const app = createApp({
     products: { Product: models.Product },

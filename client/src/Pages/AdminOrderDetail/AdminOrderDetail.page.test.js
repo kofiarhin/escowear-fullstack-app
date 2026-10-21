@@ -140,3 +140,20 @@ test("GHS input converts to pesewas without float errors", () => {
   expect(toMinorUnits("-1")).toBeNull();
   expect(toMinorUnits("")).toBeNull();
 });
+
+test("re-quotes send the current quote version and uncertain-funds cancels ask about refunds", async () => {
+  const order = { ...baseOrder, status: "payment_issue", allowedActions: ["payment-instructions", "cancel"], payment: { status: "rejected" } };
+  global.fetch.mockImplementation((url, options) => (options?.method === "POST" ? ok({ ok: true, status: "refund_pending", email: null }) : ok(order)));
+  renderAt(`/admin/orders/${order.id}`);
+  await screen.findByRole("heading", { name: order.orderNumber });
+  await userEvent.type(screen.getByLabelText("Reason (internal)"), "Customer cannot pay the balance");
+  await userEvent.click(screen.getByLabelText(/money was received for this order and must be refunded/i));
+  await act(async () => {
+    userEvent.click(screen.getByRole("button", { name: "Cancel order" }));
+  });
+  await waitFor(() => expect(global.fetch.mock.calls.some(([, options]) => options?.method === "POST")).toBe(true));
+  const [, options] = global.fetch.mock.calls.find(([, opts]) => opts?.method === "POST");
+  expect(JSON.parse(options.body)).toMatchObject({ expectedStatus: "payment_issue", refundRequired: true });
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(3));
+  await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+});
