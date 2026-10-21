@@ -14,7 +14,8 @@
     "test:server": "node --test server/tests/*.test.js",
     "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client",
     "db:ensure-order-indexes": "node server/scripts/ensureOrderIndexes.js",
-    "admin:set-role": "node server/scripts/setUserRole.js"
+    "admin:set-role": "node server/scripts/setUserRole.js",
+    "test:e2e": "node e2e/browser-smoke.cjs"
   },
   "keywords": [],
   "author": "",

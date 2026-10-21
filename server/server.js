@@ -24,7 +24,7 @@ const createApp = (deps = {}) => {
 
   // setup middlewares
   app.use(express.json({ limit: "32kb" }));
-  app.use("/api/products", productsRoutes);
+  app.use("/api/products", deps.products ? productsRoutes.createProductsRouter(deps.products.Product) : productsRoutes);
   app.use("/api/orders", createOrdersRouter(deps.orders));
   app.use("/images", imagesRoute);
   app.use("/api/users", usersRoute);

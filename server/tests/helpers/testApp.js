@@ -58,6 +58,7 @@ const startTestApp = async ({ config: configOverrides = {}, deps = {} } = {}) =>
   const models = createModels();
   const config = { ...getOrderConfig({}), publicBaseUrl: "https://shop.example.test", ...configOverrides };
   const app = createApp({
+    products: { Product: models.Product },
     orders: { models, config, logger: silentLogger, ...deps.orders },
     admin: { models, config, logger: silentLogger, ...deps.admin },
   });
