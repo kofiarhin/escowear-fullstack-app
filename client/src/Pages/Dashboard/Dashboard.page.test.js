@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
 import { MemoryRouter } from "react-router-dom";
@@ -51,4 +51,11 @@ test("dashboard shows an empty state and an error state", async () => {
   global.fetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
   renderDashboard();
   expect(await screen.findByRole("alert")).toHaveTextContent(/could not be loaded/i);
+});
+
+test("an expired sign-in on the dashboard signs the customer out", async () => {
+  global.fetch.mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "Unauthorized - invalid token" }) });
+  renderDashboard();
+  await waitFor(() => expect(localStorage.getItem("user")).toBeNull());
+  expect(screen.queryByText(/hello/i)).not.toBeInTheDocument();
 });

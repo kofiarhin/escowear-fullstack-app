@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import OrderList from "../../components/OrderList/OrderList.component";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { logoutUser } from "../../redux/actions/user.action";
 import { apiRequest, authHeader } from "../../utils/api";
 import "./dashboard.styles.css";
 
@@ -9,6 +10,7 @@ const DashBoard = () => {
   const [orders, setOrders] = useState([]);
   const [state, setState] = useState("loading");
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const { user } = useSelector((state) => state.userReducer);
 
@@ -23,8 +25,13 @@ const DashBoard = () => {
     if (!user?.token) return undefined;
     let active = true;
     apiRequest("/api/orders", { headers: authHeader(user) })
-      .then(({ ok, data }) => {
+      .then(({ ok, status, data }) => {
         if (!active) return;
+        // Expired sign-in: sign out (the effect above then redirects to login).
+        if (status === 401) {
+          dispatch(logoutUser());
+          return;
+        }
         if (ok && Array.isArray(data?.items)) {
           setOrders(data.items);
           setState("ready");
@@ -34,7 +41,7 @@ const DashBoard = () => {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [user, dispatch]);
 
   return (
     <div className="dashboard">

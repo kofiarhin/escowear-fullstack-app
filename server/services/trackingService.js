@@ -30,8 +30,15 @@ const createTrackingService = ({ Order, OrderEvent, EmailOutbox, TrackingChallen
 
   const findOrder = ({ orderNumber, email }) => Order.findOne({ orderNumber, "customer.emailNormalized": email }).lean();
 
+  // Validates synchronously, then does the lookup and code issue in the
+  // background, so response time does not reveal whether the order exists.
   const requestCode = async (body) => {
     const input = parse(body);
+    const done = issueCode(input).catch((error) => logger.error(`Tracking code request failed: ${error.message}`));
+    return { message: GENERIC_REQUEST_MESSAGE, done };
+  };
+
+  const issueCode = async (input) => {
     const order = await findOrder(input);
     if (!order) return { message: GENERIC_REQUEST_MESSAGE };
 

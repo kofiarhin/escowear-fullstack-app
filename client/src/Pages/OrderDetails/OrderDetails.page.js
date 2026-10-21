@@ -29,7 +29,9 @@ const OrderDetails = () => {
 
   useEffect(() => {
     let active = true;
-    const headers = { ...orderAccessHeader(id), ...authHeader(user) };
+    // Prefer the scoped token so a stale login token cannot block access.
+    const access = orderAccessHeader(id);
+    const headers = Object.keys(access).length ? access : authHeader(user);
     if (!Object.keys(headers).length) {
       setState("unavailable");
       return undefined;

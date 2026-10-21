@@ -15,11 +15,18 @@ const setup = async (t, options = {}) => {
     ctx.request("POST", "/api/orders/tracking/request", { body: { orderNumber: placed.body.orderNumber, email: "ama.mensah@example.test", ...body } });
   const verifyCode = (code, body = {}) =>
     ctx.request("POST", "/api/orders/tracking/verify", { body: { orderNumber: placed.body.orderNumber, email: "ama.mensah@example.test", code, ...body } });
+  // Codes are issued in the background after the 202, so give the work a moment.
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+  const requestCodeAndSettle = async (...args) => {
+    const response = await requestCode(...args);
+    await settle();
+    return response;
+  };
   const latestCode = () => {
     const messages = ctx.models.EmailOutbox.docs.filter((message) => message.kind === "tracking_code");
     return messages.at(-1)?.payload.text.match(/is: (\d{6})/)?.[1];
   };
-  return { ...ctx, product, placed, requestCode, verifyCode, latestCode, advance: (ms) => (clock += ms), now: () => clock };
+  return { ...ctx, product, placed, requestCode: requestCodeAndSettle, verifyCode, latestCode, advance: (ms) => (clock += ms), now: () => clock };
 };
 
 test("guest requests a code, verifies it once, and gets read access to that order only", async (t) => {

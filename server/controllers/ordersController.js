@@ -51,7 +51,8 @@ const createOrdersController = (orderService, { logger = console, trackingServic
   // Always 202 with the same body for well-formed requests (no enumeration).
   const requestTrackingCode = async (req, res) => {
     try {
-      return res.status(202).json(await trackingService.requestCode(req.body));
+      const { message } = await trackingService.requestCode(req.body);
+      return res.status(202).json({ message });
     } catch (error) {
       return sendError(res, error, logger);
     }
