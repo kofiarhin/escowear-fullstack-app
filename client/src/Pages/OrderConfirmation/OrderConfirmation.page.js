@@ -17,7 +17,10 @@ const OrderConfirmation = () => {
 
   useEffect(() => {
     let active = true;
-    const headers = { ...orderAccessHeader(id), ...authHeader(user) };
+    // Prefer this tab's scoped token: an expired login token would otherwise
+    // make the server reject a request the access token alone would allow.
+    const access = orderAccessHeader(id);
+    const headers = Object.keys(access).length ? access : authHeader(user);
     if (!Object.keys(headers).length) {
       setOrder(null);
       setState("unavailable");
