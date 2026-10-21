@@ -61,9 +61,11 @@ const OrderConfirmation = () => {
             : "For your privacy, order details are only shown in the browser tab that placed the order, or to the signed-in account that owns it."}
         </p>
         <p>Your order confirmation email includes your order number and how to track it.</p>
-        <Link className="order-confirmation-link" to="/store">
-          Continue shopping
-        </Link>
+        <p>
+          <Link className="order-confirmation-link" to="/track-order">
+            Track an order
+          </Link>
+        </p>
       </main>
     );
   }
@@ -96,9 +98,14 @@ const OrderConfirmation = () => {
       <OrderItems order={order} />
       <p className="order-confirmation-note">The GBP subtotal is an estimate. You will not be charged until you accept our GHS quote and pay.</p>
 
-      <Link className="order-confirmation-link" to="/store">
-        Continue shopping
-      </Link>
+      <p className="order-confirmation-actions">
+        <Link className="order-confirmation-link" to={`/orders/${order.id}`}>
+          View order progress
+        </Link>
+        <Link className="order-confirmation-link" to="/store">
+          Continue shopping
+        </Link>
+      </p>
     </main>
   );
 };

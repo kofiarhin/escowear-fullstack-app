@@ -11,7 +11,7 @@ const sendError = (res, error, logger = console) => {
   return res.status(500).json({ error: "Something went wrong. Your cart has not been changed.", code: "SERVER_ERROR" });
 };
 
-const createOrdersController = (orderService, { logger = console } = {}) => {
+const createOrdersController = (orderService, { logger = console, trackingService } = {}) => {
   const createOrder = async (req, res) => {
     try {
       const result = await orderService.createGuestOrder({
@@ -48,7 +48,25 @@ const createOrdersController = (orderService, { logger = console } = {}) => {
     }
   };
 
-  return { createOrder, getOrder, getOrders };
+  // Always 202 with the same body for well-formed requests (no enumeration).
+  const requestTrackingCode = async (req, res) => {
+    try {
+      return res.status(202).json(await trackingService.requestCode(req.body));
+    } catch (error) {
+      return sendError(res, error, logger);
+    }
+  };
+
+  const verifyTrackingCode = async (req, res) => {
+    try {
+      res.set("Cache-Control", "no-store");
+      return res.status(200).json(await trackingService.verifyCode(req.body));
+    } catch (error) {
+      return sendError(res, error, logger);
+    }
+  };
+
+  return { createOrder, getOrder, getOrders, requestTrackingCode, verifyTrackingCode };
 };
 
 module.exports = { createOrdersController, sendError };

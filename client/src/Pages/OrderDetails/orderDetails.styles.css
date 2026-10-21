@@ -1,0 +1,59 @@
+.order-details-heading,
+.order-details-shipping h2 {
+  margin: 32px 0 12px;
+  font-family: var(--font-condensed);
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.order-details-shipping dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 16px;
+  margin-bottom: 16px;
+}
+
+.order-details-shipping dt {
+  color: var(--muted);
+}
+
+.order-details-shipping dd {
+  overflow-wrap: anywhere;
+}
+
+.order-details-history {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  border-left: 2px solid var(--ink);
+}
+
+.order-details-history li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 0 10px 18px;
+}
+
+.order-details-history span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.order-details-button {
+  display: inline-block;
+  margin: 8px 0;
+  padding: 14px 22px;
+  background: var(--ink);
+  color: var(--white);
+  font-family: var(--font-condensed);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.order-details-button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}

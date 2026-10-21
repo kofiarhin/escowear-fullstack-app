@@ -3,6 +3,10 @@
     max-width: 100%;
     margin: 0 auto;
 }
+.order-list-wrapper,
+.order-unit ul {
+    list-style: none;
+}
 .order-unit {
     margin-bottom: 1rem;
     display: block;
@@ -10,4 +14,19 @@
 
 .order-unit p {
     margin-bottom: 0.5rem;
+}
+.order-unit {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.order-unit h3 {
+    margin-bottom: 0.5rem;
+    font-family: var(--font-condensed);
+    text-transform: uppercase;
+}
+
+.order-unit a {
+    border-bottom: 1px solid currentColor;
+    font-weight: 600;
 }

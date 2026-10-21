@@ -32,6 +32,7 @@ const Footer = () => {
           <Link to="/login">Login</Link>
           <Link to="/register">Register</Link>
           <Link to="/cart">Cart</Link>
+          <Link to="/track-order">Track order</Link>
         </nav>
       </div>
 
