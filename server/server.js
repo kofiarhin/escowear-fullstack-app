@@ -11,9 +11,12 @@ const path = require("path");
 // `deps` lets tests inject in-memory models; production uses the defaults.
 const createApp = (deps = {}) => {
   const app = express();
-  // Beast serves the app behind a local Nginx proxy; trust only loopback hops
-  // so rate limits key on the real client address.
-  app.set("trust proxy", "loopback");
+  // Beast serves the app behind host Nginx -> Docker port mapping, so the
+  // container sees the Docker bridge address (a private range), not loopback.
+  // Trust only loopback/private hops so rate limits key on the real client
+  // address from X-Forwarded-For. The port is bound to 127.0.0.1 on the host,
+  // so only Nginx can reach it. Override with TRUST_PROXY if the topology changes.
+  app.set("trust proxy", process.env.TRUST_PROXY || "loopback, linklocal, uniquelocal");
 
   // Health includes database readiness, not just whether Express is listening.
   app.get("/health", (req, res) => {

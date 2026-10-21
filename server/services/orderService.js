@@ -116,8 +116,11 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
   const baseUrl = () => config.publicBaseUrl;
 
   const ensureCreationSideEffects = async (order, actor) => {
-    const existingEvent = await OrderEvent.findOne({ orderId: order._id, type: "order_created" }).lean();
+    const dedupeKey = `order_created:${order._id}`;
+    const existingEvent = await OrderEvent.findOne({ dedupeKey }).lean();
     if (!existingEvent) {
+      // A concurrent retry may insert the same event; the unique dedupeKey
+      // index makes the second insert fail harmlessly.
       await OrderEvent.create({
         orderId: order._id,
         actorType: actor ? "customer" : "system",
@@ -126,6 +129,9 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
         toStatus: ORDER_STATUS.PENDING_CONTACT,
         customerVisible: true,
         details: { itemCount: order.items.length, source: order.source },
+        dedupeKey,
+      }).catch((error) => {
+        if (!isDuplicateKey(error)) throw error;
       });
     }
     if (order.email?.acknowledgementState === EMAIL_STATE.NOT_QUEUED || !order.email?.acknowledgementState) {
