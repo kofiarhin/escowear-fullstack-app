@@ -51,9 +51,9 @@ test("removes a single item and clears the cart", async () => {
   expect(screen.getByRole("heading", { name: /your cart is empty/i })).toBeInTheDocument();
 });
 
-test("keeps checkout disabled", () => {
+test("links to guest checkout", () => {
   renderCart();
-  expect(screen.getByRole("button", { name: /checkout coming soon/i })).toBeDisabled();
+  expect(screen.getByRole("link", { name: /continue to checkout/i })).toHaveAttribute("href", "/checkout");
 });
 
 test("empty cart shows a continue shopping link to the store", () => {

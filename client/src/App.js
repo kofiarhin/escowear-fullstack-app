@@ -12,6 +12,8 @@ import {
   Cart,
   Details,
   DashBoard,
+  Checkout,
+  OrderConfirmation,
 } from "./Pages";
 
 const ScrollToHash = () => {
@@ -51,6 +53,8 @@ const App = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/store" element={<Store />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/orders/:id/confirmation" element={<OrderConfirmation />} />
           <Route path="/details/:id" element={<Details />} />
           <Route path="/dashboard" element={<DashBoard />} />
           <Route path="/logout" element={<Logout />} />

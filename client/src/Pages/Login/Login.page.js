@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import "./login.styles.css";
 import { loginUser } from "../../redux/actions/user.action";
@@ -9,14 +9,17 @@ const Login = ({ setIsLoggedIn }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+  // Only same-site paths are honoured as a return destination.
+  const from = typeof location.state?.from === "string" && /^\/(?!\/)/.test(location.state.from) ? location.state.from : "/dashboard";
   const dispatch = useDispatch();
   const { user, isPending, error } = useSelector((state) => state.userReducer);
 
   useEffect(() => {
     if (user) {
-      navigate("/dashboard");
+      navigate(from, { replace: true });
     }
-  }, [user]);
+  }, [user, from, navigate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
