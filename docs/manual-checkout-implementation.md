@@ -52,7 +52,7 @@ These are HS256 JWTs signed with a key derived from `JWT_SECRET`, carrying audie
 - The auth middleware now rejects tokens without a valid user id. Before, such a token could turn into an unfiltered `findOne`.
 - Registration only accepts `name`, `email` and `password`.
 - The JSON body limit is 32 KB, and malformed JSON returns a JSON error.
-- `trust proxy` is set to `loopback`, so rate limits use the real client IP behind Nginx.
+- `trust proxy` trusts loopback and private hops (`TRUST_PROXY`, default `loopback, linklocal, uniquelocal`). Behind Docker's port mapping the container sees the bridge address, so trusting only loopback would make every rate limit shared by all visitors.
 
 ## Guest checkout UI (IDE-115)
 
@@ -92,8 +92,8 @@ Order status and payment status are tracked separately (`payment.status`: `not_r
 | pending_contact | awaiting_customer, awaiting_payment, cancelled |
 | awaiting_customer | awaiting_payment, cancelled |
 | awaiting_payment | awaiting_payment (re-quote), awaiting_customer, payment_review, payment_issue, confirmed, cancelled |
-| payment_review | payment_issue, confirmed |
-| payment_issue | awaiting_payment, payment_review, confirmed, cancelled |
+| payment_review | payment_issue, confirmed, cancelled, refund_pending |
+| payment_issue | awaiting_payment, payment_review, confirmed, cancelled, refund_pending |
 | confirmed | processing, sourcing_failed, refund_pending |
 | processing | dispatched, sourcing_failed, refund_pending |
 | dispatched → delivered → completed | — |
@@ -106,13 +106,13 @@ Every action sends `expectedStatus`. The update is an atomic compare-and-set on 
 
 | Endpoint | Rules |
 |---|---|
-| `payment-instructions` | The admin enters items, fees, shipping and duties in GHS pesewas (integers) plus a future `expiresAt`. The server computes the total, bumps `quoteVersion` and queues the payment-instructions email (deduplicated per version). Refused with `409 PAYMENT_CHANNEL_NOT_CONFIGURED` unless `ESCOWEAR_PAYMENT_INSTRUCTIONS` is set. |
+| `payment-instructions` | The admin enters items, fees, shipping and duties in GHS pesewas (integers) plus a future `expiresAt`. The server computes the total, bumps `quoteVersion` and queues the payment-instructions email (deduplicated per version). A re-quote must also send `expectedQuoteVersion`, otherwise it gets `409 STALE_QUOTE`, because re-quoting keeps the same status. Refused with `409 PAYMENT_CHANNEL_NOT_CONFIGURED` unless `ESCOWEAR_PAYMENT_INSTRUCTIONS` is set. |
 | `awaiting-customer` | Requires a note. |
 | `payment-review` | The customer's screenshot arrived by email. This only moves the order to review; nothing is uploaded or stored. |
 | `verify-payment` | Requires `bankReceiptConfirmed: true`, `amountReceivedGHSMinor` equal to the quote total (otherwise `422 AMOUNT_MISMATCH`, so use payment-issue), `bankReference`, and a `receivedAt` that is not in the future. Records `verifiedBy` and `verifiedAt` and queues the confirmation email. This is the only way to reach `confirmed`. |
 | `payment-issue` | Requires a customer message, which is emailed. The internal note is not emailed. |
 | `fulfilment` | `toStatus` is processing, dispatched, delivered, completed or sourcing_failed. Requires verified payment. Accepts the supplier reference, carrier, tracking number and link. Sourcing failure needs a note. Processing, dispatched and delivered each email the customer once. |
-| `cancel` | Requires a reason. Unpaid orders become `cancelled`; paid orders become `refund_pending`. No refund is made automatically. |
+| `cancel` | Requires a reason. Unpaid orders become `cancelled`; verified-paid orders become `refund_pending`. From `payment_review` or `payment_issue` the admin must send `refundRequired` (true or false), so money that arrived is never left unrefunded. No refund is made automatically. |
 | `refund` | Records a refund that was sent manually. Requires `refundSentConfirmed`, a reference and an amount. |
 | `notes` | Internal only, never shown to customers. |
 | `events/:eventId/requeue-email` | Re-queues the email for an event if the queue was down. The dedupe key prevents duplicates. |
@@ -158,6 +158,7 @@ Every action sends `expectedStatus`. The update is an atomic compare-and-set on 
 |---|---|---|
 | `ESCOWEAR_PUBLIC_URL` | empty | Site origin used for tracking links in emails |
 | `ORDER_CHECKOUT_ACCESS_TTL_MINUTES` | 60 | Lifetime of the confirmation-page access token |
+| `TRUST_PROXY` | `loopback, linklocal, uniquelocal` | Express `trust proxy` setting |
 | `REACT_APP_ORDER_TERMS_VERSION` (client build) | `draft-2026-10` | Terms version recorded on each order |
 | `ESCOWEAR_PAYMENT_INSTRUCTIONS` | unset | **Private.** The payment-channel text inserted into payment-instruction emails (`\n` for new lines). Must never be committed. Quotes cannot be sent while it is unset. |
 | `EMAIL_TRANSPORT` | `none` | `none` or `log` (development only) |
@@ -190,3 +191,7 @@ Indexes added:
   - `order_created`
 
 Until the unique indexes exist, idempotency still works for sequential retries. Truly concurrent duplicates are only blocked once the unique index is in place.
+
+## Real-MongoDB tests
+
+`ESCOWEAR_TEST_MONGO_URI=mongodb://127.0.0.1:<port> npm run test:realdb` runs the suites against a disposable local MongoDB. Each run creates its own randomly named database and drops only that one. Non-local hosts and the production database name are refused. Without the variable, these tests are skipped.

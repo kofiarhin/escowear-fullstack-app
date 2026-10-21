@@ -63,3 +63,22 @@ test("expired tokens are not sent", async () => {
   expect(await screen.findByRole("heading", { name: /order details unavailable/i })).toBeInTheDocument();
   expect(global.fetch).not.toHaveBeenCalled();
 });
+
+test("the scoped token is used even when a (possibly stale) login is stored", async () => {
+  saveOrderAccess(order.id, "scoped-token", 60);
+  global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => order });
+  const store = createStore(reducers);
+  store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Ama", email: "ama@example.test", token: "stale-login" } });
+  render(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={[`/orders/${order.id}/confirmation`]}>
+        <Routes>
+          <Route path="/orders/:id/confirmation" element={<OrderConfirmation />} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>
+  );
+  expect(await screen.findByRole("heading", { name: "Order received — awaiting our email" })).toBeInTheDocument();
+  expect(global.fetch.mock.calls[0][1].headers).toEqual({ "X-Order-Access-Token": "scoped-token" });
+  localStorage.clear();
+});

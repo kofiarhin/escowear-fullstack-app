@@ -20,11 +20,17 @@ const orderEventSchema = new Schema(
     // Customer-visible events appear in tracking history; the rest are admin-only.
     customerVisible: { type: Boolean, default: false, immutable: true },
     details: { type: Schema.Types.Mixed, immutable: true },
+    // Set for events that must happen at most once (e.g. order_created).
+    dedupeKey: { type: String, immutable: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
 orderEventSchema.index({ orderId: 1, createdAt: 1 }, { name: "order_created" });
+orderEventSchema.index(
+  { dedupeKey: 1 },
+  { name: "unique_event_dedupe_key", unique: true, partialFilterExpression: { dedupeKey: { $type: "string" } } }
+);
 
 const blockMutation = function () {
   throw new Error("Order events are append-only");

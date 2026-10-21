@@ -226,3 +226,23 @@ test("signed-in customers send their token and get prefilled details", async () 
   await screen.findByRole("heading", { name: "Order received — awaiting our email" });
   expect(orderCalls()[0][1].headers.Authorization).toBe("Bearer user-token");
 });
+
+test("an expired sign-in signs the customer out and lets them retry as a guest", async () => {
+  global.fetch.mockImplementationOnce(() => jsonResponse(401, { error: "Unauthorized - invalid token" }));
+  global.fetch.mockImplementation((url, options) => (options?.method === "POST" ? jsonResponse(201, createdOrder) : jsonResponse(200, createdOrder.order)));
+  renderCheckout({ user: { id: "u1", name: "Ama Mensah", email: "ama@example.test", token: "expired-token" } });
+  await userEvent.type(screen.getByLabelText("Ghana phone number"), "0241234567");
+  await userEvent.type(screen.getByLabelText("Street address or house number"), "12 Ring Road East");
+  await userEvent.type(screen.getByLabelText("Town or city"), "Accra");
+  await userEvent.selectOptions(screen.getByLabelText("Region"), "Ashanti");
+  await userEvent.click(screen.getByLabelText(/i understand this is an order request/i));
+  await submit();
+  expect(await screen.findByRole("alert")).toHaveTextContent(/sign-in has expired/i);
+  expect(storedCart()).toEqual(cartItems);
+  expect(screen.getByText(/checking out as a guest/i)).toBeInTheDocument();
+  await submit();
+  await screen.findByRole("heading", { name: "Order received — awaiting our email" });
+  const calls = orderCalls();
+  expect(calls[0][1].headers.Authorization).toBe("Bearer expired-token");
+  expect(calls[1][1].headers.Authorization).toBeUndefined();
+});
