@@ -5,5 +5,7 @@ import Store from "./Store/store.page";
 import Home from "./Home/Home.page";
 import Details from "./Details/Details.page";
 import DashBoard from "./Dashboard/Dashboard.page";
+import Checkout from "./Checkout/Checkout.page";
+import OrderConfirmation from "./OrderConfirmation/OrderConfirmation.page";
 
-export { Register, Login, Cart, Store, Home, Details, DashBoard };
+export { Register, Login, Cart, Store, Home, Details, DashBoard, Checkout, OrderConfirmation };

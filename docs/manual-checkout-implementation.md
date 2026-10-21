@@ -54,6 +54,21 @@ These are HS256 JWTs signed with a key derived from `JWT_SECRET`, carrying audie
 - The JSON body limit is 32 KB, and malformed JSON returns a JSON error.
 - `trust proxy` trusts loopback and private hops (`TRUST_PROXY`, default `loopback, linklocal, uniquelocal`). Behind Docker's port mapping the container sees the bridge address, so trusting only loopback would make every rate limit shared by all visitors.
 
+## Guest checkout UI (IDE-115)
+
+- `/cart` has a "Continue to checkout" link to `/checkout`.
+- `/checkout` needs no login. It shows the "No payment now" notice and explains the GBP estimate versus the final GHS amount. It also offers an optional sign-in link, which returns you to checkout afterwards.
+- The form collects:
+  - Contact: name, email, Ghana phone.
+  - Delivery: optional recipient name and phone, street address, area, landmark, town and region (16 regions).
+  - Agreement to the order-request terms.
+  Fields are checked in the browser first. Server field errors are mapped back to their inputs, and the first invalid input gets focus.
+- Only `productId`, `size` and `quantity` are sent for each item; no prices.
+- The `Idempotency-Key` is tied to a hash of the payload in `sessionStorage`. Retrying the same order after an error, a timeout or a reload reuses the key; changing the details creates a new key. The personal details themselves are never stored.
+- The cart is cleared only after a `201` or `200` response with an order id. Server errors, network errors, `422`, `409` and `429` all keep the cart. Network errors tell the customer that retrying is safe.
+- `/orders/:id/confirmation` shows "Order received — awaiting our email" and says the order is not paid and not confirmed. It lists the order number, the next steps, the items and the indicative GBP subtotal. It only loads with this tab's scoped access token (kept in `sessionStorage`) or the owner's login; otherwise it shows a privacy-safe "unavailable" state.
+- The checkout consent text describes the order-request process only. Published terms and a privacy policy are still needed; see the decisions table.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -61,6 +76,7 @@ These are HS256 JWTs signed with a key derived from `JWT_SECRET`, carrying audie
 | `ESCOWEAR_PUBLIC_URL` | empty | Site origin used for tracking links in emails |
 | `ORDER_CHECKOUT_ACCESS_TTL_MINUTES` | 60 | Lifetime of the confirmation-page access token |
 | `TRUST_PROXY` | `loopback, linklocal, uniquelocal` | Express `trust proxy` setting |
+| `REACT_APP_ORDER_TERMS_VERSION` (client build) | `draft-2026-10` | Terms version recorded on each order |
 
 ## Database changes
 

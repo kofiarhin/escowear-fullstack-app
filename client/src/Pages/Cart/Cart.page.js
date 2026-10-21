@@ -75,8 +75,8 @@ const Cart = () => {
             <div><dt>Items</dt><dd>{itemCount}</dd></div>
             <div className="cart-summary-subtotal"><dt>Indicative subtotal</dt><dd>{formatGBP(cartSubtotal(items))}</dd></div>
           </dl>
-          <p className="cart-summary-note">Final availability, shipping and Ghana cedi payment amount will be confirmed later.</p>
-          <button className="cart-button cart-button-primary place-order" type="button" disabled title="Guest checkout is being built in IDE-115">Checkout coming soon</button>
+          <p className="cart-summary-note">No payment now. Final availability, shipping and Ghana cedi payment amount will be confirmed by email.</p>
+          <Link className="cart-button cart-button-primary place-order" to="/checkout">Continue to checkout</Link>
           <button className="cart-button cart-button-secondary clear-cart" type="button" onClick={() => update([])}>Clear Cart</button>
         </aside>
       </div>
