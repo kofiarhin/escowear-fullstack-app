@@ -97,6 +97,7 @@ test("cart → guest order → acknowledgement → quote → proof → bank veri
     (await ctx.request("POST", "/api/orders/tracking/request", { body: { orderNumber, email: "ama.mensah@example.test" } })).status,
     202
   );
+  await new Promise((resolve) => setTimeout(resolve, 50)); // code is issued after the 202
   await deliver();
   const codeMail = inbox.find((mail) => /tracking code/.test(mail.subject));
   const code = codeMail.text.match(/is: (\d{6})/)[1];

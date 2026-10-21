@@ -1,7 +1,7 @@
 # Release readiness — manual checkout (IDE-114 to IDE-118)
 
 **Date:** 21 October 2026
-**Status:** Verified locally in isolation. **Not released.** Production is blocked by the items below.
+**Status:** Verified locally in isolation, including against a real MongoDB 7.0 server. Reviewed and fixed on 21 October 2026. **Not released.** Production is blocked by the items below.
 **Branches** (stacked; each builds on the previous one, starting from `master@a7c650c`):
 
 | Ticket | Branch | Commit |
@@ -18,12 +18,13 @@ Nothing has been pushed, merged or deployed. No production database, secret, ser
 
 | Check | Command | Result |
 |---|---|---|
-| Server unit/API tests (in-memory models) | `npm run test:server` | **52/52 pass** |
+| Server unit/API tests (in-memory models) | `npm run test:server` | **55/55 pass** |
+| Real MongoDB 7.0.14 suite | `npm run test:realdb` | **21/21 pass** |
 | Importer tests | `npm run test:importer` | **3/3 pass** |
-| Client tests | `CI=true npm test --prefix client -- --watchAll=false` | **45/45 pass**, 9 suites, no act() warnings |
+| Client tests | `CI=true npm test --prefix client -- --watchAll=false` | **50/50 pass**, 9 suites, no act() warnings |
 | Client production build | `npm run build --prefix client` with `CI=false`, as the Dockerfile does | **Compiles.** 3 warnings, all pre-existing in untouched files (Register, Logout, user reducer). `CI=true` builds fail on these pre-existing warnings, on `master` too. |
 | Full API journey | `server/tests/e2eCheckout.test.js` | **Pass.** Cart → order with double submit → acknowledgement during a provider outage, then retry → GHS quote → proof → bank verification → dispatch → code tracking → completed, with no duplicate emails. |
-| Browser smoke, headless Chromium, desktop 1280×860 and mobile 390×844 | `PLAYWRIGHT_CORE_PATH=… npm run test:e2e` | **18/18 checks pass** |
+| Browser smoke, headless Chromium, desktop 1280×860 and mobile 390×844 | `PLAYWRIGHT_CORE_PATH=… npm run test:e2e` | **18/18 pass in memory and 18/18 on real MongoDB** |
 | Auth/orders container smoke (updated to the new contract) | `deploy/beast/auth-orders-smoke.cjs` (run locally with paths rewritten) | **5/5 PASS** |
 
 The browser smoke runs against `e2e/harness.cjs`: the real Express app and the production React build, with in-memory models, a capturing mail transport, and fake people and payment-channel text. It covers:
@@ -61,9 +62,41 @@ The browser smoke runs against `e2e/harness.cjs`: the real Express app and the p
 | AC16 legacy orders readable, no destructive migration | Pass in code; **production data not assessed** | `guestOrders.test.js` |
 | AC17 mobile/desktop, states, accessibility, console | Pass (automated checks only; no screen-reader or manual audit) | browser smoke |
 
+## Review round 2 (21 October 2026): bugs found and fixed
+
+| PR | Issue | Fix | Proof |
+|---|---|---|---|
+| #11 | Behind Docker's port mapping the container sees the bridge IP, but `trust proxy` trusted only loopback, so **every rate limit was shared by all visitors** | Trust loopback and private hops (`TRUST_PROXY`) | unit test of the trust function; per-client limit test |
+| #11 | Concurrent idempotent retries wrote **duplicate `order_created` events** | unique `dedupeKey` on events | reproduced 3/3 on real MongoDB before the fix; 10-way concurrency test passes after |
+| #11 | Login passed request values straight into the query (`{"$gt": ""}`) | strings only, normalized email | real-DB test |
+| #12 | An expired stored login made checkout fail with a generic error, and the confirmation page show "unavailable" | sign out on 401 and let the customer resubmit as a guest; prefer the scoped token | client tests |
+| #13 | A **duplicate re-quote click sent two quotes and two payment emails** (the status does not change on a re-quote) | `expectedQuoteVersion` is required (`409 STALE_QUOTE`) | reproduced on real MongoDB; 5-way concurrency test passes after |
+| #13 | Cancelling from `payment_issue` (for example a short payment) could leave **received money with no refund tracked** | explicit `refundRequired` decision; `true` leads to `refund_pending`. The refund amount is stored on the order | memory, real-DB and UI tests |
+| #13 | Login said "user not found" vs "wrong password", revealing which accounts (including admins) exist | one generic error | real-DB test |
+| #14 | Tracking-code request timing revealed whether an order and email pair existed | 202 is returned before the lookup runs | tests |
+| #14 | Stale login blocked `/orders/:id`; the dashboard showed an error on 401 | prefer the scoped token; sign out on 401 | client tests |
+
+## Real-MongoDB evidence
+
+The suites ran against a throwaway local `mongod` 7.0.14, an existing cached binary started on `127.0.0.1` with its data in a temporary directory. Nothing was installed and no container was started. Command: `ESCOWEAR_TEST_MONGO_URI=mongodb://127.0.0.1:<port> npm run test:realdb`. Each suite uses its own randomly named database, then drops it. Afterwards the server held only `admin`, `config` and `local`.
+
+- **21/21 real-DB tests pass.** They cover:
+  - Index creation through the same additive path as `ensureOrderIndexes`.
+  - 10 concurrent submits with one key giving one order, one event and one email.
+  - Partial unique indexes accepting legacy documents.
+  - Legacy documents in the old shape read correctly.
+  - Append-only events.
+  - Stored-role checks.
+  - The full admin flow with `select:false` fields.
+  - Concurrent quotes, re-quotes and verify/issue races.
+  - Three concurrent email workers sending each email once.
+  - Tracking-code TTL, single use, 20 parallel guesses and 10 parallel correct verifies.
+  - Login operator injection and account enumeration.
+- **Browser smoke against real MongoDB: 18/18 pass** (`ESCOWEAR_TEST_MONGO_URI=… npm run test:e2e`).
+
 ## Test limitations
 
-- All persistence tests use an in-memory stand-in for Mongoose (`server/tests/helpers/memoryModel.js`). Mongoose schema validation is tested directly, but **no test has run against a real MongoDB**. No local MongoDB, Docker access or `mongodb-memory-server` is available without new approvals. Recommended: approve `mongodb-memory-server` as a dev dependency, or a throwaway MongoDB container, and run the suites against it before release.
+- The default `npm run test:server` uses an in-memory stand-in. The real-DB suite is opt-in and must be run by hand (no CI is configured). It ran against MongoDB 7.0.14; the production server version was not checked (it is read-only information to collect before release).
 - Rate limits are per process and in memory, which suits the single-container deployment but resets on restart.
 
 ## Security review
@@ -94,5 +127,5 @@ The browser smoke runs against `e2e/harness.cjs`: the real Express app and the p
 3. **Indexes**: production connects with `autoIndex: false`. Run `npm run db:ensure-order-indexes` (additive only) after a backup and approval. Until the unique indexes exist, truly concurrent duplicate orders are not blocked at the database level.
 4. **Legacy data assessment**: count and inspect existing `orders` documents read-only before release. Code reads legacy documents; no migration is needed or included.
 5. **Rotate the leaked MongoDB credential** if it is still valid.
-6. **Real-DB test run** (see Test limitations).
+6. **Confirm the production MongoDB version** matches what was tested (7.0), using a read-only check.
 7. **Deploy approval** following `DEPLOY-BEAST.md`, with runtime verification on Beast.

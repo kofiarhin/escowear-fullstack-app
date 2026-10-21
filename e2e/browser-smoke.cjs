@@ -224,6 +224,7 @@ const runJourney = async (browser, harness, { name, ...contextOptions }) => {
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const harness = await start();
+  console.log(`Harness data store: ${harness.database}`);
   const browser = await chromium.launch();
   try {
     for (const viewport of VIEWPORTS) await runJourney(browser, harness, viewport);

@@ -25,14 +25,22 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
   if (!fs.existsSync(path.join(__dirname, "..", "client", "build", "index.html"))) {
     throw new Error("client/build is missing: run `npm run build --prefix client` first");
   }
-  const models = {
-    Order: createMemoryModel({ uniques: ["orderNumber", "idempotencyKeyHash"] }),
-    OrderEvent: createMemoryModel(),
-    EmailOutbox: createMemoryModel({ uniques: ["dedupeKey"] }),
-    Product: createMemoryModel(),
-    User: createMemoryModel({ uniques: ["email"] }),
-    TrackingChallenge: createMemoryModel(),
-  };
+  // In-memory by default; a disposable real MongoDB when ESCOWEAR_TEST_MONGO_URI is set.
+  let realDb = null;
+  let models;
+  if (process.env.ESCOWEAR_TEST_MONGO_URI) {
+    realDb = await require("../server/tests/helpers/realDb").connectTestDb();
+    models = realDb.models;
+  } else {
+    models = {
+      Order: createMemoryModel({ uniques: ["orderNumber", "idempotencyKeyHash"] }),
+      OrderEvent: createMemoryModel({ uniques: ["dedupeKey"] }),
+      EmailOutbox: createMemoryModel({ uniques: ["dedupeKey"] }),
+      Product: createMemoryModel(),
+      User: createMemoryModel({ uniques: ["email"] }),
+      TrackingChallenge: createMemoryModel(),
+    };
+  }
   const product = await models.Product.create({
     _id: new Types.ObjectId(),
     name: "E2E Test Runner",
@@ -74,12 +82,12 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
   const server = outer.listen(port, "127.0.0.1");
   await new Promise((resolve) => server.once("listening", resolve));
   const url = `http://127.0.0.1:${server.address().port}`;
-  const stop = () =>
-    new Promise((resolve) => {
-      clearInterval(timer);
-      server.close(resolve);
-    });
-  return { url, stop, models, inbox, product };
+  const stop = async () => {
+    clearInterval(timer);
+    await new Promise((resolve) => server.close(resolve));
+    if (realDb) await realDb.close();
+  };
+  return { url, stop, models, inbox, product, database: realDb ? `MongoDB ${realDb.dbName}` : "in-memory" };
 };
 
 if (require.main === module) {
