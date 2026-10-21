@@ -69,6 +69,7 @@ const Checkout = () => {
     const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
     setForm((current) => ({ ...current, [field]: value }));
     if (errors[field]) setErrors((current) => ({ ...current, [field]: undefined }));
+    if (status.state === "invalid") setStatus({ state: "idle", message: "" });
   };
 
   const focusFirstError = (fieldErrors) => {

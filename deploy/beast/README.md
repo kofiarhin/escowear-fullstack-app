@@ -24,7 +24,8 @@ Namecheap DNS: @ -> 51.68.196.59, www -> escowear.com
 - `escowear.http.conf`: temporary HTTP/ACME site template used before HTTPS was issued.
 - `escowear.https.conf`: HTTPS proxy and www redirect template; **verify installed Nginx files against live configuration before reusing**.
 - `smoke.cjs`: read-only MongoDB / storefront smoke tests.
-- `auth-orders-smoke.cjs`: isolated in-memory authentication and order tests, **not** a live checkout test.
+- `auth-orders-smoke.cjs`: isolated in-memory authentication and order tests (guest-checkout contract, IDE-114), **not** a live checkout test.
+- `../../e2e/`: isolated browser smoke for the full manual-checkout journey (in-memory models, fake data); see `docs/release-readiness-manual-checkout.md`.
 - `REPORT.md`: original preparation evidence (2026-10-17); it deliberately preserves the state **before** launch.
 
 ## Verify the running site (read-only)
