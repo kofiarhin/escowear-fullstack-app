@@ -69,6 +69,64 @@ These are HS256 JWTs signed with a key derived from `JWT_SECRET`, carrying audie
 - `/orders/:id/confirmation` shows "Order received — awaiting our email" and says the order is not paid and not confirmed. It lists the order number, the next steps, the items and the indicative GBP subtotal. It only loads with this tab's scoped access token (kept in `sessionStorage`) or the owner's login; otherwise it shows a privacy-safe "unavailable" state.
 - The checkout consent text describes the order-request process only. Published terms and a privacy policy are still needed; see the decisions table.
 
+## Admin manual payment and email workflow (IDE-116)
+
+### Admin access
+
+`users.role` is either `customer` (the default) or `admin`. Registration ignores `role`, and there is no API that grants it. An operator grants it on the server after the owner approves:
+
+```bash
+npm run admin:set-role -- --email staff@example.com --role admin --confirm
+```
+
+The script uses `updateOne`, so the password hash is never touched. The save hook also no longer re-hashes an unchanged password. Every `/api/admin/*` route reloads the user and checks `role === "admin"`. Anonymous users get `401`, and customers or unknown roles get `403`. Customer order-access tokens are rejected.
+
+The UI lives at `/admin/orders`, with a paginated list filtered by status and searchable by order number, name or email, and `/admin/orders/:id`. The header shows an Admin link for admins, but the server enforces every rule regardless.
+
+### State machine
+
+Order status and payment status are tracked separately (`payment.status`: `not_requested → awaiting_payment → under_review → verified`, plus `rejected`, `refund_pending` and `refunded`).
+
+| From | Allowed next |
+|---|---|
+| pending_contact | awaiting_customer, awaiting_payment, cancelled |
+| awaiting_customer | awaiting_payment, cancelled |
+| awaiting_payment | awaiting_payment (re-quote), awaiting_customer, payment_review, payment_issue, confirmed, cancelled |
+| payment_review | payment_issue, confirmed, cancelled, refund_pending |
+| payment_issue | awaiting_payment, payment_review, confirmed, cancelled, refund_pending |
+| confirmed | processing, sourcing_failed, refund_pending |
+| processing | dispatched, sourcing_failed, refund_pending |
+| dispatched → delivered → completed | — |
+| sourcing_failed | processing, refund_pending |
+| refund_pending | refunded |
+
+Every action sends `expectedStatus`. The update is an atomic compare-and-set on `status` (re-quotes also check `quoteVersion`). Stale or concurrent actions get `409 STALE_STATUS`, and moves not in the table get `409 ILLEGAL_TRANSITION`. Each change appends an `OrderEvent` recording the actor, the from/to status and sanitized details.
+
+### Actions (`POST /api/admin/orders/:id/...`)
+
+| Endpoint | Rules |
+|---|---|
+| `payment-instructions` | The admin enters items, fees, shipping and duties in GHS pesewas (integers) plus a future `expiresAt`. The server computes the total, bumps `quoteVersion` and queues the payment-instructions email (deduplicated per version). A re-quote must also send `expectedQuoteVersion`, otherwise it gets `409 STALE_QUOTE`, because re-quoting keeps the same status. Refused with `409 PAYMENT_CHANNEL_NOT_CONFIGURED` unless `ESCOWEAR_PAYMENT_INSTRUCTIONS` is set. |
+| `awaiting-customer` | Requires a note. |
+| `payment-review` | The customer's screenshot arrived by email. This only moves the order to review; nothing is uploaded or stored. |
+| `verify-payment` | Requires `bankReceiptConfirmed: true`, `amountReceivedGHSMinor` equal to the quote total (otherwise `422 AMOUNT_MISMATCH`, so use payment-issue), `bankReference`, and a `receivedAt` that is not in the future. Records `verifiedBy` and `verifiedAt` and queues the confirmation email. This is the only way to reach `confirmed`. |
+| `payment-issue` | Requires a customer message, which is emailed. The internal note is not emailed. |
+| `fulfilment` | `toStatus` is processing, dispatched, delivered, completed or sourcing_failed. Requires verified payment. Accepts the supplier reference, carrier, tracking number and link. Sourcing failure needs a note. Processing, dispatched and delivered each email the customer once. |
+| `cancel` | Requires a reason. Unpaid orders become `cancelled`; verified-paid orders become `refund_pending`. From `payment_review` or `payment_issue` the admin must send `refundRequired` (true or false), so money that arrived is never left unrefunded. No refund is made automatically. |
+| `refund` | Records a refund that was sent manually. Requires `refundSentConfirmed`, a reference and an amount. |
+| `notes` | Internal only, never shown to customers. |
+| `events/:eventId/requeue-email` | Re-queues the email for an event if the queue was down. The dedupe key prevents duplicates. |
+| `POST /api/admin/emails/:id/retry` | Re-queues a failed email. |
+
+### Email outbox and delivery
+
+- Messages are rendered when they are queued and stored in `emailoutboxes` with a unique `dedupeKey`.
+- The worker claims each message atomically (`queued → sending`), passes `dedupeKey` to the transport as an idempotency key, and retries up to 5 times with exponential backoff (1 minute up to 1 hour). After that the message is marked `failed`, with `lastError` visible to admins.
+- A message stuck in `sending` is marked `failed` and is not resent automatically, to avoid duplicates.
+- Once sent, the bodies of payment-instruction and tracking-code emails are purged.
+- `EMAIL_TRANSPORT=none` is the default; the worker does not run and mail stays queued. `log` exists for development only and is refused in production. A real provider adapter needs decision D3 and an approved dependency.
+- Each worker tick also re-queues acknowledgements that were never queued.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -77,6 +135,8 @@ These are HS256 JWTs signed with a key derived from `JWT_SECRET`, carrying audie
 | `ORDER_CHECKOUT_ACCESS_TTL_MINUTES` | 60 | Lifetime of the confirmation-page access token |
 | `TRUST_PROXY` | `loopback, linklocal, uniquelocal` | Express `trust proxy` setting |
 | `REACT_APP_ORDER_TERMS_VERSION` (client build) | `draft-2026-10` | Terms version recorded on each order |
+| `ESCOWEAR_PAYMENT_INSTRUCTIONS` | unset | **Private.** The payment-channel text inserted into payment-instruction emails (`\n` for new lines). Must never be committed. Quotes cannot be sent while it is unset. |
+| `EMAIL_TRANSPORT` | `none` | `none` or `log` (development only) |
 
 ## Database changes
 

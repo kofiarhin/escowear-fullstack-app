@@ -96,6 +96,7 @@ const orderSchema = new Schema(
       verifiedAt: Date,
       reviewNote: String,
       refundReference: String,
+      amountRefundedGHSMinor: minorUnits,
       refundedAt: Date,
     },
     fulfilment: {
