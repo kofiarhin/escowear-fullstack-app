@@ -71,6 +71,14 @@ For Windows PowerShell, set `$env:CI='true'` before the frontend command.
 - `GET /api/products?category=trainers` — category filter (the stored category must match)
 - `GET /api/products/:id` — one product
 
+## Orders API (manual checkout)
+
+- `POST /api/orders` — guest order (server-priced; `Idempotency-Key` header required)
+- `GET /api/orders` — signed-in customer's own orders
+- `GET /api/orders/:id` — one sanitized order for its owner or a scoped order access token
+
+Contract, configuration, index creation and open business decisions: [docs/manual-checkout-implementation.md](docs/manual-checkout-implementation.md).
+
 Shop navigation uses `/store`, without a hard-coded `category=shoes` filter. The storefront normalizes legacy `category=shoes` links so the catalogue still appears.
 
 ## Deployment on Beast
