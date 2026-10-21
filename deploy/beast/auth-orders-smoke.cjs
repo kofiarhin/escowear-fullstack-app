@@ -68,7 +68,7 @@ const { getOrderConfig } = require("/app/server/config/orders");
 
 const orderModels = {
   Order: createMemoryModel({ uniques: ["orderNumber", "idempotencyKeyHash"] }),
-  OrderEvent: createMemoryModel(),
+  OrderEvent: createMemoryModel({ uniques: ["dedupeKey"] }),
   EmailOutbox: createMemoryModel({ uniques: ["dedupeKey"] }),
   Product: createMemoryModel(),
   User: TestUser,

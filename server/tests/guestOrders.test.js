@@ -401,3 +401,23 @@ test("Order schema accepts legacy and guest documents", () => {
   assert.ok(error.errors["items.0.quantity"]);
   assert.ok(error.errors["items.0.unitPriceGBPMinor"]);
 });
+
+test("rate limits key on the real client behind the proxy chain, not the proxy address", async (t) => {
+  const ctx = await setup(t);
+  const attempt = (forwardedFor) =>
+    ctx.request("POST", "/api/orders", { body: {}, headers: { "Idempotency-Key": newIdempotencyKey(), "X-Forwarded-For": forwardedFor } });
+  for (let index = 0; index < 20; index += 1) await attempt("203.0.113.10");
+  assert.equal((await attempt("203.0.113.10")).status, 429);
+  // A different visitor through the same proxy is not affected.
+  assert.equal((await attempt("203.0.113.11")).status, 422);
+  // A client cannot dodge the limit by prepending a fake address: Express uses
+  // the right-most untrusted hop, which the proxy appended.
+  assert.equal((await attempt("198.51.100.99, 203.0.113.10")).status, 429);
+});
+
+test("Docker bridge and loopback hops are trusted; public addresses are not", () => {
+  const { createApp } = require("../server");
+  const trust = createApp({ orders: { models: require("./helpers/testApp").createModels() } }).get("trust proxy fn");
+  ["127.0.0.1", "172.18.0.1", "10.0.0.5", "::1"].forEach((address) => assert.equal(trust(address, 0), true, address));
+  ["203.0.113.10", "8.8.8.8"].forEach((address) => assert.equal(trust(address, 0), false, address));
+});

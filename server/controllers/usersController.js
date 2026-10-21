@@ -37,14 +37,15 @@ const createUser = async (req, res) => {
 // @router /api/users/login
 // @access public
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
 
-  if (!email || !password) {
+  // Strings only: an object such as {"$gt": ""} must never reach the query.
+  if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
     return res.status(400).json({ error: "email and password is required" });
   }
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (!user) {
       return res.status(400).json({ error: "user not found" });
