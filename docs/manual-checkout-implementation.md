@@ -52,7 +52,7 @@ These are HS256 JWTs signed with a key derived from `JWT_SECRET`, carrying audie
 - The auth middleware now rejects tokens without a valid user id. Before, such a token could turn into an unfiltered `findOne`.
 - Registration only accepts `name`, `email` and `password`.
 - The JSON body limit is 32 KB, and malformed JSON returns a JSON error.
-- `trust proxy` is set to `loopback`, so rate limits use the real client IP behind Nginx.
+- `trust proxy` trusts loopback and private hops (`TRUST_PROXY`, default `loopback, linklocal, uniquelocal`). Behind Docker's port mapping the container sees the bridge address, so trusting only loopback would make every rate limit shared by all visitors.
 
 ## Guest checkout UI (IDE-115)
 
@@ -133,6 +133,7 @@ Every action sends `expectedStatus`. The update is an atomic compare-and-set on 
 |---|---|---|
 | `ESCOWEAR_PUBLIC_URL` | empty | Site origin used for tracking links in emails |
 | `ORDER_CHECKOUT_ACCESS_TTL_MINUTES` | 60 | Lifetime of the confirmation-page access token |
+| `TRUST_PROXY` | `loopback, linklocal, uniquelocal` | Express `trust proxy` setting |
 | `REACT_APP_ORDER_TERMS_VERSION` (client build) | `draft-2026-10` | Terms version recorded on each order |
 | `ESCOWEAR_PAYMENT_INSTRUCTIONS` | unset | **Private.** The payment-channel text inserted into payment-instruction emails (`\n` for new lines). Must never be committed. Quotes cannot be sent while it is unset. |
 | `EMAIL_TRANSPORT` | `none` | `none` or `log` (development only) |
@@ -160,3 +161,7 @@ Indexes added:
   - `order_created`
 
 Until the unique indexes exist, idempotency still works for sequential retries. Truly concurrent duplicates are only blocked once the unique index is in place.
+
+## Real-MongoDB tests
+
+`ESCOWEAR_TEST_MONGO_URI=mongodb://127.0.0.1:<port> npm run test:realdb` runs the suites against a disposable local MongoDB. Each run creates its own randomly named database and drops only that one. Non-local hosts and the production database name are refused. Without the variable, these tests are skipped.
