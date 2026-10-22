@@ -5,10 +5,10 @@ import { registerUser, errorHandler } from "../../redux/actions/user.action";
 import { useDispatch, useSelector } from "react-redux";
 
 const Register = () => {
-  const [name, setName] = useState("test");
-  const [email, setEmail] = useState("billy@gmail.com");
-  const [password, setPassword] = useState("password");
-  const [confirmPassword, setConfirmPassword] = useState("password");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -18,7 +18,7 @@ const Register = () => {
     if (user) {
       navigate("/dashboard");
     }
-  }, [user]);
+  }, [user, navigate]);
 
   // handleSubmit
   const handleSubmit = (e) => {
@@ -29,7 +29,9 @@ const Register = () => {
       dispatch(errorHandler("please fill out all fields"));
     } else {
       // compare password
-      if (password !== confirmPassword) {
+      if (password.length < 10) {
+        dispatch(errorHandler("Password must be at least 10 characters"));
+      } else if (password !== confirmPassword) {
         // error = "password does not match";
         dispatch(errorHandler("Password does not match"));
       } else {
@@ -77,7 +79,9 @@ const Register = () => {
             <label htmlFor="password">Password</label>
             <input
               type="password"
-              placeholder="Enter password"
+              placeholder="At least 10 characters"
+              minLength={10}
+              autoComplete="new-password"
               onChange={(e) => setPassword(e.target.value)}
               value={password}
             />
@@ -88,6 +92,8 @@ const Register = () => {
             <input
               type="password"
               placeholder="Confirm Password"
+              minLength={10}
+              autoComplete="new-password"
               onChange={(e) => setConfirmPassword(e.target.value)}
               value={confirmPassword}
             />

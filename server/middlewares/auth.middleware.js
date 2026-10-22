@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../Models/User.model");
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
+const ADMIN_SESSION_SECONDS = 12 * 60 * 60;
 
 const bearerToken = (req) => {
   const header = req.headers.authorization;
@@ -26,7 +27,7 @@ const createAuth = (UserModel = User) => {
     }
     const user = await UserModel.findOne({ _id: payload.id });
     if (!user) return { error: 404, message: "authorization - user not found" };
-    return { user };
+    return { user, issuedAt: typeof payload.iat === "number" ? payload.iat : 0 };
   };
 
   const auth = async (req, res, next) => {
@@ -36,6 +37,7 @@ const createAuth = (UserModel = User) => {
       const result = await resolveUser(token);
       if (result.error) return res.status(result.error).json({ error: result.message });
       req.user = result.user;
+      req.tokenIssuedAt = result.issuedAt;
       return next();
     } catch {
       return res.status(500).json({ error: "Authorization failed" });
@@ -49,8 +51,14 @@ const createAuth = (UserModel = User) => {
     return auth(req, res, next);
   };
 
+  // Admin access also requires a recent sign-in, so a long-lived token that
+  // leaks (or predates a role change) cannot be used for admin actions.
   const requireAdmin = (req, res, next) => {
     if (req.user?.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+    const ageSeconds = Math.floor(Date.now() / 1000) - (req.tokenIssuedAt || 0);
+    if (ageSeconds > ADMIN_SESSION_SECONDS) {
+      return res.status(401).json({ error: "Please sign in again to use admin tools", code: "ADMIN_REAUTH_REQUIRED" });
+    }
     return next();
   };
 
@@ -63,3 +71,4 @@ module.exports = defaultAuth.auth;
 module.exports.createAuth = createAuth;
 module.exports.optionalAuth = defaultAuth.optionalAuth;
 module.exports.requireAdmin = defaultAuth.requireAdmin;
+module.exports.ADMIN_SESSION_SECONDS = ADMIN_SESSION_SECONDS;

@@ -37,8 +37,6 @@ export const logoutUser = () => {
 };
 
 export const registerUser = (name, email, password) => (dispatch) => {
-  console.log({ name, email, password });
-
   dispatch({
     type: "REGISTER_USER_PENDING",
   });
@@ -58,11 +56,13 @@ export const registerUser = (name, email, password) => (dispatch) => {
           payload: data.error,
         });
       } else {
-        dispatch({
-          type: "REGISTER_USER_SUCCESS",
-          payload: data,
-        });
+        // Registration does not return a session token, so sign in straight
+        // away; otherwise the account pages would load without one.
+        loginUser(email, password)(dispatch);
       }
+    })
+    .catch(() => {
+      dispatch({ type: "REGISTER_USER_FAILED", payload: "There was a problem registering. Please try again." });
     });
 };
 

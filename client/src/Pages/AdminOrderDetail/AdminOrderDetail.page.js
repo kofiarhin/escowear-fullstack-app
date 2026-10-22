@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { logoutUser } from "../../redux/actions/user.action";
 import { AdminGate } from "../AdminOrders/AdminOrders.page";
 import { apiRequest, authHeader } from "../../utils/api";
 import { formatGBP, formatGHS } from "../../utils/money";
@@ -181,7 +182,8 @@ const ActionForm = ({ action, order, user, onDone }) => {
       } else {
         const details = Object.values(response.data?.fields || {}).filter((value) => typeof value === "string");
         const message = [response.data?.error || "The action failed.", ...details].join(" — ");
-        if (response.status === 409) onDone(message);
+        // 409: reload to show the new state; 401: the reload signs out an expired admin session.
+        if (response.status === 401 || response.status === 409) onDone(message);
         else setStatus({ state: "error", message });
       }
     } catch {
@@ -299,6 +301,7 @@ const NoteForm = ({ order, user, onDone }) => {
 const AdminOrderDetail = () => {
   const { id } = useParams();
   const { user } = useSelector((state) => state.userReducer);
+  const dispatch = useDispatch();
   const [order, setOrder] = useState(null);
   const [state, setState] = useState("loading");
   const [notice, setNotice] = useState("");
@@ -310,11 +313,12 @@ const AdminOrderDetail = () => {
       if (response.ok) {
         setOrder(response.data);
         setState("ready");
-      } else setState(response.status === 404 ? "missing" : response.status === 403 ? "forbidden" : "error");
+      } else if (response.status === 401) dispatch(logoutUser());
+      else setState(response.status === 404 ? "missing" : response.status === 403 ? "forbidden" : "error");
     } catch {
       setState("error");
     }
-  }, [id, user]);
+  }, [id, user, dispatch]);
 
   useEffect(() => {
     load();
