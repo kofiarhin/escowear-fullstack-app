@@ -452,7 +452,8 @@ test("transport configuration", () => {
   assert.equal(createTransportFromEnv({ EMAIL_TRANSPORT: "none" }), null);
   assert.equal(createTransportFromEnv({ EMAIL_TRANSPORT: "log", NODE_ENV: "development" }, silentLogger).name, "log");
   assert.throws(() => createTransportFromEnv({ EMAIL_TRANSPORT: "log", NODE_ENV: "production" }), /not allowed in production/);
-  assert.throws(() => createTransportFromEnv({ EMAIL_TRANSPORT: "smtp" }), /Unsupported/);
+  assert.throws(() => createTransportFromEnv({ EMAIL_TRANSPORT: "carrier-pigeon" }), /Unsupported/);
+  assert.throws(() => createTransportFromEnv({ EMAIL_TRANSPORT: "smtp" }), /Invalid SMTP configuration/);
 });
 
 test("users default to customer role, reject unknown roles, and re-saving does not re-hash", async () => {

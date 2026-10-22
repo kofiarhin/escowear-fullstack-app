@@ -17,6 +17,22 @@ services:
       NODE_OPTIONS: --max-old-space-size=384
       ESCOWEAR_MONGO_URI: ${ESCOWEAR_MONGO_URI:?Set ESCOWEAR_MONGO_URI in a private .env file}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in a private .env file}
+      # Checkout, payment and email settings (names documented in .env.example).
+      # Listed one by one so unrelated secrets in .env never reach the container.
+      ESCOWEAR_PUBLIC_URL: ${ESCOWEAR_PUBLIC_URL:-}
+      ESCOWEAR_PAYMENT_INSTRUCTIONS: ${ESCOWEAR_PAYMENT_INSTRUCTIONS:-}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-none}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      ORDER_CHECKOUT_ACCESS_TTL_MINUTES: ${ORDER_CHECKOUT_ACCESS_TTL_MINUTES:-}
+      ORDER_TRACKING_ACCESS_TTL_MINUTES: ${ORDER_TRACKING_ACCESS_TTL_MINUTES:-}
+      ORDER_TRACKING_CODE_TTL_MINUTES: ${ORDER_TRACKING_CODE_TTL_MINUTES:-}
     ports:
       - "127.0.0.1:${ESCOWEAR_HOST_PORT:-5080}:5000"
     healthcheck:

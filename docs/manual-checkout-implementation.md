@@ -7,8 +7,8 @@ Implements the proposed [manual order checkout specification](https://github.com
 | ID | Decision | How the code handles it until decided |
 |---|---|---|
 | D1 | GHS rate, fees, shipping, quote validity | No rate or fee rules in code. An admin enters every final GHS amount (in pesewas) and the expiry by hand. |
-| D2 | Receiving bank/payment channel and reply-to mailbox | No bank details in source. Payment instructions only render from the private `ESCOWEAR_PAYMENT_INSTRUCTIONS` env value, and the action is refused if it is unset. |
-| D3 | Mail provider, sender, secrets | No provider package. Mail goes into a durable `emailoutboxes` queue. With the default `EMAIL_TRANSPORT=none`, messages stay queued and visible to admins; nothing is sent. |
+| D2 | Receiving payment channel and reply-to mailbox — **decided 22 Oct 2026: Mobile Money only for the MVP** | No bank details in source. Payment instructions only render from the private `ESCOWEAR_PAYMENT_INSTRUCTIONS` env value, and the action is refused if it is unset. |
+| D3 | Mail provider, sender, secrets — **decided 22 Oct 2026: Gmail SMTP (`EMAIL_TRANSPORT=smtp`), see [email-setup.md](email-setup.md)** | No provider package. Mail goes into a durable `emailoutboxes` queue. With the default `EMAIL_TRANSPORT=none`, messages stay queued and visible to admins; nothing is sent. |
 | D4 | Admin identities | Admins can only be granted with the operator CLI (`npm run admin:set-role`), never through the API. |
 | D5 | Ghana delivery, duties, refund policy | Only the address fields are validated (16 regions, Ghana phone format). Refunds are recorded by hand; nothing is automatic. |
 | D6 | Retention of orders, mail and audit PII; token lifetimes | Nothing is deleted automatically. Token and code lifetimes below are provisional defaults set by env. |
@@ -161,7 +161,8 @@ Every action sends `expectedStatus`. The update is an atomic compare-and-set on 
 | `TRUST_PROXY` | `loopback, linklocal, uniquelocal` | Express `trust proxy` setting |
 | `REACT_APP_ORDER_TERMS_VERSION` (client build) | `draft-2026-10` | Terms version recorded on each order |
 | `ESCOWEAR_PAYMENT_INSTRUCTIONS` | unset | **Private.** The payment-channel text inserted into payment-instruction emails (`\n` for new lines). Must never be committed. Quotes cannot be sent while it is unset. |
-| `EMAIL_TRANSPORT` | `none` | `none` or `log` (development only) |
+| `EMAIL_TRANSPORT` | `none` | `none`, `smtp` (see [email-setup.md](email-setup.md)) or `log` (development only) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`, `EMAIL_REPLY_TO` | — | SMTP provider settings; **`SMTP_PASS` is private** |
 | `ORDER_TRACKING_CODE_TTL_MINUTES` | 10 | One-time code lifetime (provisional, D6) |
 | `ORDER_TRACKING_CODE_MAX_ATTEMPTS` | 5 | Guesses per code |
 | `ORDER_TRACKING_CODES_PER_HOUR` | 5 | Codes per order per hour |
