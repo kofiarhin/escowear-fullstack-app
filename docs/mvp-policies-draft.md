@@ -14,6 +14,7 @@
 | D5d | Pricing | **All-inclusive GHS quote**: shoes, shipping, import duties, taxes and delivery. **Nothing extra is paid on arrival**; EscoWear absorbs any small difference in duties. | 23 Oct 2026 |
 | D5e | Delivery time | **Estimate, not a guarantee: usually 10–21 days**, counted from when we confirm your payment. Customers are emailed about any delay. **The estimate must be verified against real UK-to-Ghana shipping times before publishing.** | 23 Oct 2026 |
 | D7 | Seller identity | **Not registered as a business. Kofi trades in his own name** (sole trader) under the name "EscoWear". Kofi **lives in the UK, regularly alternates between the UK and Ghana, and manages EscoWear from both countries**, selling mainly to customers in Ghana. | 23 Oct 2026 |
+| D6 | Data retention | Orders and payment records: **6 years**, then deleted. Tracking codes: deleted **within 1 day** of expiry (automatic). Customers can **request account deletion** at any time; only legally required order records are kept. Payment screenshots (Gmail inbox) are **deleted once the order is completed, unless needed for a dispute**. | 23 Oct 2026 |
 | D5c | Faulty, damaged or wrong items | Draft below: replacement or full refund; **EscoWear covers return costs**. | 23 Oct 2026 |
 
 ## Cancellation (draft wording)
@@ -32,6 +33,18 @@ _Implementation note: the payment-instructions email and the checkout/confirmati
 ## Delivery (draft wording)
 
 Delivery usually takes **10–21 days, counted from when we confirm your payment**. This is an estimate, not a guarantee. If anything delays your order, we'll email you with an update. You can see progress any time at /track-order.
+
+## Your data (draft wording, for the privacy notice)
+
+- We keep your order and payment records for **6 years** after your order, for tax, accounting and disputes. Then we delete them.
+- One-time tracking codes are deleted automatically within a day of expiring. We never store your codes in readable form.
+- You can ask us to **delete your account** at any time by replying to any order email. We'll delete your account details and keep only the order records the law requires.
+- Payment screenshots you email us are **deleted once your order is completed**, unless we need them to resolve a dispute.
+
+_Implementation notes (not yet built):_
+- _Account deletion is a manual admin step for the MVP; no self-service button yet._
+- _The 6-year deletion has no automatic job yet and needs a yearly manual review or a scheduled clean-up._
+- _Screenshot deletion is done by hand in the Gmail inbox._
 
 ## Faulty, damaged or wrong items (draft wording)
 
@@ -67,6 +80,7 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
   - **Data protection:** the UK GDPR and Data Protection Act 2018 (including whether an ICO data protection fee is due), and Ghana's Data Protection Act, 2012 (Act 843), including whether registration with the Data Protection Commission is required.
   - **Tax:** UK self-assessment for trading income, and any Ghana tax position. This is for an accountant, not the site.
   - **Which country's law the terms name**, and whether a UK or Ghana lawyer (or both) should review.
+- **Data retention (D6):** confirm that 6 years for order and payment records is appropriate under the UK GDPR / DPA 2018 and Ghana's Act 843, and what privacy-notice content each requires (purpose, legal basis, retention, rights, contact, international transfers). Customer data is stored in MongoDB Atlas and processed via Gmail.
 - **Faulty goods:** check the buyer's rights under Ghana's general sale-of-goods law (Sale of Goods Act, 1962 (Act 137)), and whether a 14-day reporting window is acceptable or must be longer.
 - To confirm:
   - Is Act 772 still in force, or replaced by the 2025 Bill?
@@ -78,4 +92,4 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
 
 - Quote validity period.
 - Identity details to publish (name, contact address, phone), once the legal review confirms what is required.
-- Privacy notice, and how long customer data is kept (D6).
+- Privacy notice: full text, still to be drafted, using D6 above.
