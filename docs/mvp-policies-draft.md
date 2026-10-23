@@ -15,6 +15,7 @@
 | D5e | Delivery time | **Estimate, not a guarantee: usually 10–21 days**, counted from when we confirm your payment. Customers are emailed about any delay. **The estimate must be verified against real UK-to-Ghana shipping times before publishing.** | 23 Oct 2026 |
 | D7 | Seller identity | **Not registered as a business. Kofi trades in his own name** (sole trader) under the name "EscoWear". Kofi **lives in the UK, regularly alternates between the UK and Ghana, and manages EscoWear from both countries**, selling mainly to customers in Ghana. | 23 Oct 2026 |
 | D6 | Data retention | Orders and payment records: **6 years**, then deleted. Tracking codes: deleted **within 1 day** of expiry (automatic). Customers can **request account deletion** at any time; only legally required order records are kept. Payment screenshots (Gmail inbox) are **deleted once the order is completed, unless needed for a dispute**. | 23 Oct 2026 |
+| D8 | Quote validity | GHS quotes are **valid for 48 hours**, with the expiry shown in **Ghana time**. After that, the customer **must request an updated quote before paying**. | 23 Oct 2026 |
 | D5c | Faulty, damaged or wrong items | Draft below: replacement or full refund; **EscoWear covers return costs**. | 23 Oct 2026 |
 
 ## Cancellation (draft wording)
@@ -29,6 +30,14 @@
 Prices on the site are an estimate in GBP. Before you pay, we email your **final price in Ghana cedis (GHS)**. It covers the shoes, shipping, import duties, taxes and delivery to your address. **You won't pay anything extra on arrival.**
 
 _Implementation note: the payment-instructions email and the checkout/confirmation text must say this when the policies are published._
+
+## Quotes (draft wording)
+
+Your GHS quote is **valid for 48 hours**. The expiry date and time (Ghana time) are shown in our email. If it expires before you pay, **please ask us for an updated quote before paying**. Prices and exchange rates can change.
+
+_Implementation notes:_
+- _The payment email already shows the expiry in Ghana time (Africa/Accra)._
+- _To do: default the admin quote expiry to 48 hours, and say in the email that payment after expiry needs a new quote._
 
 ## Delivery (draft wording)
 
@@ -90,6 +99,5 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
 
 ## Open questions (to be decided)
 
-- Quote validity period.
 - Identity details to publish (name, contact address, phone), once the legal review confirms what is required.
 - Privacy notice: full text, still to be drafted, using D6 above.
