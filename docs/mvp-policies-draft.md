@@ -7,8 +7,8 @@
 | # | Topic | Decision | Date |
 |---|---|---|---|
 | D2 | Payment method | **Mobile Money only** for the MVP. The customer sends the exact GHS amount to one MoMo number, uses the order number as the reference, and replies to the email with a screenshot. Payment is confirmed only after the money is seen in the account. MoMo details live only in the private server setting. | 22 Oct 2026 |
-| D3 | Email | Gmail SMTP from `kofiarhin69@gmail.com` (see `email-setup.md`). | 22 Oct 2026 |
-| D4 | Admin | One admin account: `kofiarhin69@gmail.com`. | 22 Oct 2026 |
+| D3 | Email | Gmail SMTP from the owner's Gmail account (see `email-setup.md`). | 22 Oct 2026 |
+| D4 | Admin | One admin account, the owner's (address kept in Linear IDE-125, not in this repo). | 22 Oct 2026 |
 | D5a | Item unavailable after payment | Offer an alternative item first. If the customer declines, give a **full refund to the original Mobile Money number within 7 days**. | 23 Oct 2026 |
 | D5b | Cancellation | Draft below; agreed in principle and pending legal verification. | 23 Oct 2026 |
 | D5d | Pricing | **All-inclusive GHS quote**: shoes, shipping, import duties, taxes and delivery. **Nothing extra is paid on arrival**; EscoWear absorbs any small difference in duties. | 23 Oct 2026 |
