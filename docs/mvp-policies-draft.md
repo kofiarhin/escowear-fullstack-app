@@ -11,13 +11,21 @@
 | D4 | Admin | One admin account: `kofiarhin69@gmail.com`. | 22 Oct 2026 |
 | D5a | Item unavailable after payment | Offer an alternative item first. If the customer declines, give a **full refund to the original Mobile Money number within 7 days**. | 23 Oct 2026 |
 | D5b | Cancellation | Draft below; agreed in principle and pending legal verification. | 23 Oct 2026 |
+| D5c | Faulty, damaged or wrong items | Draft below: replacement or full refund; **EscoWear covers return costs**. | 23 Oct 2026 |
 
 ## Cancellation (draft wording)
 
 1. **Before you pay:** you can cancel at any time, free of charge. Reply to our email, or simply don't pay.
 2. **After you pay, before we buy your item:** you can cancel for a full refund to your Mobile Money number within 7 days.
 3. **After we buy your item:** the order can't be stopped while it is on its way. You can still cancel **within 14 days of receiving it**, without giving a reason, by returning the item unworn, in its original condition and box. You pay only the direct cost of sending it back. We refund the full price within 14 days of receiving the return.
-4. **Faulty or wrong items:** see Returns (to be decided).
+4. **Faulty or wrong items:** see below.
+
+## Faulty, damaged or wrong items (draft wording)
+
+1. If your item arrives faulty or damaged, or is not what you ordered (wrong size or model), tell us **within 14 days of delivery**. Reply to any order email with photos of the item and its box.
+2. You choose a **replacement** (if available) or a **full refund**, including the original delivery cost, to your Mobile Money number.
+3. **EscoWear pays the return costs.** Where sending the item back isn't practical, we may refund on the photo evidence alone.
+4. We refund within 14 days of receiving the returned item, or of accepting the photo evidence.
 
 ## Legal points to verify before publishing
 
@@ -35,6 +43,7 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
   - Payment method; delivery time; return, exchange and refund policy; privacy and security policy.
   - Terms the customer can read and store, and a chance to correct errors before ordering.
   - If these are missing, the customer may cancel within 14 days and must be refunded within 30 days.
+- **Faulty goods:** check the buyer's rights under Ghana's general sale-of-goods law (Sale of Goods Act, 1962 (Act 137)), and whether a 14-day reporting window is acceptable or must be longer.
 - To confirm:
   - Is Act 772 still in force, or replaced by the 2025 Bill?
   - Does UK consumer law also apply? This depends on where EscoWear is legally based.
@@ -43,7 +52,6 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
 
 ## Open questions (to be decided)
 
-- Returns for faulty or wrong items.
 - Delivery times, shipping costs and duties (who pays, and whether they are included in the GHS quote).
 - Quote validity period.
 - Business identity details for the site (legal name and status, address, phone).
