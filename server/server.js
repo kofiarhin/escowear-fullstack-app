@@ -65,7 +65,15 @@ const app = createApp();
 // default EMAIL_TRANSPORT=none, emails stay queued and visible to admins.
 const startEmailDelivery = () => {
   const { createTransportFromEnv } = require("./emails/transports");
-  const transport = createTransportFromEnv();
+  let transport;
+  try {
+    transport = createTransportFromEnv();
+  } catch (error) {
+    // A bad mail setting must not take the shop down: orders still save and
+    // emails stay queued (visible to admins) until the setting is fixed.
+    console.error(`Email transport disabled: ${error.message}`);
+    return null;
+  }
   if (!transport) {
     console.log("Email transport: none (messages stay queued)");
     return null;
