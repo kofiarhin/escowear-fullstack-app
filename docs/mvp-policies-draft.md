@@ -13,6 +13,7 @@
 | D5b | Cancellation | Draft below; agreed in principle and pending legal verification. | 23 Oct 2026 |
 | D5d | Pricing | **All-inclusive GHS quote**: shoes, shipping, import duties, taxes and delivery. **Nothing extra is paid on arrival**; EscoWear absorbs any small difference in duties. | 23 Oct 2026 |
 | D5e | Delivery time | **Estimate, not a guarantee: usually 10–21 days**, counted from when we confirm your payment. Customers are emailed about any delay. **The estimate must be verified against real UK-to-Ghana shipping times before publishing.** | 23 Oct 2026 |
+| D7 | Seller identity | **Not registered as a business. Kofi trades in his own name** (sole trader) under the name "EscoWear". Country: to be confirmed. | 23 Oct 2026 |
 | D5c | Faulty, damaged or wrong items | Draft below: replacement or full refund; **EscoWear covers return costs**. | 23 Oct 2026 |
 
 ## Cancellation (draft wording)
@@ -56,6 +57,9 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
   - Terms the customer can read and store, and a chance to correct errors before ordering.
   - If these are missing, the customer may cancel within 14 days and must be refunded within 30 days.
 - **Delivery wording:** Act 772 requires an order to be executed within 14 days "unless the parties have agreed otherwise". Confirm that a stated 10–21 day *estimate* accepted with the quote counts as "agreed otherwise". If not, it may need to be a firm maximum period. Also verify the 10–21 day range against real shipping times.
+- **Seller identity and business name:** EscoWear is unregistered, and Kofi trades in his own name. Confirm:
+  - Whether trading under the name "EscoWear" requires business-name registration (in Ghana, with the Office of the Registrar of Companies; or the equivalent where Kofi trades).
+  - What identity details the site must show in that case: name, legal status, physical address and phone.
 - **Faulty goods:** check the buyer's rights under Ghana's general sale-of-goods law (Sale of Goods Act, 1962 (Act 137)), and whether a 14-day reporting window is acceptable or must be longer.
 - To confirm:
   - Is Act 772 still in force, or replaced by the 2025 Bill?
@@ -66,5 +70,5 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
 ## Open questions (to be decided)
 
 - Quote validity period.
-- Business identity details for the site (legal name and status, address, phone).
+- Country Kofi trades from, then the identity details to publish (name, address, phone).
 - Privacy notice, and how long customer data is kept (D6).
