@@ -44,6 +44,12 @@ export const localDateTimeToIso = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 };
 
+// Date -> value for a datetime-local input, in the browser's local time.
+export const toLocalDateTimeInput = (date) => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
 export const formatDateTime = (value) =>
   value ? new Date(value).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : "—";
 

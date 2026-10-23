@@ -10,6 +10,9 @@ ENV NODE_OPTIONS=--max-old-space-size=1536
 RUN CI=true npm test -- --watchAll=false --runInBand
 
 FROM frontend-deps AS frontend
+# Draft policies stay hidden unless explicitly published after legal review.
+ARG REACT_APP_POLICIES_STATUS=hidden
+ENV REACT_APP_POLICIES_STATUS=${REACT_APP_POLICIES_STATUS}
 COPY client/ ./
 ENV CI=false
 ENV NODE_OPTIONS=--max-old-space-size=1536

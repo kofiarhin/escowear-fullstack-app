@@ -16,6 +16,7 @@ import {
   mapServerErrors,
   validateCheckoutForm,
 } from "../../utils/checkout";
+import { policiesVisible } from "../../policies/content";
 import "./checkout.styles.css";
 
 const FIELD_ORDER = ["name", "email", "phone", "recipient", "recipientPhone", "line1", "line2", "landmark", "city", "region", "termsAccepted"];
@@ -252,6 +253,12 @@ const Checkout = () => {
               <li>We check the exact size is available from the UK retailer and work out the final cost.</li>
               <li>We email you the final amount in Ghana cedis (GHS) with payment instructions.</li>
               <li>Your order is confirmed only after we verify your payment.</li>
+              {policiesVisible() && (
+                <>
+                  <li>Your GHS quote includes shipping, import duties, taxes and delivery, so you pay nothing extra on arrival. Quotes are valid for 48 hours.</li>
+                  <li>Delivery usually takes 10–21 days after we confirm your payment (an estimate, not a guarantee).</li>
+                </>
+              )}
             </ul>
             <div className={`checkout-consent ${errors.termsAccepted ? "has-error" : ""}`}>
               <input
@@ -267,6 +274,16 @@ const Checkout = () => {
               <label htmlFor="checkout-termsAccepted">
                 I understand this is an order request, not a payment, and agree that EscoWear may use my details to process
                 this order and contact me about it.
+                {policiesVisible() && (
+                  <>
+                    {" "}
+                    I have read the{" "}
+                    <a href="/policies" target="_blank" rel="noopener noreferrer">
+                      shop policies (opens in a new tab)
+                    </a>
+                    .
+                  </>
+                )}
               </label>
               {errors.termsAccepted && (
                 <p className="checkout-error" id="checkout-termsAccepted-error">

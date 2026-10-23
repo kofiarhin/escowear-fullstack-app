@@ -143,6 +143,7 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
     const context = {
       order: { ...order, ...(spec.snapshot || {}) },
       baseUrl: config.publicBaseUrl,
+      policiesPublished: Boolean(config.policiesPublished),
       message: spec.message,
       headline: spec.headline,
       paymentInstructions: spec.kind === "payment_instructions" ? paymentInstructions() : undefined,

@@ -2,6 +2,19 @@
 
 > **Status: DRAFT, not published.** These are Kofi's business decisions, written up for review. **The Ghana legal requirements must be verified before anything is published or shown to customers.** That means a check by a Ghana-qualified lawyer, plus the current status of the Electronic Transactions Act 2008 (Act 772) and the draft Electronic Transactions Bill 2025. This document is not legal advice.
 
+## Where the draft lives in the site (unpublished)
+
+- **Page:** `/policies`, with text in `client/src/policies/sections.js` and the switch in `client/src/policies/content.js`.
+- **Switch: `ESCOWEAR_POLICIES_STATUS`** (compose; passed to the image build as `REACT_APP_POLICIES_STATUS`):
+  - `hidden` (default): `/policies` says the policies are being finalised, nothing links to it, emails carry no policy promises, and **the draft text is not included in the public JavaScript at all**.
+  - `draft`: full text with a red "DRAFT, not yet published" banner. For local or lawyer review only; never deploy this publicly.
+  - `published`: full text, a link from the checkout agreement and the footer, policy lines in the order-received and payment emails, and orders record the policy version (`POLICY_VERSION`).
+- **Applies in every state:**
+  - The quote-expiry rule in the payment email ("ask for an updated quote before paying").
+  - The MoMo wording ("send the exact amount… use your order number as the reference").
+  - The 48-hour default expiry in the admin quote form.
+- **Switch to `published` only after:** the legal review is complete, the seller-identity placeholder is filled in, and Kofi approves.
+
 ## Decisions recorded
 
 | # | Topic | Decision | Date |

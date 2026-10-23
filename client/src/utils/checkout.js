@@ -1,3 +1,5 @@
+import { POLICY_VERSION, policiesStatus } from "../policies/content";
+
 // Client-side mirror of the server's guest-order rules (server stays authoritative).
 export const GHANA_REGIONS = [
   "Ahafo",
@@ -18,7 +20,10 @@ export const GHANA_REGIONS = [
   "Western North",
 ];
 
-export const TERMS_VERSION = process.env.REACT_APP_ORDER_TERMS_VERSION || "draft-2026-10";
+// Recorded on each order. Once the reviewed policies are published, orders
+// record the policy version the customer agreed to.
+export const TERMS_VERSION =
+  process.env.REACT_APP_ORDER_TERMS_VERSION || (policiesStatus() === "published" ? POLICY_VERSION : "draft-2026-10");
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const clean = (value) => String(value ?? "").replace(/\s+/g, " ").trim();

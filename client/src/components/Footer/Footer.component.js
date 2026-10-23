@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { policiesVisible } from "../../policies/content";
 import "./footer.styles.css";
 
 const Footer = () => {
@@ -33,6 +34,7 @@ const Footer = () => {
           <Link to="/register">Register</Link>
           <Link to="/cart">Cart</Link>
           <Link to="/track-order">Track order</Link>
+          {policiesVisible() && <Link to="/policies">Shop policies</Link>}
         </nav>
       </div>
 

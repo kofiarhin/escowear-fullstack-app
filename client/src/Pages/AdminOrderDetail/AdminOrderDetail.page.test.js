@@ -157,3 +157,14 @@ test("re-quotes send the current quote version and uncertain-funds cancels ask a
   await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(3));
   await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 });
+
+test("quote expiry defaults to 48 hours from now", async () => {
+  global.fetch.mockImplementation(() =>
+    ok({ ...baseOrder, status: "pending_contact", allowedActions: ["payment-instructions"], paymentChannelConfigured: true, pricing: { subtotalGBPMinor: 16499 } })
+  );
+  renderAt(`/admin/orders/${baseOrder.id}`);
+  const input = await screen.findByLabelText(/quote valid until/i);
+  const hours = (new Date(input.value).getTime() - Date.now()) / 3600000;
+  expect(hours).toBeGreaterThan(47.9);
+  expect(hours).toBeLessThan(48.1);
+});
