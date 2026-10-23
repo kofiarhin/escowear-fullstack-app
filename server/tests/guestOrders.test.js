@@ -353,7 +353,7 @@ test("registration ignores privileged fields", async (t) => {
     User.prototype.save = original;
   });
   const response = await ctx.request("POST", "/api/users/register", {
-    body: { name: "Mallory", email: "mallory@example.test", password: "pw-123456", role: "admin", _id: "x" },
+    body: { name: "Mallory", email: "mallory@example.test", password: "pw-1234567890", role: "admin", _id: "x" },
   });
   assert.equal(response.status, 201);
   assert.notEqual(saved[0].role, "admin");

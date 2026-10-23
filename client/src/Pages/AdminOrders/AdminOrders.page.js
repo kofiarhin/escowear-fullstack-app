@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { logoutUser } from "../../redux/actions/user.action";
 import { apiRequest, authHeader } from "../../utils/api";
 import { formatGBP, formatGHS } from "../../utils/money";
 import { ORDER_STATUSES, formatDateTime, humanize, isAdmin } from "../../utils/admin";
@@ -30,6 +31,7 @@ export const AdminGate = ({ user, children }) => {
 
 const AdminOrders = () => {
   const { user } = useSelector((state) => state.userReducer);
+  const dispatch = useDispatch();
   const [params, setParams] = useSearchParams();
   const [data, setData] = useState(null);
   const [state, setState] = useState("loading");
@@ -49,13 +51,16 @@ const AdminOrders = () => {
       if (response.ok) {
         setData(response.data);
         setState("ready");
+      } else if (response.status === 401) {
+        // Admin sessions last 12 hours; sign out so the gate asks to sign in again.
+        dispatch(logoutUser());
       } else {
-        setState(response.status === 403 || response.status === 401 ? "forbidden" : "error");
+        setState(response.status === 403 ? "forbidden" : "error");
       }
     } catch {
       setState("error");
     }
-  }, [user, page, status, q]);
+  }, [user, page, status, q, dispatch]);
 
   useEffect(() => {
     load();

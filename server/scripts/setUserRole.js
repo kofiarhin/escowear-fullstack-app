@@ -30,6 +30,7 @@ const run = async ({ email, role, confirm }, { UserModel = User, connect = conne
   const result = await UserModel.updateOne({ email: String(email).trim().toLowerCase() }, { $set: { role } });
   if (!result.matchedCount) throw new Error("No user with that email; ask them to register first");
   log(`Role for ${String(email).trim().toLowerCase()} set to ${role}`);
+  log("The account must sign out and sign in again; admin sessions then last 12 hours.");
   return result;
 };
 
