@@ -1,9 +1,14 @@
 const User = require("../Models/User.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const createToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
-};
+const { ADMIN_SESSION_SECONDS } = require("../middlewares/auth.middleware");
+
+// Admins get short sessions; customers keep the existing 30-day sign-in.
+const createToken = (id, role) =>
+  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: role === "admin" ? ADMIN_SESSION_SECONDS : "30d" });
+
+const PASSWORD_MIN = 10;
+const PASSWORD_MAX = 128;
 
 // @desc create users
 // @router /api/users/register
@@ -12,7 +17,13 @@ const createUser = async (req, res) => {
   // Only these fields are accepted; role and other privileged fields never come
   // from public input.
   const { name, email, password } = req.body || {};
-  const user = new User({ name, email, password });
+  if (typeof name !== "string" || typeof email !== "string" || typeof password !== "string" || !name.trim() || !email.trim()) {
+    return res.status(400).json({ error: "Name, email and password are required" });
+  }
+  if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
+    return res.status(400).json({ error: `Password must be ${PASSWORD_MIN}-${PASSWORD_MAX} characters` });
+  }
+  const user = new User({ name: name.trim(), email: email.trim().toLowerCase(), password });
 
   try {
     await user.save();
@@ -59,7 +70,7 @@ const loginUser = async (req, res) => {
         // `role` only drives what the UI shows; every admin API re-checks it server-side.
         return res
           .status(200)
-          .json({ id: _id, email, name, role: user.role || "customer", token: createToken(_id) });
+          .json({ id: _id, email, name, role: user.role || "customer", token: createToken(_id, user.role) });
       } else {
         return res.status(400).json({ error: "Invalid email or password" });
       }

@@ -9,7 +9,7 @@ Implements the proposed [manual order checkout specification](https://github.com
 | D1 | GHS rate, fees, shipping, quote validity | No rate or fee rules in code. An admin enters every final GHS amount (in pesewas) and the expiry by hand. |
 | D2 | Receiving payment channel and reply-to mailbox — **decided 22 Oct 2026: Mobile Money only for the MVP** | No bank details in source. Payment instructions only render from the private `ESCOWEAR_PAYMENT_INSTRUCTIONS` env value, and the action is refused if it is unset. |
 | D3 | Mail provider, sender, secrets — **decided 22 Oct 2026: Gmail SMTP (`EMAIL_TRANSPORT=smtp`), see [email-setup.md](email-setup.md)** | No provider package. Mail goes into a durable `emailoutboxes` queue. With the default `EMAIL_TRANSPORT=none`, messages stay queued and visible to admins; nothing is sent. |
-| D4 | Admin identities | Admins can only be granted with the operator CLI (`npm run admin:set-role`), never through the API. |
+| D4 | Admin identities — **decided 22 Oct 2026: one owner admin (address recorded privately in Linear IDE-125)** | Admins can only be granted with the operator CLI (`npm run admin:set-role`), never through the API. |
 | D5 | Ghana delivery, duties, refund policy | Only the address fields are validated (16 regions, Ghana phone format). Refunds are recorded by hand; nothing is automatic. |
 | D6 | Retention of orders, mail and audit PII; token lifetimes | Nothing is deleted automatically. Token and code lifetimes below are provisional defaults set by env. |
 
@@ -80,6 +80,13 @@ npm run admin:set-role -- --email staff@example.com --role admin --confirm
 ```
 
 The script uses `updateOne`, so the password hash is never touched. The save hook also no longer re-hashes an unchanged password. Every `/api/admin/*` route reloads the user and checks `role === "admin"`. Anonymous users get `401`, and customers or unknown roles get `403`. Customer order-access tokens are rejected.
+
+Admin account security (IDE-125):
+
+- Passwords must be 10–128 characters (checked by both client and server). The register form no longer pre-fills sample values.
+- Sign-in is rate-limited to 20 attempts per 15 minutes per IP and 8 per 15 minutes per account. Registration is limited to 10 per hour per IP.
+- Admin tokens expire after 12 hours. Admin APIs also refuse any token issued more than 12 hours ago (`401 ADMIN_REAUTH_REQUIRED`), so an older 30-day customer token never works for admin, even after a role change. The admin pages sign out and ask you to sign in again.
+- MVP setup: the owner registers their admin email on the site with a new password (not their email password, and never shared). After approval, run `npm run admin:set-role -- --email <owner email> --role admin --confirm` on the server, then sign out and back in.
 
 The UI lives at `/admin/orders`, with a paginated list filtered by status and searchable by order number, name or email, and `/admin/orders/:id`. The header shows an Admin link for admins, but the server enforces every rule regardless.
 

@@ -14,6 +14,7 @@ test("IDE-116 admin manual payment on real MongoDB", { skip: skipReason() }, asy
 
   const setup = async () => {
     await db.reset();
+    require("../routes/usersRoute").resetRateLimits();
     const ctx = await startTestApp({ models, deps: { admin: { env } } });
     const product = await models.Product.create(sampleProduct());
     const admin = await ctx.addUser({ role: "admin" });
@@ -33,7 +34,7 @@ test("IDE-116 admin manual payment on real MongoDB", { skip: skipReason() }, asy
     try {
       const customer = await ctx.addUser();
       assert.equal((await ctx.request("GET", "/api/admin/orders", { token: userToken(customer._id) })).status, 403);
-      const registered = await ctx.request("POST", "/api/users/register", { body: { name: "Mallory", email: "mallory@example.test", password: "pw-123456", role: "admin" } });
+      const registered = await ctx.request("POST", "/api/users/register", { body: { name: "Mallory", email: "mallory@example.test", password: "pw-1234567890", role: "admin" } });
       assert.equal(registered.status, 201);
       const stored = await models.User.findOne({ email: "mallory@example.test" }).lean();
       assert.equal(stored.role, "customer");
@@ -118,6 +119,59 @@ test("IDE-116 admin manual payment on real MongoDB", { skip: skipReason() }, asy
       assert.equal(instructions.state, "sent");
       assert.ok(!instructions.payload.text.includes("REAL-DB TEST CHANNEL"), "body purged after send");
       assert.equal((await models.Order.findOne({}).lean()).email.paymentInstructionState, "sent");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  await t.test("registration rules: no pre-filled weak passwords, no role, normalized email", async () => {
+    const { ctx } = await setup();
+    try {
+      const register = (body) => ctx.request("POST", "/api/users/register", { body });
+      assert.equal((await register({ name: "A", email: "a@example.test", password: "password" })).status, 400, "8 chars is too short");
+      assert.equal((await register({ name: "A", email: "a@example.test", password: "x".repeat(129) })).status, 400);
+      assert.equal((await register({ name: { $gt: "" }, email: "a@example.test", password: "long-enough-pw" })).status, 400);
+      const ok = await register({ name: " Kofi ", email: " Admin@Example.TEST ", password: "long-enough-pw", role: "admin" });
+      assert.equal(ok.status, 201);
+      const stored = await models.User.findOne({ email: "admin@example.test" }).lean();
+      assert.equal(stored.name, "Kofi");
+      assert.equal(stored.role, "customer");
+      assert.notEqual(stored.password, "long-enough-pw", "password is hashed");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  await t.test("admin sign-in tokens last 12 hours; customer tokens 30 days", async () => {
+    const { ctx } = await setup();
+    try {
+      await ctx.request("POST", "/api/users/register", { body: { name: "Owner", email: "owner@example.test", password: "owner-password-1" } });
+      await models.User.updateOne({ email: "owner@example.test" }, { $set: { role: "admin" } });
+      await ctx.request("POST", "/api/users/register", { body: { name: "Buyer", email: "buyer@example.test", password: "buyer-password-1" } });
+      const jwt = require("jsonwebtoken");
+      const life = async (email, password) => {
+        const response = await ctx.request("POST", "/api/users/login", { body: { email, password } });
+        assert.equal(response.status, 200);
+        const { iat, exp } = jwt.decode(response.body.token);
+        return exp - iat;
+      };
+      assert.equal(await life("owner@example.test", "owner-password-1"), 12 * 3600);
+      assert.equal(await life("buyer@example.test", "buyer-password-1"), 30 * 86400);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  await t.test("repeated sign-in attempts for one account are rate limited", async () => {
+    const { ctx } = await setup();
+    try {
+      await ctx.request("POST", "/api/users/register", { body: { name: "Target", email: "target@example.test", password: "target-password-1" } });
+      const statuses = [];
+      for (let attempt = 0; attempt < 9; attempt += 1) {
+        statuses.push((await ctx.request("POST", "/api/users/login", { body: { email: "TARGET@example.test", password: `guess-${attempt}` } })).status);
+      }
+      assert.deepEqual(statuses.slice(0, 8), Array(8).fill(400));
+      assert.equal(statuses[8], 429);
     } finally {
       await ctx.close();
     }
