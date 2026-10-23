@@ -11,6 +11,7 @@
 | D4 | Admin | One admin account: `kofiarhin69@gmail.com`. | 22 Oct 2026 |
 | D5a | Item unavailable after payment | Offer an alternative item first. If the customer declines, give a **full refund to the original Mobile Money number within 7 days**. | 23 Oct 2026 |
 | D5b | Cancellation | Draft below; agreed in principle and pending legal verification. | 23 Oct 2026 |
+| D5d | Pricing | **All-inclusive GHS quote**: shoes, shipping, import duties, taxes and delivery. **Nothing extra is paid on arrival**; EscoWear absorbs any small difference in duties. | 23 Oct 2026 |
 | D5c | Faulty, damaged or wrong items | Draft below: replacement or full refund; **EscoWear covers return costs**. | 23 Oct 2026 |
 
 ## Cancellation (draft wording)
@@ -19,6 +20,12 @@
 2. **After you pay, before we buy your item:** you can cancel for a full refund to your Mobile Money number within 7 days.
 3. **After we buy your item:** the order can't be stopped while it is on its way. You can still cancel **within 14 days of receiving it**, without giving a reason, by returning the item unworn, in its original condition and box. You pay only the direct cost of sending it back. We refund the full price within 14 days of receiving the return.
 4. **Faulty or wrong items:** see below.
+
+## Pricing (draft wording)
+
+Prices on the site are an estimate in GBP. Before you pay, we email your **final price in Ghana cedis (GHS)**. It covers the shoes, shipping, import duties, taxes and delivery to your address. **You won't pay anything extra on arrival.**
+
+_Implementation note: the payment-instructions email and the checkout/confirmation text must say this when the policies are published._
 
 ## Faulty, damaged or wrong items (draft wording)
 
@@ -52,7 +59,7 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
 
 ## Open questions (to be decided)
 
-- Delivery times, shipping costs and duties (who pays, and whether they are included in the GHS quote).
+- Delivery time to state (Act 772: orders must be executed within 14 days unless agreed otherwise).
 - Quote validity period.
 - Business identity details for the site (legal name and status, address, phone).
 - Privacy notice, and how long customer data is kept (D6).
