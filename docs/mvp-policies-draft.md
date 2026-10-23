@@ -13,7 +13,7 @@
 | D5b | Cancellation | Draft below; agreed in principle and pending legal verification. | 23 Oct 2026 |
 | D5d | Pricing | **All-inclusive GHS quote**: shoes, shipping, import duties, taxes and delivery. **Nothing extra is paid on arrival**; EscoWear absorbs any small difference in duties. | 23 Oct 2026 |
 | D5e | Delivery time | **Estimate, not a guarantee: usually 10–21 days**, counted from when we confirm your payment. Customers are emailed about any delay. **The estimate must be verified against real UK-to-Ghana shipping times before publishing.** | 23 Oct 2026 |
-| D7 | Seller identity | **Not registered as a business. Kofi trades in his own name** (sole trader) under the name "EscoWear". Country: to be confirmed. | 23 Oct 2026 |
+| D7 | Seller identity | **Not registered as a business. Kofi trades in his own name** (sole trader) under the name "EscoWear". Kofi **lives in the UK, regularly alternates between the UK and Ghana, and manages EscoWear from both countries**, selling mainly to customers in Ghana. | 23 Oct 2026 |
 | D5c | Faulty, damaged or wrong items | Draft below: replacement or full refund; **EscoWear covers return costs**. | 23 Oct 2026 |
 
 ## Cancellation (draft wording)
@@ -60,6 +60,13 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
 - **Seller identity and business name:** EscoWear is unregistered, and Kofi trades in his own name. Confirm:
   - Whether trading under the name "EscoWear" requires business-name registration (in Ghana, with the Office of the Registrar of Companies; or the equivalent where Kofi trades).
   - What identity details the site must show in that case: name, legal status, physical address and phone.
+- **Cross-border setup (UK resident, operating from both the UK and Ghana, customers mainly in Ghana).** Review which rules apply, and to what extent:
+  - **UK consumer law:** whether the Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013 and the Consumer Rights Act 2015 apply to a UK-resident trader selling to consumers in Ghana. If they do, they bring a 14-day cancellation right, pre-contract information duties and a 14-day refund deadline.
+  - **UK business-name disclosure:** a sole trader using a name other than their own (here "EscoWear") may have to show their own name and a UK address for documents on the site and in emails (Companies Act 2006, Part 41).
+  - **Ghana:** business-name registration for trading as "EscoWear", and whether operating partly from Ghana creates a local registration or tax presence.
+  - **Data protection:** the UK GDPR and Data Protection Act 2018 (including whether an ICO data protection fee is due), and Ghana's Data Protection Act, 2012 (Act 843), including whether registration with the Data Protection Commission is required.
+  - **Tax:** UK self-assessment for trading income, and any Ghana tax position. This is for an accountant, not the site.
+  - **Which country's law the terms name**, and whether a UK or Ghana lawyer (or both) should review.
 - **Faulty goods:** check the buyer's rights under Ghana's general sale-of-goods law (Sale of Goods Act, 1962 (Act 137)), and whether a 14-day reporting window is acceptable or must be longer.
 - To confirm:
   - Is Act 772 still in force, or replaced by the 2025 Bill?
@@ -70,5 +77,5 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
 ## Open questions (to be decided)
 
 - Quote validity period.
-- Country Kofi trades from, then the identity details to publish (name, address, phone).
+- Identity details to publish (name, contact address, phone), once the legal review confirms what is required.
 - Privacy notice, and how long customer data is kept (D6).
