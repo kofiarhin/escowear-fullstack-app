@@ -15,6 +15,8 @@ const getOrderConfig = (env = process.env) => ({
   trackingCodesPerOrderPerHour: positiveInt(env.ORDER_TRACKING_CODES_PER_HOUR, 5),
   // Public site origin used to build links in emails (no tokens are put in links).
   publicBaseUrl: (env.ESCOWEAR_PUBLIC_URL || "").replace(/\/+$/, ""),
+  // Policy wording in emails stays off until the legal review is complete.
+  policiesPublished: env.ESCOWEAR_POLICIES_STATUS === "published",
 });
 
 module.exports = { getOrderConfig };

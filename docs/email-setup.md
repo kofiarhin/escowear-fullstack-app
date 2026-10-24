@@ -1,5 +1,18 @@
 # Email setup (SMTP)
 
+**Preparation only:** production setting changes and test-email sends need owner
+approval. A login-only check passed on 24 October 2026; inbox delivery and replies
+remain unverified. See [the launch checklist](mvp-launch-checklist.md).
+
+The owner's proposed support mailbox is **support@escowear.com — UNVERIFIED**.
+The Gmail login check did not verify it. It is stored as a draft business detail in
+`client/src/policies/review.json`, with `seller.emailVerified: false`. The template
+keeps `EMAIL_REPLY_TO` unset and email transport disabled. Do not use the proposed
+support address as a sender or reply destination until the owner confirms control
+and an approved receipt-and-reply test passes. A Gmail sender and a support inbox
+can be different mailboxes; verify both paths. Record evidence privately and then
+update the verification flag only for the address actually tested.
+
 EscoWear sends its order emails over SMTP: order received, payment instructions, payment issue, order confirmed, status updates and tracking codes. The MVP uses **Gmail**. Any other SMTP provider works by changing only `.env`; no code changes are needed.
 
 Until email is configured (`EMAIL_TRANSPORT=none`), orders still work. Emails wait in the queue and admins can see them on each order.
@@ -9,7 +22,7 @@ Until email is configured (`EMAIL_TRANSPORT=none`), orders still work. Emails wa
 Gmail does not accept your normal password over SMTP. It needs a 16-character **App Password**.
 
 1. Sign in to the Google Account you will send from.
-2. Turn on **2-Step Verification**: Google Account → Security → 2-Step Verification. App Passwords require it.
+2. App Passwords require **2-Step Verification**. Some managed, Advanced Protection or security-key-only accounts cannot use them; see [Google's App Password instructions](https://support.google.com/accounts/answer/185833?hl=en). Do not change account security settings without owner approval.
 3. Open <https://myaccount.google.com/apppasswords>, or search the account settings for "App passwords".
 4. Enter a name such as `EscoWear server`, then select **Create**.
 5. Google shows a 16-character password, for example `abcd efgh ijkl mnop`. Copy it now; it is only shown once.
@@ -32,7 +45,7 @@ ESCOWEAR_PUBLIC_URL=https://escowear.com
 ```
 
 - Gmail sends only from your own address (or an alias verified in Gmail), so `EMAIL_FROM` must use the same address as `SMTP_USER`.
-- Gmail allows roughly 500 emails a day, which is plenty for an MVP.
+- Personal Gmail may block sending above 500 messages in a day; Workspace limits differ. Monitor the outbox: each order creates several messages and tracking requests add more. See [Google's sending limits](https://support.google.com/mail/answer/22839?hl=en).
 
 ## 3. Check it, without creating an order
 

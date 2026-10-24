@@ -58,6 +58,8 @@ const Register = () => {
           <div className="form-unit">
             <label htmlFor="name">Name</label>
             <input
+              id="name"
+              autoComplete="name"
               type="text"
               placeholder="Enter name"
               onChange={(e) => setName(e.target.value)}
@@ -66,9 +68,11 @@ const Register = () => {
           </div>
 
           <div className="form-unit">
-            <label htmlFor="name">Email</label>
+            <label htmlFor="email">Email</label>
             <input
-              type="text"
+              id="email"
+              autoComplete="email"
+              type="email"
               placeholder="Enter email"
               onChange={(e) => setEmail(e.target.value)}
               value={email}
@@ -78,6 +82,7 @@ const Register = () => {
           <div className="form-unit">
             <label htmlFor="password">Password</label>
             <input
+              id="password"
               type="password"
               placeholder="At least 10 characters"
               minLength={10}
@@ -88,8 +93,9 @@ const Register = () => {
           </div>
 
           <div className="form-unit">
-            <label htmlFor="password">Confirm Password</label>
+            <label htmlFor="confirmPassword">Confirm Password</label>
             <input
+              id="confirmPassword"
               type="password"
               placeholder="Confirm Password"
               minLength={10}

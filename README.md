@@ -11,7 +11,7 @@ Escowear is a UK-to-Ghana sneaker storefront built with **React**, **Express/Nod
 - Beast's Codex deployment report confirmed a healthy `escowear-web-1` container, working product API/images/health checks, and successful HTTPS configuration for `escowear.com` and `www.escowear.com`.
 - The application connects to the existing MongoDB database `escowear-sneaker-import-test`. At launch, read-only checks found **3,258 products**.
 - Automated checks reported **4 frontend tests** and **6 backend tests** passing. Auth/order behavior passed **isolated in-memory tests**, not real customer checkout testing.
-- **Still to verify in-browser:** individual product detail pages, registration/login, cart, and complete order/checkout journey. A database backup was intentionally deferred for this MVP.
+- **Checkout release preparation:** see [the current launch checklist](docs/mvp-launch-checklist.md) for local verification, configuration, policy and deployment gates. The new checkout is not deployed. Database credential remediation (IDE-123) is deferred by the owner, not resolved.
 
 These are recorded deployment observations, not a guarantee of current service availability.
 
@@ -100,7 +100,7 @@ Runtime Compose limits: **512 MiB RAM**, **1 CPU**, **128 processes**. The appli
 
 ### Production safety
 
-Keep `.env` private (mode `600` on Beast). Never commit or paste MongoDB credentials or JWT secrets. Verify database connectivity and the running image before making changes. Production Nginx, DNS, Docker startup, certificates, and database writes require owner approval. **A MongoDB backup/recovery plan was not verified at MVP launch** and remains a risk to address.
+Keep `.env` private (mode `600` on Beast). Never commit or paste MongoDB credentials or JWT secrets. Verify database connectivity and the running image before making changes. Production Nginx, DNS, Docker startup, certificates, and database writes require owner approval. Backup verification was added after the initial MVP launch; a fresh pre-release backup and recovery check remain required. See the [current launch checklist](docs/mvp-launch-checklist.md).
 
 ## Sneaker importer (separate, approval-gated workflow)
 

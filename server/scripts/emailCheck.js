@@ -30,7 +30,9 @@ const run = async (argv = process.argv.slice(2), { env = process.env, log = cons
 
 if (require.main === module) {
   run().catch((error) => {
-    console.error(`Email check failed: ${error.message}`);
+    // Provider error messages can echo recipients or authentication details.
+    const safeCodes = new Set(["EAUTH", "ETIMEDOUT", "ECONNECTION", "ECONNREFUSED", "ESOCKET", "ENOTFOUND"]);
+    console.error(`Email check failed: ${safeCodes.has(error.code) ? error.code : "check configuration and connection privately"}`);
     process.exitCode = 1;
   });
 }

@@ -7,7 +7,7 @@ const Logout = ({ setIsLoggedIn }) => {
     localStorage.removeItem("user");
     setIsLoggedIn(null);
     navigate("/login");
-  }, []);
+  }, [navigate, setIsLoggedIn]);
   return (
     <div>
       <h1 className="title">Logout</h1>

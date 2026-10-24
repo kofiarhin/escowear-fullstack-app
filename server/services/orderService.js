@@ -140,7 +140,7 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
         orderId: order._id,
         kind: "order_received",
         to: order.customer.emailNormalized,
-        context: { order, baseUrl: baseUrl() },
+        context: { order, baseUrl: baseUrl(), policiesPublished: Boolean(config.policiesPublished) },
       });
       await Order.updateOne(
         { _id: order._id, "email.acknowledgementState": { $ne: EMAIL_STATE.SENT } },

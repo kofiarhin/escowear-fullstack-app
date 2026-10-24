@@ -5,7 +5,7 @@ import { logoutUser } from "../../redux/actions/user.action";
 import { AdminGate } from "../AdminOrders/AdminOrders.page";
 import { apiRequest, authHeader } from "../../utils/api";
 import { formatGBP, formatGHS } from "../../utils/money";
-import { FULFILMENT_STEPS, formatDateTime, humanize, isAdmin, localDateTimeToIso, toMinorUnits } from "../../utils/admin";
+import { FULFILMENT_STEPS, formatDateTime, humanize, isAdmin, localDateTimeToIso, toLocalDateTimeInput, toMinorUnits } from "../../utils/admin";
 import "./admin.styles.css";
 
 const money = (name, label, required = true) => ({ name, label, type: "money", required });
@@ -17,12 +17,14 @@ const ACTIONS = {
     title: "Send GHS quote and payment instructions",
     help: "Enter the final amounts you have agreed after checking availability. The email uses the payment channel configured on the server.",
     submit: "Send payment instructions",
+    // MVP policy: quotes are valid for 48 hours.
+    defaults: () => ({ expiresAt: toLocalDateTimeInput(new Date(Date.now() + 48 * 60 * 60 * 1000)) }),
     fields: [
       money("subtotal", "Items (GHS)"),
       money("fees", "Fees (GHS)"),
       money("shipping", "Shipping (GHS)"),
       money("duties", "Duties (GHS)"),
-      { name: "expiresAt", label: "Quote valid until", type: "datetime-local", required: true },
+      { name: "expiresAt", label: "Quote valid until (your local time; defaults to 48 hours)", type: "datetime-local", required: true },
       { name: "rateSnapshot", label: "Rate / calculation note (internal, optional)", type: "text" },
       { name: "message", label: "Message to customer (optional)", type: "textarea" },
     ],
@@ -144,7 +146,7 @@ const ACTIONS = {
 
 const ActionForm = ({ action, order, user, onDone }) => {
   const definition = ACTIONS[action];
-  const [values, setValues] = useState({});
+  const [values, setValues] = useState(() => definition.defaults?.() || {});
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState({ state: "idle", message: "" });
   const prefix = `action-${action}`;

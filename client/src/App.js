@@ -18,6 +18,7 @@ import {
   AdminOrderDetail,
   TrackOrder,
   OrderDetails,
+  Policies,
 } from "./Pages";
 
 const ScrollToHash = () => {
@@ -61,6 +62,7 @@ const App = () => {
           <Route path="/orders/:id/confirmation" element={<OrderConfirmation />} />
           <Route path="/orders/:id" element={<OrderDetails />} />
           <Route path="/track-order" element={<TrackOrder />} />
+          <Route path="/policies" element={<Policies />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
           <Route path="/details/:id" element={<Details />} />
