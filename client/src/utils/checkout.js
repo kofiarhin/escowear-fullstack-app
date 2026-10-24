@@ -21,9 +21,9 @@ export const GHANA_REGIONS = [
 ];
 
 // Recorded on each order. Once the reviewed policies are published, orders
-// record the policy version the customer agreed to.
+// must record the published policy version (the server rejects any other).
 export const TERMS_VERSION =
-  process.env.REACT_APP_ORDER_TERMS_VERSION || (policiesStatus() === "published" ? POLICY_VERSION : "draft-2026-10");
+  policiesStatus() === "published" ? POLICY_VERSION : process.env.REACT_APP_ORDER_TERMS_VERSION || "draft-2026-10";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const clean = (value) => String(value ?? "").replace(/\s+/g, " ").trim();

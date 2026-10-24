@@ -93,6 +93,17 @@ const startEmailDelivery = () => {
   return startEmailWorker({ ...models, orderService, transport, trackingCodeTtlMinutes: config.trackingCodeTtlMinutes });
 };
 
+// Emails read ESCOWEAR_POLICIES_STATUS at runtime, separately from the site's
+// build-time switch. Refuse to start in "published" while the publication guard
+// fails, so emails can never make policy promises the site has not published.
+const assertPolicyPublication = (env = process.env, problems = () => require("../client/scripts/check-policies.cjs").publicationProblems()) => {
+  if (env.ESCOWEAR_POLICIES_STATUS !== "published") return;
+  const missing = problems();
+  if (missing.length) {
+    throw new Error(`ESCOWEAR_POLICIES_STATUS=published but ${missing.length} publication requirement(s) are missing; run npm run release:check`);
+  }
+};
+
 // setup port
 const port = process.env.PORT || 5000;
 
@@ -100,6 +111,7 @@ const startServer = async () => {
   if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
     throw new Error("Missing required environment variable JWT_SECRET");
   }
+  assertPolicyPublication();
   await connectDB();
   startEmailDelivery();
   return app.listen(port, () => console.log(`Listening on port ${port}`));
@@ -112,4 +124,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, createApp, startServer };
+module.exports = { app, assertPolicyPublication, createApp, startServer };
