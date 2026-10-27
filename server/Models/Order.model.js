@@ -95,6 +95,14 @@ const orderSchema = new Schema(
       verifiedBy: { type: Schema.Types.ObjectId, ref: "User" },
       verifiedAt: Date,
       reviewNote: String,
+      // Latest website-uploaded proof (metadata only; image is in private storage).
+      proof: {
+        id: { type: Schema.Types.ObjectId, ref: "PaymentProof" },
+        submittedAt: Date,
+        quoteVersion: Number,
+        referenceMasked: String,
+        channel: String,
+      },
       refundReference: String,
       amountRefundedGHSMinor: minorUnits,
       refundedAt: Date,
@@ -107,6 +115,9 @@ const orderSchema = new Schema(
       trackingUrl: String,
       dispatchedAt: Date,
       deliveredAt: Date,
+      // Set only from operational information the admin enters; never guessed.
+      estimatedDeliveryAt: Date,
+      issue: String,
     },
     email: {
       acknowledgementState: String,

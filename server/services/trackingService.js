@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const { enqueueEmail } = require("./emailOutbox");
-const { issueOrderAccessToken } = require("./orderAccess");
+const { issueOrderAccessToken, issuePaymentProofToken } = require("./orderAccess");
 const { OrderError } = require("./orderService");
 const { normalizeEmail } = require("../validators/orderValidator");
 
@@ -113,6 +113,9 @@ const createTrackingService = ({ Order, OrderEvent, EmailOutbox, TrackingChallen
       orderId: String(order._id),
       accessToken: issueOrderAccessToken(order._id, config.trackingAccessTtlMinutes, { secret, via: "tracking" }),
       expiresInMinutes: config.trackingAccessTtlMinutes,
+      // Proven ownership also grants a short-lived, order-bound upload capability.
+      proofToken: issuePaymentProofToken(order._id, config.proofAccessTtlMinutes || config.trackingAccessTtlMinutes, { secret, via: "tracking" }),
+      proofExpiresInMinutes: config.proofAccessTtlMinutes || config.trackingAccessTtlMinutes,
     };
   };
 

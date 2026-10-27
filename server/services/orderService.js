@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const { ORDER_STATUS, PAYMENT_STATUS, EMAIL_STATE, customerStatusLabel } = require("./orderStatus");
-const { issueOrderAccessToken } = require("./orderAccess");
+const { issueOrderAccessToken, issuePaymentProofToken } = require("./orderAccess");
 const { enqueueEmail, isDuplicateKey } = require("./emailOutbox");
 const { isObjectId, isValidIdempotencyKey, normalizeSize, validateGuestOrder } = require("../validators/orderValidator");
 
@@ -44,9 +44,19 @@ const productUnavailableReason = (product, size) => {
 
 const isLegacyOrder = (order) => !Array.isArray(order.items) || order.items.length === 0;
 
-const toCustomerOrder = (order, events = []) => {
+// Statuses where the owner may upload payment proof for the current quote.
+const PROOF_SUBMITTABLE = [ORDER_STATUS.AWAITING_PAYMENT, ORDER_STATUS.PAYMENT_ISSUE];
+
+const historyEntry = (event) =>
+  event.type === "customer_update"
+    ? { type: "update", label: "Update from EscoWear", message: event.details?.message || "", at: event.createdAt }
+    : { status: event.toStatus, label: customerStatusLabel(event.toStatus), at: event.createdAt };
+
+const toCustomerOrder = (order, events = [], now = new Date()) => {
   const legacy = isLegacyOrder(order);
   const quote = order.pricing?.finalGHS;
+  const quoteExpired = Boolean(quote?.expiresAt && new Date(quote.expiresAt) <= now);
+  const proof = order.payment?.proof;
   return {
     id: String(order._id),
     orderNumber: order.orderNumber || null,
@@ -81,6 +91,8 @@ const toCustomerOrder = (order, events = []) => {
                   dutiesMinor: quote.dutiesMinor,
                   totalMinor: quote.totalMinor,
                   expiresAt: quote.expiresAt,
+                  quoteVersion: quote.quoteVersion,
+                  expired: quoteExpired,
                 }
               : null,
         },
@@ -93,7 +105,19 @@ const toCustomerOrder = (order, events = []) => {
           country: order.shippingAddress.country,
         }
       : null,
+    // Never includes storage paths, full transaction references or bank details.
+    payment: legacy
+      ? null
+      : {
+          status: order.payment?.status || null,
+          verified: order.payment?.status === PAYMENT_STATUS.VERIFIED,
+          canSubmitProof: Boolean(quote?.totalMinor && !quoteExpired && PROOF_SUBMITTABLE.includes(order.status)),
+          proof: proof?.id
+            ? { submittedAt: proof.submittedAt, referenceMasked: proof.referenceMasked, quoteVersion: proof.quoteVersion }
+            : null,
+        },
     fulfilment: {
+      estimatedDeliveryAt: order.fulfilment?.estimatedDeliveryAt || null,
       carrier: order.fulfilment?.carrier || null,
       trackingNumber: order.fulfilment?.trackingNumber || null,
       trackingUrl: order.fulfilment?.trackingUrl || null,
@@ -101,8 +125,8 @@ const toCustomerOrder = (order, events = []) => {
       deliveredAt: order.fulfilment?.deliveredAt || null,
     },
     history: events
-      .filter((event) => event.customerVisible && event.toStatus)
-      .map((event) => ({ status: event.toStatus, label: customerStatusLabel(event.toStatus), at: event.createdAt })),
+      .filter((event) => event.customerVisible && (event.toStatus || event.type === "customer_update"))
+      .map(historyEntry),
   };
 };
 
@@ -159,6 +183,8 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
       trackingHandoff: {
         accessToken: issueOrderAccessToken(order._id, config.checkoutAccessTtlMinutes, { via: "checkout" }),
         expiresInMinutes: config.checkoutAccessTtlMinutes,
+        // Separate, order-bound capability to upload payment proof later in this tab.
+        proofToken: issuePaymentProofToken(order._id, config.checkoutAccessTtlMinutes, { via: "checkout" }),
       },
       order: toCustomerOrder(order),
     },

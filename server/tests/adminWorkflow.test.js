@@ -123,7 +123,7 @@ test("full manual payment workflow: quote → review → bank-verified → fulfi
   const instructions = ctx.models.EmailOutbox.docs.find((message) => message.kind === "payment_instructions");
   assert.match(instructions.payload.text, /GH₵5,650\.00|GHS\s?5,650\.00/);
   assert.match(instructions.payload.text, /TEST PAYMENT CHANNEL\nNot a real account/);
-  assert.match(instructions.payload.text, /reply to this email with a screenshot/i);
+  assert.match(instructions.payload.text, /upload your payment screenshot/i);
   assert.match(instructions.payload.text, new RegExp(`payment reference: ${ctx.placed.body.orderNumber}`));
 
   // Duplicate click with the now-stale expected status cannot double-send.
@@ -183,7 +183,7 @@ test("full manual payment workflow: quote → review → bank-verified → fulfi
   assert.equal(order.fulfilment.supplierReference, "RET-123");
 
   const kinds = ctx.models.EmailOutbox.docs.map((message) => message.dedupeKey.split(":")[0] + (message.kind === "order_status" ? `:${message.dedupeKey.split(":")[2]}` : ""));
-  assert.deepEqual(kinds, ["order_received", "payment_instructions", "order_confirmed", "status:processing", "status:dispatched", "status:delivered"]);
+  assert.deepEqual(kinds, ["order_received", "payment_instructions", "order_confirmed", "status:processing", "status:dispatched", "status:delivered", "status:completed"]);
   const dispatchMail = ctx.models.EmailOutbox.docs.find((message) => message.dedupeKey.endsWith(":dispatched"));
   assert.match(dispatchMail.payload.text, /Tracking number: TC123/);
 

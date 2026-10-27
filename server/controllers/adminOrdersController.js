@@ -19,10 +19,12 @@ const adminSummary = (order) => ({
   subtotalGBPMinor: order.pricing?.subtotalGBPMinor,
   quoteTotalGHSMinor: order.pricing?.finalGHS?.totalMinor ?? null,
   paymentStatus: order.payment?.status,
+  // A website proof is waiting for the admin to check the receiving account.
+  proofAwaitingReview: order.status === "payment_review" && Boolean(order.payment?.proof?.id),
   email: order.email || {},
 });
 
-const adminDetail = (order, events, emails, paymentChannelConfigured) => {
+const adminDetail = (order, events, emails, paymentChannelConfigured, paymentProofs = []) => {
   // Hashes used for idempotency never leave the server.
   const { idempotencyKeyHash, requestFingerprint, ...rest } = order;
   return {
@@ -31,6 +33,7 @@ const adminDetail = (order, events, emails, paymentChannelConfigured) => {
     statusLabel: customerStatusLabel(order.status),
     allowedActions: allowedActions(order.status),
     paymentChannelConfigured,
+    paymentProofs,
     events: events.map((event) => ({
       id: String(event._id),
       type: event.type,
@@ -58,7 +61,7 @@ const adminDetail = (order, events, emails, paymentChannelConfigured) => {
   };
 };
 
-const createAdminOrdersController = ({ Order, OrderEvent, EmailOutbox, workflow, logger = console }) => {
+const createAdminOrdersController = ({ Order, OrderEvent, EmailOutbox, workflow, proofs, logger = console }) => {
   const handle = (action) => async (req, res) => {
     try {
       return await action(req, res);
@@ -89,12 +92,31 @@ const createAdminOrdersController = ({ Order, OrderEvent, EmailOutbox, workflow,
     if (!isObjectId(req.params.id)) throw new OrderError(404, "NOT_FOUND", "Order not found");
     const order = await Order.findOne({ _id: req.params.id }).select("+internalNotes").lean();
     if (!order || !order.orderNumber) throw new OrderError(404, "NOT_FOUND", "Order not found");
-    const [events, emails] = await Promise.all([
+    const [events, emails, paymentProofs] = await Promise.all([
       OrderEvent.find({ orderId: order._id }).sort({ createdAt: 1 }).lean(),
       EmailOutbox.find({ orderId: order._id }).sort({ createdAt: 1 }).lean(),
+      proofs ? proofs.listForAdmin(order) : [],
     ]);
     res.set("Cache-Control", "no-store");
-    return res.json(adminDetail(order, events, emails, workflow.paymentChannelConfigured()));
+    return res.json(adminDetail(order, events, emails, workflow.paymentChannelConfigured(), paymentProofs));
+  });
+
+  // Streams one stored screenshot to an admin. Never cached, never sniffed,
+  // never rendered as a document, so a crafted file cannot run in our origin.
+  const paymentProofImage = handle(async (req, res) => {
+    const { buffer, contentType } = await proofs.readForAdmin(req.params.id, req.params.proofId);
+    res.set({
+      "Content-Type": contentType,
+      "Content-Length": String(buffer.length),
+      "Cache-Control": "no-store, private",
+      Pragma: "no-cache",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; img-src 'self'; sandbox",
+      "Content-Disposition": "inline; filename=\"payment-proof\"",
+      "Cross-Origin-Resource-Policy": "same-origin",
+      "Referrer-Policy": "no-referrer",
+    });
+    return res.status(200).end(buffer);
   });
 
   const action = (method) =>
@@ -126,6 +148,8 @@ const createAdminOrdersController = ({ Order, OrderEvent, EmailOutbox, workflow,
   return {
     addNote,
     cancel: action("cancelOrder"),
+    customerUpdate: action("sendCustomerUpdate"),
+    paymentProofImage,
     fulfilment: action("updateFulfilment"),
     getOrder,
     listOrders,

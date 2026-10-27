@@ -57,3 +57,8 @@
   outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
+
+.order-details-update {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

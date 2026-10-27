@@ -6,7 +6,7 @@ import { readCart, saveCart, cartSubtotal } from "../../utils/cart";
 import { getProductImage, useFallbackProductImage } from "../../utils/product";
 import { formatGBP } from "../../utils/money";
 import { apiRequest, authHeader, NetworkError } from "../../utils/api";
-import { saveOrderAccess } from "../../utils/orderAccess";
+import { saveOrderAccess, saveProofAccess } from "../../utils/orderAccess";
 import {
   GHANA_REGIONS,
   buildOrderPayload,
@@ -106,6 +106,7 @@ const Checkout = () => {
 
       if (ok && data?.orderId && data?.orderNumber && (httpStatus === 201 || httpStatus === 200)) {
         saveOrderAccess(data.orderId, data.trackingHandoff?.accessToken, data.trackingHandoff?.expiresInMinutes || 60);
+        saveProofAccess(data.orderId, data.trackingHandoff?.proofToken, data.trackingHandoff?.expiresInMinutes || 60);
         // Only now, after the server has confirmed the order, is the cart cleared.
         saveCart([]);
         forgetCheckoutAttempt();

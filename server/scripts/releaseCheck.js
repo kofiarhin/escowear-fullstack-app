@@ -1,7 +1,12 @@
 // Offline readiness check: reads settings but never prints their values,
 // connects to a database, sends email or changes the environment.
 const { readSmtpConfig } = require("../emails/transports");
+const path = require("path");
 const { publicationProblems } = require("../../client/scripts/check-policies.cjs");
+
+const REPO = path.resolve(__dirname, "../..");
+// Directories Express or the client build can serve: proofs must never live there.
+const PUBLIC_ROOTS = ["client", "server/images"].map((dir) => path.join(REPO, dir));
 
 const checkReleaseConfig = (env, policyProblems = publicationProblems()) => {
   const problems = [];
@@ -21,6 +26,17 @@ const checkReleaseConfig = (env, policyProblems = publicationProblems()) => {
     problems.push("ESCOWEAR_PUBLIC_URL must be an HTTPS origin without credentials, path, query or fragment");
   }
   if (env.ESCOWEAR_POLICIES_STATUS !== "published") problems.push("Reviewed policies must be published before checkout launch");
+  const proofDir = (env.ESCOWEAR_PROOF_UPLOAD_DIR || "").trim();
+  if (!proofDir || !path.isAbsolute(proofDir)) {
+    problems.push("ESCOWEAR_PROOF_UPLOAD_DIR must be an absolute path on a persistent private volume");
+  } else if (PUBLIC_ROOTS.some((root) => path.resolve(proofDir) === root || path.resolve(proofDir).startsWith(root + path.sep))) {
+    problems.push("ESCOWEAR_PROOF_UPLOAD_DIR must not be inside a public/static directory");
+  }
+  const reply = (env.EMAIL_REPLY_TO || "").trim();
+  const from = (env.EMAIL_FROM || "").match(/<([^>]+)>/)?.[1] || (env.EMAIL_FROM || "").trim();
+  if (reply && from && reply.toLowerCase() !== from.toLowerCase()) {
+    problems.push("EMAIL_REPLY_TO differs from EMAIL_FROM: confirm the provider allows it as a verified alias so one mailbox handles all support (then clear this by matching them)");
+  }
   problems.push(...policyProblems);
   return problems;
 };

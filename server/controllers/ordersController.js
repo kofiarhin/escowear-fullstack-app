@@ -1,8 +1,9 @@
 const { OrderError } = require("../services/orderService");
-const { verifyOrderAccessToken } = require("../services/orderAccess");
+const { verifyOrderAccessToken, verifyPaymentProofToken } = require("../services/orderAccess");
+const { MultipartError, readMultipart } = require("../middlewares/multipart");
 
 const sendError = (res, error, logger = console) => {
-  if (error instanceof OrderError) {
+  if (error instanceof OrderError || error instanceof MultipartError) {
     const body = { error: error.message, code: error.code };
     if (error.fields) body.fields = error.fields;
     return res.status(error.status).json(body);
@@ -11,7 +12,9 @@ const sendError = (res, error, logger = console) => {
   return res.status(500).json({ error: "Something went wrong. Your cart has not been changed.", code: "SERVER_ERROR" });
 };
 
-const createOrdersController = (orderService, { logger = console, trackingService } = {}) => {
+const createOrdersController = (orderService, { logger = console, trackingService, proofService, proofMaxBytes, maxConcurrentUploads = 4 } = {}) => {
+  let uploadsInFlight = 0;
+  const proofViewer = (req) => ({ user: req.user, proofOrderId: verifyPaymentProofToken(req.get("X-Order-Proof-Token")) });
   const createOrder = async (req, res) => {
     try {
       const result = await orderService.createGuestOrder({
@@ -67,7 +70,46 @@ const createOrdersController = (orderService, { logger = console, trackingServic
     }
   };
 
-  return { createOrder, getOrder, getOrders, requestTrackingCode, verifyTrackingCode };
+  // Payment details for the proven owner (login or proof capability) only.
+  const getPaymentInstructions = async (req, res) => {
+    try {
+      res.set("Cache-Control", "no-store");
+      const order = await proofService.authorize(req.params.id, proofViewer(req));
+      return res.status(200).json(await proofService.getPaymentInstructions(order));
+    } catch (error) {
+      return sendError(res, error, logger);
+    }
+  };
+
+  // Ownership is checked before the body is read, so strangers never get to
+  // stream an upload. The order state is re-checked atomically on commit.
+  const submitPaymentProof = async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    if (uploadsInFlight >= maxConcurrentUploads) {
+      res.set("Retry-After", "10");
+      req.resume();
+      return res.status(503).json({ error: "We're busy processing uploads. Please try again in a moment.", code: "UPLOADS_BUSY" });
+    }
+    uploadsInFlight += 1;
+    try {
+      const order = await proofService.authorize(req.params.id, proofViewer(req));
+      const { fields, file } = await readMultipart(req, { maxBytes: proofMaxBytes, allowedFields: ["transactionReference", "quoteVersion"] });
+      const result = await proofService.submit({ order, user: req.user, idempotencyKey: req.get("Idempotency-Key"), fields, file });
+      return res.status(result.httpStatus).json(result.body);
+    } catch (error) {
+      // Stop reading an upload we have rejected; close so it is not reused.
+      if (!req.complete) {
+        res.set("Connection", "close");
+        req.unpipe();
+        req.resume();
+      }
+      return sendError(res, error, logger);
+    } finally {
+      uploadsInFlight -= 1;
+    }
+  };
+
+  return { createOrder, getOrder, getOrders, getPaymentInstructions, requestTrackingCode, submitPaymentProof, verifyTrackingCode };
 };
 
 module.exports = { createOrdersController, sendError };

@@ -9,6 +9,7 @@
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const fs = require("node:fs");
+const sharp = require("sharp");
 const { start } = require("./harness.cjs");
 
 const { chromium } = require(process.env.PLAYWRIGHT_CORE_PATH || "playwright-core");
@@ -67,7 +68,42 @@ const expectNoA11yIssues = async (page, label) => {
   assert.deepEqual(issues, [], `${label}: ${issues.join("; ")}`);
 };
 
+// Waits for the n-th tracking-code email for an order and returns its code.
+const waitForCode = async (harness, orderNumber, count) => {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const mails = (await (await fetch(`${harness.url}/__e2e/outbox`)).json()).filter((mail) => mail.subject.includes(orderNumber) && /tracking code/.test(mail.subject));
+    if (mails.length >= count) return mails[count - 1].text.match(/is: (\d{6})/)[1];
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error("tracking code email not delivered");
+};
+
+// Customer pays (outside the site) then uploads screenshot + transaction ID.
+const uploadProof = async (page, proofPng, shot) => {
+  await page.getByText(/E2E TEST CHANNEL/).waitFor({ timeout: 10000 }).catch(async (error) => {
+    throw new Error(`${error.message}\nPage text: ${(await page.locator("main").innerText()).slice(0, 1200)}`);
+  });
+  await page.getByText("Total to pay").waitFor();
+  await page.getByLabel(/payment screenshot/i).setInputFiles({ name: "notes.png", mimeType: "image/png", buffer: Buffer.from("this is plain text pretending to be an image file ".repeat(4)) });
+  await page.getByLabel("Mobile Money transaction ID").fill("E2E-MOMO-0001");
+  await page.getByRole("button", { name: "Submit payment proof" }).click();
+  await page.getByRole("alert").filter({ hasText: /JPEG, PNG or WebP/i }).waitFor();
+  await expectNoA11yIssues(page, "payment upload form");
+  await page.getByLabel(/payment screenshot/i).setInputFiles({ name: "momo.png", mimeType: "image/png", buffer: proofPng });
+  assert.equal(await page.locator("#payment-proof-file-error").count(), 0, "stale file error cleared after choosing a new file");
+  await shot("payment-form");
+  await page.getByRole("button", { name: "Submit payment proof" }).click();
+  await page.getByRole("heading", { name: "Payment submitted — under review" }).waitFor();
+  await page.getByText(/your order is not confirmed yet/i).first().waitFor();
+  assert.equal(await page.getByText(/payment verified/i).count(), 0, "upload never shows as verified");
+  await page.reload();
+  await page.getByRole("heading", { name: "Payment submitted — under review" }).waitFor();
+  await page.getByText(/••••0001/).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Submit payment proof" }).count(), 0, "no second submission while under review");
+};
+
 const runJourney = async (browser, harness, { name, ...contextOptions }) => {
+  const proofPng = await sharp({ create: { width: 360, height: 720, channels: 3, background: "#ffcc00" } }).png().toBuffer();
   const problems = [];
   const shot = (page, step) => page.screenshot({ path: path.join(OUT, `${name}-${step}.png`), fullPage: true });
 
@@ -147,8 +183,41 @@ const runJourney = async (browser, harness, { name, ...contextOptions }) => {
   await adminPage.getByText(/send payment instructions: saved\. email queued/i).waitFor();
   await adminPage.getByText(/awaiting payment/i).first().waitFor();
 
-  await actionForm("Payment proof received by email").getByRole("button", { name: "Mark proof under review" }).click();
-  await adminPage.getByText(/mark proof under review: saved/i).waitFor();
+  // Customer uploads proof on the website: desktop from the checkout tab's
+  // capability, mobile after recovering access with an emailed tracking code.
+  let payer = page;
+  let recovery = null;
+  if (name === "mobile") {
+    recovery = await browser.newContext(contextOptions);
+    payer = await recovery.newPage();
+    watch(payer, `${name}/recovery`, problems);
+    await payer.goto(`${harness.url}/track-order?order=${orderNumber}`);
+    await payer.getByLabel("Email").fill(`${name}.customer@e2e.test`);
+    await payer.getByRole("button", { name: "Email me a code" }).click();
+    await payer.getByLabel("6-digit code").fill(await waitForCode(harness, orderNumber, 1));
+    await payer.getByRole("button", { name: "View my order" }).click();
+  } else {
+    // Same tab that placed the order: "View order progress" from the receipt.
+    await page.goto(confirmationUrl);
+    await page.getByRole("link", { name: "View order progress" }).click();
+  }
+  await uploadProof(payer, proofPng, (step) => shot(payer, `3-${step}`));
+  await shot(payer, "4-under-review");
+  pass(`${name}: website payment instructions shown; bad file refused; screenshot + transaction ID uploaded → under review (not confirmed), survives reload`);
+
+  // Admin sees the new proof without any manual "proof received" step.
+  await adminPage.goto(`${harness.url}/admin/orders`);
+  await adminPage.getByText("New proof to check").waitFor();
+  await adminPage.getByRole("link", { name: orderNumber }).click();
+  await adminPage.getByRole("heading", { name: "Payment proof uploads" }).waitFor();
+  await adminPage.getByText("E2E-MOMO-0001").waitFor();
+  assert.equal(await actionForm("Proof received outside the website (fallback)").count(), 0);
+  await adminPage.getByRole("button", { name: "View screenshot" }).click();
+  const proofImage = adminPage.getByRole("img", { name: /payment screenshot uploaded for/i });
+  await proofImage.waitFor();
+  assert.ok(await proofImage.evaluate((image) => image.complete && image.naturalWidth === 360), "protected screenshot rendered");
+  assert.match(await proofImage.getAttribute("src"), /^blob:/);
+  pass(`${name}: admin dashboard flags new proof and shows the protected screenshot via an authorized blob URL`);
 
   const verify = actionForm("Verify bank receipt");
   await verify.getByLabel("Amount received (GHS)").fill("1999.00");
@@ -173,7 +242,7 @@ const runJourney = async (browser, harness, { name, ...contextOptions }) => {
   await fulfil().getByLabel("Tracking number").fill("E2E-TRACK-9");
   await fulfil().getByRole("button", { name: "Save fulfilment step" }).click();
   await adminPage.getByText("E2E Courier", { exact: false }).first().waitFor();
-  await shot(adminPage, "3-admin");
+  await shot(adminPage, "5-admin");
   pass(`${name}: bank receipt verified, processing → dispatched with carrier`);
 
   // --- Guest tracking with emailed one-time code ----------------------------
@@ -184,13 +253,7 @@ const runJourney = async (browser, harness, { name, ...contextOptions }) => {
   await guestPage.getByLabel("Email").fill(`${name}.customer@e2e.test`);
   await guestPage.getByRole("button", { name: "Email me a code" }).click();
   await guestPage.getByLabel("6-digit code").waitFor();
-  let code;
-  for (let attempt = 0; attempt < 40 && !code; attempt += 1) {
-    const mails = await (await fetch(`${harness.url}/__e2e/outbox`)).json();
-    code = mails.filter((mail) => mail.subject.includes(orderNumber) && /tracking code/.test(mail.subject)).at(-1)?.text.match(/is: (\d{6})/)?.[1];
-    if (!code) await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  assert.ok(code, "tracking code email delivered by worker");
+  const code = await waitForCode(harness, orderNumber, name === "mobile" ? 2 : 1);
   await guestPage.getByLabel("6-digit code").fill(code === "000000" ? "111111" : "000000");
   await guestPage.getByRole("button", { name: "View my order" }).click();
   await guestPage.getByRole("alert").filter({ hasText: /not valid or has expired/i }).waitFor();
@@ -201,21 +264,27 @@ const runJourney = async (browser, harness, { name, ...contextOptions }) => {
   const visible = await guestPage.locator("main").innerText();
   assert.ok(!/E2E-TXN-1|E2E TEST CHANNEL/.test(visible), "no bank reference or channel shown to the guest");
   await expectNoA11yIssues(guestPage, `${name} order details`);
-  await shot(guestPage, "4-tracking");
+  await guestPage.locator(".payment-panel").getByText(/payment verified — order confirmed/i).waitFor();
+  await shot(guestPage, "6-tracking");
   pass(`${name}: wrong code rejected, emailed code grants order view with tracking, no internal data`);
 
   // Emails produced by the journey, in order.
   const mails = (await (await fetch(`${harness.url}/__e2e/outbox`)).json()).filter((mail) => mail.subject.includes(orderNumber));
   const kinds = mails.map((mail) => mail.subject.replace(/ — #.*/, ""));
-  for (const expected of ["EscoWear order received", "EscoWear payment details", "EscoWear order confirmed", "EscoWear order update", "Your EscoWear tracking code"]) {
+  for (const expected of ["EscoWear order received", "EscoWear payment details", "EscoWear payment proof received", "EscoWear order confirmed", "EscoWear order update", "Your EscoWear tracking code"]) {
     assert.ok(kinds.includes(expected), `missing email: ${expected}`);
   }
   assert.equal(new Set(mails.map((mail) => mail.idempotencyKey)).size, mails.length, "no duplicate email sends");
   pass(`${name}: ${mails.length} customer emails, each sent once`);
 
-  await Promise.all([customer.close(), adminContext.close(), guest.close()]);
+  const proofMail = mails.find((mail) => mail.subject.startsWith("EscoWear payment proof received"));
+  assert.match(proofMail.text, /NOT confirmed yet/);
+  const confirmedMails = mails.filter((mail) => mail.subject.startsWith("EscoWear order confirmed"));
+  assert.equal(confirmedMails.length, 1, "exactly one order-confirmed email, after bank verification");
+
+  await Promise.all([customer.close(), adminContext.close(), guest.close(), recovery?.close()]);
   // Only the deliberate negative steps may produce 4xx responses.
-  assert.deepEqual(problems.expected4xx.sort(), ["400 /api/orders/tracking/verify", "422 /api/admin/orders/:id/verify-payment"]);
+  assert.deepEqual(problems.expected4xx.sort(), ["400 /api/orders/tracking/verify", "415 /api/orders/:id/payment-proof", "422 /api/admin/orders/:id/verify-payment"]);
   // Images in this harness are local; any other problem is a real failure.
   assert.deepEqual([...problems], [], problems.join("\n"));
   pass(`${name}: no console errors, page errors, failed requests or 5xx responses`);

@@ -164,3 +164,65 @@ test("quote expiry defaults to 48 hours from now", async () => {
   expect(hours).toBeGreaterThan(47.9);
   expect(hours).toBeLessThan(48.1);
 });
+
+test("website proof: review panel with reference, expected total, duplicate warning and protected screenshot viewer", async () => {
+  const order = {
+    ...baseOrder,
+    payment: { status: "under_review", proof: { id: "p1" } },
+    paymentProofs: [
+      { id: "p1", quoteVersion: 1, transactionReference: "MP241027.1234", contentType: "image/png", sizeBytes: 20480, width: 300, height: 600, reviewStatus: "pending", submittedAt: "2026-10-27T10:00:00.000Z", submitterType: "guest", active: true, duplicateReferenceOrderIds: ["other"] },
+    ],
+  };
+  global.URL.createObjectURL = jest.fn(() => "blob:proof-1");
+  global.URL.revokeObjectURL = jest.fn();
+  global.fetch.mockImplementation((url) =>
+    url.includes("/payment-proof/")
+      ? Promise.resolve({ ok: true, status: 200, blob: async () => new Blob(["x"], { type: "image/png" }) })
+      : ok(order)
+  );
+  const view = renderAt(`/admin/orders/${order.id}`);
+  expect(await screen.findByRole("heading", { name: "Payment proof uploads" })).toBeInTheDocument();
+  expect(screen.getByText("MP241027.1234")).toBeInTheDocument();
+  expect(screen.getByText(/new proof to review/i)).toHaveTextContent(/GH₵3,000\.00|GHS\s?3,000\.00/);
+  expect(screen.getByText(/also submitted on 1 other order/i)).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: /proof received outside the website/i })).not.toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: "View screenshot" }));
+  const image = await screen.findByRole("img", { name: /payment screenshot uploaded for/i });
+  expect(image).toHaveAttribute("src", "blob:proof-1");
+  const call = global.fetch.mock.calls.find(([url]) => url.includes("/payment-proof/"));
+  expect(call[0]).toBe(`/api/admin/orders/${order.id}/payment-proof/p1`);
+  expect(call[1].headers.Authorization).toBe("Bearer admin-token");
+  view.unmount();
+  expect(global.URL.revokeObjectURL).toHaveBeenCalledWith("blob:proof-1");
+});
+
+test("admin can record a delivery issue and send a customer delay update", async () => {
+  const order = { ...baseOrder, status: "dispatched", payment: { status: "verified" }, allowedActions: ["fulfilment", "customer-update"] };
+  global.fetch.mockImplementation((url, options) => (options?.method === "POST" ? ok({ ok: true, status: order.status, email: { queued: true } }) : ok(order)));
+  renderAt(`/admin/orders/${order.id}`);
+  await screen.findByRole("heading", { name: order.orderNumber });
+  await userEvent.selectOptions(screen.getByLabelText("Next step"), "delivery_issue");
+  await userEvent.type(screen.getByLabelText(/what went wrong/i), "Courier reports parcel lost");
+  await userEvent.click(screen.getByRole("button", { name: "Save fulfilment step" }));
+  expect(await screen.findByText(/save fulfilment step: saved/i)).toBeInTheDocument();
+  let post = global.fetch.mock.calls.filter(([, opts]) => opts?.method === "POST").at(-1);
+  expect(post[0]).toBe(`/api/admin/orders/${order.id}/fulfilment`);
+  expect(JSON.parse(post[1].body)).toMatchObject({ expectedStatus: "dispatched", toStatus: "delivery_issue", issue: "Courier reports parcel lost" });
+
+  await userEvent.type(await screen.findByLabelText("Update for the customer"), "Customs is taking two extra days.");
+  await userEvent.click(screen.getByRole("button", { name: "Send update" }));
+  expect(await screen.findByText(/send update: saved/i)).toBeInTheDocument();
+  post = global.fetch.mock.calls.filter(([, opts]) => opts?.method === "POST").at(-1);
+  expect(post[0]).toBe(`/api/admin/orders/${order.id}/customer-update`);
+  expect(JSON.parse(post[1].body)).toMatchObject({ expectedStatus: "dispatched", customerMessage: "Customs is taking two extra days." });
+  await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+});
+
+test("order list flags orders with a new website proof", async () => {
+  global.fetch.mockImplementation(() =>
+    ok({ items: [{ id: baseOrder.id, orderNumber: baseOrder.orderNumber, status: "payment_review", customer: baseOrder.customer, subtotalGBPMinor: 16499, quoteTotalGHSMinor: 300000, paymentStatus: "under_review", proofAwaitingReview: true }], pagination: { total: 1, page: 1, limit: 20, pages: 1 } })
+  );
+  renderAt("/admin/orders");
+  expect(await screen.findByText("New proof to check")).toBeInTheDocument();
+});

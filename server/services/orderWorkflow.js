@@ -18,8 +18,10 @@ const TRANSITIONS = Object.freeze({
   [S.PAYMENT_ISSUE]: [S.AWAITING_PAYMENT, S.PAYMENT_REVIEW, S.CONFIRMED, S.CANCELLED, S.REFUND_PENDING],
   [S.CONFIRMED]: [S.PROCESSING, S.SOURCING_FAILED, S.REFUND_PENDING],
   [S.PROCESSING]: [S.DISPATCHED, S.SOURCING_FAILED, S.REFUND_PENDING],
-  [S.DISPATCHED]: [S.DELIVERED],
-  [S.DELIVERED]: [S.COMPLETED],
+  [S.DISPATCHED]: [S.DELIVERED, S.DELIVERY_ISSUE],
+  [S.DELIVERED]: [S.COMPLETED, S.DELIVERY_ISSUE],
+  // Resolved by re-dispatching a replacement, confirming delivery, or refunding.
+  [S.DELIVERY_ISSUE]: [S.DISPATCHED, S.DELIVERED, S.COMPLETED, S.REFUND_PENDING],
   [S.SOURCING_FAILED]: [S.PROCESSING, S.REFUND_PENDING],
   [S.REFUND_PENDING]: [S.REFUNDED],
   [S.COMPLETED]: [],
@@ -29,8 +31,10 @@ const TRANSITIONS = Object.freeze({
 
 const canTransition = (from, to) => (TRANSITIONS[from] || []).includes(to);
 
-const PAID_STATUSES = [S.CONFIRMED, S.PROCESSING, S.SOURCING_FAILED];
-const FULFILMENT_TARGETS = [S.PROCESSING, S.DISPATCHED, S.DELIVERED, S.COMPLETED, S.SOURCING_FAILED];
+const PAID_STATUSES = [S.CONFIRMED, S.PROCESSING, S.SOURCING_FAILED, S.DELIVERY_ISSUE];
+const FULFILMENT_TARGETS = [S.PROCESSING, S.DISPATCHED, S.DELIVERED, S.COMPLETED, S.SOURCING_FAILED, S.DELIVERY_ISSUE];
+// Statuses where the customer can be sent a progress note (e.g. a delay).
+const UPDATE_STATUSES = [S.CONFIRMED, S.PROCESSING, S.DISPATCHED, S.DELIVERED, S.DELIVERY_ISSUE, S.SOURCING_FAILED, S.REFUND_PENDING];
 
 // Which admin actions the UI may offer for a status (the server re-checks).
 const allowedActions = (status) => {
@@ -44,6 +48,7 @@ const allowedActions = (status) => {
   if (FULFILMENT_TARGETS.some((target) => next.includes(target))) actions.push("fulfilment");
   if (next.includes(S.CANCELLED) || (PAID_STATUSES.includes(status) && next.includes(S.REFUND_PENDING))) actions.push("cancel");
   if (next.includes(S.REFUNDED)) actions.push("refund");
+  if (UPDATE_STATUSES.includes(status)) actions.push("customer-update");
   return actions;
 };
 
@@ -51,6 +56,8 @@ const STATUS_EMAILS = {
   [S.PROCESSING]: { headline: "We are now sourcing your order" },
   [S.DISPATCHED]: { headline: "Your order has been dispatched" },
   [S.DELIVERED]: { headline: "Your order has been delivered" },
+  [S.COMPLETED]: { headline: "Your order is complete. Thank you for shopping with EscoWear" },
+  [S.DELIVERY_ISSUE]: { headline: "We are looking into a problem with your delivery" },
   [S.SOURCING_FAILED]: { headline: "We could not source an item in your order and will contact you about options" },
   [S.CANCELLED]: { headline: "Your order has been cancelled" },
   [S.REFUND_PENDING]: { headline: "Your order has been cancelled and a refund is being arranged" },
@@ -66,6 +73,12 @@ const date = (value) => {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
+// undefined when blank, null when invalid or not in the future.
+const optionalFutureDate = (value, reference = new Date()) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed = date(value);
+  return parsed && parsed > reference ? parsed : null;
+};
 const fail = (fields) => {
   throw new OrderError(422, "VALIDATION_FAILED", "Please correct the highlighted fields", fields);
 };
@@ -80,7 +93,7 @@ const optionalUrl = (value) => {
   }
 };
 
-const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = process.env, now = () => new Date(), logger = console }) => {
+const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = process.env, now = () => new Date(), logger = console, proofs = null }) => {
   const paymentInstructions = () => (env.ESCOWEAR_PAYMENT_INSTRUCTIONS || "").replace(/\\n/g, "\n").trim();
 
   const loadOrder = async (orderId) => {
@@ -208,6 +221,8 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
     if (rateSnapshot.length > 200) fields["quote.rateSnapshot"] = "Keep the rate note under 200 characters";
     const message = multiline(body.message, 2000);
     if (message.length > 2000) fields.message = "Keep the message under 2000 characters";
+    const estimatedDeliveryAt = optionalFutureDate(quoteInput.estimatedDeliveryAt, now());
+    if (estimatedDeliveryAt === null) fields["quote.estimatedDeliveryAt"] = "Estimated delivery must be a future date";
     if (Object.keys(fields).length) fail(fields);
     const totalMinor = amounts.subtotalMinor + amounts.feesMinor + amounts.shippingMinor + amounts.dutiesMinor;
     if (totalMinor <= 0 || !Number.isSafeInteger(totalMinor)) fail({ "quote.subtotalMinor": "The quote total must be more than zero" });
@@ -232,7 +247,12 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       order,
       admin,
       toStatus: S.AWAITING_PAYMENT,
-      set: { "pricing.finalGHS": quote, "payment.status": P.AWAITING_PAYMENT, "payment.reference": order.orderNumber },
+      set: {
+        "pricing.finalGHS": quote,
+        "payment.status": P.AWAITING_PAYMENT,
+        "payment.reference": order.orderNumber,
+        ...(estimatedDeliveryAt ? { "fulfilment.estimatedDeliveryAt": estimatedDeliveryAt } : {}),
+      },
       // Guards a concurrent re-quote racing on the same status.
       guard: { "pricing.finalGHS.quoteVersion": previousVersion || { $exists: false } },
       type: previousVersion ? "quote_revised" : "quote_sent",
@@ -241,7 +261,10 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
         kind: "payment_instructions",
         dedupeKey: `payment_instructions:${order._id}:v${quote.quoteVersion}`,
         message: message || undefined,
-        snapshot: { pricing: { ...order.pricing, finalGHS: quote } },
+        snapshot: {
+          pricing: { ...order.pricing, finalGHS: quote },
+          ...(estimatedDeliveryAt ? { fulfilment: { ...order.fulfilment, estimatedDeliveryAt } } : {}),
+        },
       },
     });
   };
@@ -265,7 +288,8 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       toStatus: S.PAYMENT_REVIEW,
       set: { "payment.status": P.UNDER_REVIEW, "payment.reviewNote": note || undefined },
       type: "payment_proof_received",
-      // The screenshot itself stays in the business mailbox; nothing is stored here.
+      // Fallback for proof sent outside the website (e.g. by email). Website
+      // uploads move the order to payment_review automatically.
       details: { note: note || undefined, proofChannel: "external_email" },
     });
   };
@@ -291,7 +315,7 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       });
     }
     const verifiedAt = now();
-    return transition({
+    const result = await transition({
       order,
       admin,
       toStatus: S.CONFIRMED,
@@ -317,6 +341,8 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
         snapshot: { payment: { ...order.payment, amountReceivedGHSMinor: amount } },
       },
     });
+    if (proofs) await proofs.settleActiveProof(order, "accepted", admin);
+    return result;
   };
 
   const recordPaymentIssue = async (orderId, admin, body = {}) => {
@@ -330,7 +356,7 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
     if (note.length > 2000) fields.note = "Keep the note under 2000 characters";
     if (Object.keys(fields).length) fail(fields);
     const issueNumber = (await OrderEvent.countDocuments({ orderId: order._id, type: "payment_issue" })) + 1;
-    return transition({
+    const result = await transition({
       order,
       admin,
       toStatus: S.PAYMENT_ISSUE,
@@ -339,6 +365,9 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       details: { note: note || undefined, issueNumber },
       email: { kind: "payment_issue", dedupeKey: `payment_issue:${order._id}:${issueNumber}`, message: customerMessage },
     });
+    // A rejected website proof lets the customer upload a new one.
+    if (proofs) await proofs.settleActiveProof(order, "rejected", admin);
+    return result;
   };
 
   const updateFulfilment = async (orderId, admin, body = {}) => {
@@ -373,6 +402,17 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       Object.assign(details, { carrier: carrier || undefined, trackingNumber: trackingNumber || undefined });
     }
     if (toStatus === S.DELIVERED) set["fulfilment.deliveredAt"] = now();
+    if (toStatus === S.DELIVERY_ISSUE) {
+      const issue = multiline(body.issue, 500);
+      if (issue.length < 3 || issue.length > 500) fields.issue = "Describe the delivery problem (lost, damaged, wrong item…)";
+      set["fulfilment.issue"] = issue;
+      details.issue = issue;
+    }
+    if ([S.PROCESSING, S.DISPATCHED].includes(toStatus)) {
+      const estimatedDeliveryAt = optionalFutureDate(body.estimatedDeliveryAt, now());
+      if (estimatedDeliveryAt === null) fields.estimatedDeliveryAt = "Estimated delivery must be a future date";
+      if (estimatedDeliveryAt) set["fulfilment.estimatedDeliveryAt"] = estimatedDeliveryAt;
+    }
     const customerMessage = multiline(body.customerMessage, 2000);
     if (customerMessage.length > 2000) fields.customerMessage = "Keep the message under 2000 characters";
     if (toStatus === S.SOURCING_FAILED && !multiline(body.note, 2000)) fields.note = "Record why sourcing failed";
@@ -384,6 +424,8 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       admin,
       toStatus,
       set: cleanSet,
+      // Re-checked inside the atomic update: no sourcing or shipping unless paid.
+      guard: { "payment.status": P.VERIFIED },
       type: `fulfilment_${toStatus}`,
       details,
       email: statusEmail(order, toStatus, customerMessage),
@@ -444,6 +486,41 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
     });
   };
 
+  // Customer-visible progress note without a status change (e.g. a delay).
+  const sendCustomerUpdate = async (orderId, admin, body = {}) => {
+    const order = await loadOrder(orderId);
+    if (body.expectedStatus !== order.status) {
+      throw new OrderError(409, "STALE_STATUS", `Order is now ${order.status}; reload before acting`, { currentStatus: order.status });
+    }
+    if (!UPDATE_STATUSES.includes(order.status)) throw new OrderError(409, "ILLEGAL_TRANSITION", "Updates can be sent only after payment is verified");
+    const customerMessage = multiline(body.customerMessage, 2000);
+    const fields = {};
+    if (customerMessage.length < 10 || customerMessage.length > 2000) fields.customerMessage = "Write the update for the customer (10–2000 characters)";
+    const estimatedDeliveryAt = optionalFutureDate(body.estimatedDeliveryAt, now());
+    if (estimatedDeliveryAt === null) fields.estimatedDeliveryAt = "Estimated delivery must be a future date";
+    if (Object.keys(fields).length) fail(fields);
+    if (estimatedDeliveryAt) await Order.updateOne({ _id: order._id }, { $set: { "fulfilment.estimatedDeliveryAt": estimatedDeliveryAt } });
+    const updateNumber = (await OrderEvent.countDocuments({ orderId: order._id, type: "customer_update" })) + 1;
+    const event = await recordEvent(order, admin, "customer_update", undefined, undefined, {
+      message: customerMessage,
+      estimatedDeliveryAt,
+      email: {
+        kind: "order_status",
+        dedupeKey: `update:${order._id}:${updateNumber}`,
+        headline: "We have an update about your order",
+        message: customerMessage,
+        snapshot: estimatedDeliveryAt ? { fulfilment: { ...order.fulfilment, estimatedDeliveryAt } } : undefined,
+      },
+    });
+    try {
+      const message = await queueEventEmail(order, event);
+      return { order, event, email: { queued: true, state: message.state, id: String(message._id) } };
+    } catch (error) {
+      logger.error(`Order ${order._id} update email not queued: ${error.message}`);
+      return { order, event, email: { queued: false, error: "Email could not be queued; retry from the order history" } };
+    }
+  };
+
   const addNote = async (orderId, admin, body = {}) => {
     const order = await loadOrder(orderId);
     const note = multiline(body.body, 2000);
@@ -476,10 +553,11 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
     recordPaymentIssue,
     recordRefund,
     requeueEventEmail,
+    sendCustomerUpdate,
     sendPaymentInstructions,
     updateFulfilment,
     verifyPayment,
   };
 };
 
-module.exports = { TRANSITIONS, allowedActions, canTransition, createOrderWorkflow };
+module.exports = { FULFILMENT_TARGETS, TRANSITIONS, UPDATE_STATUSES, allowedActions, canTransition, createOrderWorkflow };

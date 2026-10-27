@@ -3,7 +3,7 @@
 // Bank/payment-channel details are never in source: they come from private
 // server configuration (ESCOWEAR_PAYMENT_INSTRUCTIONS) at send-queue time.
 
-const TEMPLATE_VERSION = "2026-10-24.1";
+const TEMPLATE_VERSION = "2026-10-27.1";
 const { business } = require("../../client/src/policies/review.json");
 
 const formatMinor = (minor, currency) =>
@@ -24,7 +24,21 @@ const itemLines = (order) =>
       `- ${item.name} (${item.size}) x${item.quantity} — ${formatMinor(item.lineTotalGBPMinor, "GBP")}`
   );
 
-const signOff = ["", "Thank you,", "EscoWear"];
+// Every message comes from, and replies go to, the one configured support
+// mailbox (EMAIL_FROM / EMAIL_REPLY_TO), so "reply to this email" is the contact.
+const signOff = ["", "Questions? Just reply to this email.", "", "Thank you,", "EscoWear"];
+
+const formatDay = (value) =>
+  new Date(value).toLocaleDateString("en-GB", { dateStyle: "medium", timeZone: "Africa/Accra" });
+
+const estimateLine = (order) =>
+  order.fulfilment?.estimatedDeliveryAt ? [`Estimated delivery: ${formatDay(order.fulfilment.estimatedDeliveryAt)}`] : [];
+
+// Where to pay and upload proof. No access token is ever put in a link.
+const paymentPageLine = (order, baseUrl) =>
+  baseUrl
+    ? `Open your order to see these details and upload your payment screenshot: ${baseUrl}/track-order?order=${encodeURIComponent(order.orderNumber)}`
+    : `On our website, open "Track order" with order number ${order.orderNumber} and this email address to upload your payment screenshot.`;
 
 // Policy promises appear in emails only once the reviewed policies are
 // published (ESCOWEAR_POLICIES_STATUS=published).
@@ -41,7 +55,8 @@ const templates = {
       `We have received your order #${order.orderNumber}.`,
       "",
       "This is not a payment request and your order is not yet confirmed.",
-      "We will check availability and costs, then email you the final amount in Ghana cedis (GHS) with payment instructions.",
+      "We will check availability and costs, then email you the final amount in Ghana cedis (GHS) with Mobile Money payment instructions.",
+      "After paying, you will upload your payment screenshot and transaction ID on our website.",
       "",
       "Items:",
       ...itemLines(order),
@@ -79,6 +94,7 @@ const templates = {
         `  Shipping: ${formatMinor(quote.shippingMinor, "GHS")}`,
         `  Duties: ${formatMinor(quote.dutiesMinor, "GHS")}`,
         `This quote is valid until ${formatDate(quote.expiresAt)}.`,
+        ...estimateLine(order),
         ...policyLines(policiesPublished, null, [
           "This total includes shipping, import duties, taxes and delivery. You won't pay anything extra on arrival.",
         ]),
@@ -88,8 +104,12 @@ const templates = {
         "",
         `Send the exact amount above and use your order number as the payment reference: ${order.orderNumber}`,
         "",
-        "After paying, reply to this email with a screenshot of your payment.",
-        "We will confirm your order only after the money has arrived in our account.",
+        "After paying:",
+        "1. Take a screenshot of the Mobile Money confirmation.",
+        "2. " + paymentPageLine(order, baseUrl),
+        "3. Enter the transaction ID from your payment message and submit.",
+        "",
+        "Uploading a screenshot does not confirm your order. We confirm it only after we have checked that the money has arrived in our account.",
         "If this quote expires before you pay, please reply to ask for an updated quote before paying.",
         ...policyLines(policiesPublished, baseUrl, [DELIVERY_DETAILS]),
         ...(message ? ["", message] : []),
@@ -109,9 +129,9 @@ const templates = {
       "",
       message,
       "",
-      "Please reply to this email if you have any questions.",
-      "",
-      trackingLine(order, baseUrl),
+      "Your order is not confirmed and we will not buy your items until this is resolved.",
+      "If we ask you to, you can upload a new screenshot and transaction ID from your order page.",
+      paymentPageLine(order, baseUrl),
       ...signOff,
     ].join("\n"),
   }),
@@ -122,7 +142,8 @@ const templates = {
       `Hi ${order.customer.name},`,
       "",
       `We have verified your payment of ${formatMinor(order.payment.amountReceivedGHSMinor, "GHS")} for order #${order.orderNumber}.`,
-      "Your order is confirmed and we are now sourcing your items. We will email you when it is dispatched.",
+      "Your order is confirmed. We will now buy your items from the UK retailer and email you when they are dispatched to Ghana.",
+      ...estimateLine(order),
       "",
       trackingLine(order, baseUrl),
       ...signOff,
@@ -136,12 +157,42 @@ const templates = {
       "",
       `${headline} (order #${order.orderNumber}).`,
       ...(message ? ["", message] : []),
+      ...(order.fulfilment?.estimatedDeliveryAt && !order.fulfilment?.deliveredAt ? ["", ...estimateLine(order)] : []),
       ...(order.fulfilment?.carrier ? ["", `Carrier: ${order.fulfilment.carrier}`] : []),
       ...(order.fulfilment?.trackingNumber ? [`Tracking number: ${order.fulfilment.trackingNumber}`] : []),
       ...(order.fulfilment?.trackingUrl ? [`Carrier tracking: ${order.fulfilment.trackingUrl}`] : []),
       "",
       trackingLine(order, baseUrl),
       ...signOff,
+    ].join("\n"),
+  }),
+
+  payment_proof_received: ({ order, baseUrl, referenceMasked, submittedAt }) => ({
+    subject: `EscoWear payment proof received — #${order.orderNumber}`,
+    text: [
+      `Hi ${order.customer.name},`,
+      "",
+      `We have received your payment screenshot for order #${order.orderNumber}${referenceMasked ? ` (transaction ID ending ${referenceMasked.replace(/•/g, "")})` : ""}.`,
+      `Submitted: ${formatDate(submittedAt || new Date())}`,
+      "",
+      "Your payment is now under review. Your order is NOT confirmed yet.",
+      "We will check that the money has arrived in our Mobile Money account, then email you to confirm your order.",
+      "",
+      trackingLine(order, baseUrl),
+      ...signOff,
+    ].join("\n"),
+  }),
+
+  // Operations notice. Never contains the screenshot, the full reference or customer contact details.
+  payment_proof_admin_notice: ({ order, baseUrl, referenceMasked, duplicateReference }) => ({
+    subject: `New payment proof to review — #${order.orderNumber}`,
+    text: [
+      `A customer uploaded payment proof for order #${order.orderNumber} (reference ${referenceMasked}).`,
+      `Quote total: ${formatMinor(order.pricing.finalGHS.totalMinor, "GHS")}`,
+      ...(duplicateReference ? ["", "WARNING: this transaction reference was also used on another order."] : []),
+      "",
+      "Check the receiving Mobile Money account before verifying. A screenshot is never proof of payment.",
+      ...(baseUrl ? [`Review: ${baseUrl}/admin/orders/${order._id}`] : []),
     ].join("\n"),
   }),
 

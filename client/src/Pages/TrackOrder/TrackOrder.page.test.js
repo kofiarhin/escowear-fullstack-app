@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import reducers from "../../redux/reducers";
 import TrackOrder from "./TrackOrder.page";
 import OrderDetails from "../OrderDetails/OrderDetails.page";
-import { getOrderAccess, saveOrderAccess } from "../../utils/orderAccess";
+import { getOrderAccess, getProofAccess, saveOrderAccess } from "../../utils/orderAccess";
 
 const order = {
   id: "64b0000000000000000000aa",
@@ -49,7 +49,8 @@ beforeEach(() => {
 test("guest tracks an order with order number, email and emailed code", async () => {
   global.fetch.mockImplementation((url) => {
     if (url === "/api/orders/tracking/request") return json(202, { message: "If the order number and email match an order, we have emailed a 6-digit code." });
-    if (url === "/api/orders/tracking/verify") return json(200, { orderId: order.id, accessToken: "tracking-token", expiresInMinutes: 30 });
+    if (url === "/api/orders/tracking/verify")
+      return json(200, { orderId: order.id, accessToken: "tracking-token", expiresInMinutes: 30, proofToken: "proof-cap", proofExpiresInMinutes: 60 });
     return json(200, order);
   });
   renderAt("/track-order?order=ew-abcde-23456");
@@ -64,6 +65,8 @@ test("guest tracks an order with order number, email and emailed code", async ()
 
   expect(await screen.findByRole("heading", { name: "Dispatched" })).toBeInTheDocument();
   expect(getOrderAccess(order.id)).toBe("tracking-token");
+  // The upload capability is stored separately and never sent with order reads.
+  expect(getProofAccess(order.id)).toBe("proof-cap");
   expect(global.fetch).toHaveBeenCalledWith(`/api/orders/${order.id}`, expect.objectContaining({ headers: { "X-Order-Access-Token": "tracking-token" } }));
   expect(screen.getByText("DHL")).toBeInTheDocument();
   expect(screen.getByText("JD0001")).toBeInTheDocument();

@@ -70,7 +70,7 @@ test("cart → guest order → acknowledgement → quote → proof → bank veri
   await deliver();
   const instructions = inbox.find((mail) => /payment details/.test(mail.subject));
   assert.match(instructions.text, /E2E TEST CHANNEL/);
-  assert.match(instructions.text, /reply to this email with a screenshot/i);
+  assert.match(instructions.text, /upload your payment screenshot/i);
 
   // 4. Customer emails a screenshot (outside the app); admin records review, then the bank receipt.
   assert.equal((await act("payment-review", { expectedStatus: "awaiting_payment", note: "screenshot in mailbox" })).status, 200);

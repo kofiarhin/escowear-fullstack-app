@@ -301,3 +301,38 @@
     grid-template-columns: 1fr;
   }
 }
+
+.admin-proofs {
+  margin: 24px 0;
+}
+
+.admin-proof-list {
+  display: grid;
+  gap: 16px;
+  list-style: none;
+}
+
+.admin-proof-list li {
+  padding: 12px;
+  border: 1px solid #ddd;
+}
+
+.admin-proof-list li.is-active {
+  border: 2px solid var(--ink);
+}
+
+.admin-proof-figure {
+  margin: 12px 0 0;
+}
+
+.admin-proof-figure img {
+  display: block;
+  max-width: 100%;
+  max-height: 80vh;
+  height: auto;
+  border: 1px solid #ccc;
+}
+
+.admin-proof-flag {
+  color: #8a4b00;
+}

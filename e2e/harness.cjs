@@ -6,6 +6,7 @@
 const crypto = require("node:crypto");
 const path = require("node:path");
 const fs = require("node:fs");
+const os = require("node:os");
 
 process.env.NODE_ENV = "production"; // serve client/build like the container does
 process.env.JWT_SECRET = crypto.randomBytes(32).toString("hex");
@@ -39,6 +40,7 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
       Product: createMemoryModel(),
       User: createMemoryModel({ uniques: ["email"] }),
       TrackingChallenge: createMemoryModel(),
+      PaymentProof: createMemoryModel({ uniques: ["idempotencyKeyHash"] }),
     };
   }
   const product = await models.Product.create({
@@ -55,7 +57,10 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
   });
   const admin = await models.User.create({ name: "E2E Admin", email: "admin@e2e.test", password: "unused", role: "admin" });
 
-  const config = { ...getOrderConfig({}), publicBaseUrl: "" };
+  // Uploaded screenshots go to a throwaway private directory, removed on stop.
+  const proofDir = fs.mkdtempSync(path.join(os.tmpdir(), "escowear-e2e-proofs-"));
+  const config = { ...getOrderConfig({}), publicBaseUrl: "", proofUploadDir: proofDir };
+  const paymentEnv = { ESCOWEAR_PAYMENT_INSTRUCTIONS: TEST_PAYMENT_CHANNEL };
   const inbox = [];
   const transport = {
     async send(message) {
@@ -74,8 +79,8 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
   outer.use(
     createApp({
       products: { Product: models.Product },
-      orders: { models, config, logger },
-      admin: { models, config, logger, env: { ESCOWEAR_PAYMENT_INSTRUCTIONS: TEST_PAYMENT_CHANNEL } },
+      orders: { models, config, logger, env: paymentEnv },
+      admin: { models, config, logger, env: paymentEnv },
     })
   );
 
@@ -86,8 +91,9 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
     clearInterval(timer);
     await new Promise((resolve) => server.close(resolve));
     if (realDb) await realDb.close();
+    fs.rmSync(proofDir, { recursive: true, force: true });
   };
-  return { url, stop, models, inbox, product, database: realDb ? `MongoDB ${realDb.dbName}` : "in-memory" };
+  return { url, stop, models, inbox, product, proofDir, database: realDb ? `MongoDB ${realDb.dbName}` : "in-memory" };
 };
 
 if (require.main === module) {

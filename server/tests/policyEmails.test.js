@@ -24,7 +24,7 @@ test("payment instructions: MoMo reference, exact amount, Ghana-time expiry and 
   assert.match(text, /valid until 25 Oct 2026, 12:00 \(Ghana time\)/);
   assert.match(text, /Send the exact amount above and use your order number as the payment reference: EW-AAAAA-BBBBB/);
   assert.match(text, /If this quote expires before you pay, please reply to ask for an updated quote before paying\./);
-  assert.match(text, /only after the money has arrived in our account/);
+  assert.match(text, /only after we have checked that the money has arrived in our account/);
 });
 
 test("policy promises are absent while unpublished and present once published", () => {

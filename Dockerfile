@@ -27,6 +27,8 @@ COPY server/ ./server/
 COPY client/scripts/check-policies.cjs ./client/scripts/check-policies.cjs
 COPY client/src/policies/review.json ./client/src/policies/review.json
 COPY --from=frontend /app/client/build ./client/build
+# Private payment-proof store (mounted as a named volume); owned by the app user only.
+RUN mkdir -p /app/data/payment-proofs && chown -R node:node /app/data && chmod 700 /app/data /app/data/payment-proofs
 USER node
 EXPOSE 5000
 CMD ["node", "server/server.js"]

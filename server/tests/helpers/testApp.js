@@ -1,6 +1,9 @@
 // Builds the real Express app wired to in-memory models, and a tiny fetch-based
 // HTTP client. No MongoDB connection is opened.
 const crypto = require("node:crypto");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const jwt = require("jsonwebtoken");
 const { Types } = require("mongoose");
 const { createMemoryModel } = require("./memoryModel");
@@ -19,7 +22,11 @@ const createModels = () => ({
   Product: createMemoryModel(),
   User: createMemoryModel({ uniques: ["email"] }),
   TrackingChallenge: createMemoryModel(),
+  PaymentProof: createMemoryModel({ uniques: ["idempotencyKeyHash"] }),
 });
+
+// A private, throwaway directory for uploaded proofs in each test app.
+const tempProofDir = () => fs.mkdtempSync(path.join(os.tmpdir(), "escowear-proofs-"));
 
 const sampleProduct = (overrides = {}) => ({
   _id: new Types.ObjectId(),
@@ -56,7 +63,8 @@ const userToken = (userId) => jwt.sign({ id: String(userId) }, process.env.JWT_S
 
 // `models` may be real Mongoose models (see realDb.js); defaults to in-memory.
 const startTestApp = async ({ config: configOverrides = {}, deps = {}, models = createModels() } = {}) => {
-  const config = { ...getOrderConfig({}), publicBaseUrl: "https://shop.example.test", ...configOverrides };
+  const proofDir = configOverrides.proofUploadDir || tempProofDir();
+  const config = { ...getOrderConfig({}), publicBaseUrl: "https://shop.example.test", proofUploadDir: proofDir, ...configOverrides };
   const app = createApp({
     products: { Product: models.Product },
     orders: { models, config, logger: silentLogger, ...deps.orders },
@@ -89,10 +97,13 @@ const startTestApp = async ({ config: configOverrides = {}, deps = {}, models = 
   const addUser = async (overrides = {}) =>
     models.User.create({ name: "Registered Customer", email: `user-${crypto.randomUUID()}@example.test`, password: "hashed", role: "customer", ...overrides });
 
-  const close = () => new Promise((resolve) => server.close(resolve));
-  return { app, models, config, request, addUser, close, base };
+  const close = async () => {
+    await new Promise((resolve) => server.close(resolve));
+    if (!configOverrides.proofUploadDir) fs.rmSync(proofDir, { recursive: true, force: true });
+  };
+  return { app, models, config, request, addUser, close, base, proofDir };
 };
 
 const newIdempotencyKey = () => crypto.randomUUID();
 
-module.exports = { createModels, newIdempotencyKey, sampleProduct, silentLogger, startTestApp, userToken, validOrderBody };
+module.exports = { createModels, tempProofDir, newIdempotencyKey, sampleProduct, silentLogger, startTestApp, userToken, validOrderBody };
