@@ -75,7 +75,7 @@ const orderModels = {
 };
 const productId = new Types.ObjectId();
 orderModels.Product.docs.push({ _id: productId, name: "Smoke sneaker", price: 99, currency: "GBP", sizes: ["9"], inStock: true, status: "active" });
-const ordersRoutes = createOrdersRouter({ models: orderModels, config: getOrderConfig({}) });
+const ordersRoutes = createOrdersRouter({ models: orderModels, config: { ...getOrderConfig({}), checkoutOpen: true } });
 const app = express();
 app.use(express.json());
 app.use("/api/users", usersRoutes);

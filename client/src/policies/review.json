@@ -1,6 +1,6 @@
 {
-  "approvedForPublication": false,
-  "version": "mvp-2026-10-24-draft",
+  "approvedForPublication": true,
+  "version": "mvp-2026-10-28",
   "business": {
     "name": "EscoWear",
     "customerMarket": "Ghana",
@@ -8,11 +8,12 @@
     "delivery": "Delivery is confirmed individually after ordering."
   },
   "seller": {
-    "name": "",
-    "legalStatus": "",
-    "address": "To be confirmed",
-    "email": "support@escowear.com",
+    "name": "PLACEHOLDER — set before publishing",
+    "legalStatus": "PLACEHOLDER — set before publishing",
+    "address": "PLACEHOLDER — set before publishing",
+    "email": "kofiarhin69@gmail.com",
     "emailVerified": false,
-    "phone": ""
-  }
+    "phone": "PLACEHOLDER — set before publishing"
+  },
+  "approvedBy": "Kofi (owner), 2026-10-28: policy text approved; publication still requires complete seller details"
 }

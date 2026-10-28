@@ -21,7 +21,7 @@ test("publication requires approval, a final version and every seller field", ()
     assert.ok(publicationProblems({ ...reviewed, seller: { ...reviewed.seller, [field]: " " } }).includes(`Seller ${field} is missing`));
   }
   assert.ok(publicationProblems({ ...reviewed, seller: { ...reviewed.seller, emailVerified: false } }).includes("Support email mailbox verification is missing"));
-  for (const address of ["To be confirmed", " tbc ", "TBD"]) {
+  for (const address of ["To be confirmed", " tbc ", "TBD", "PLACEHOLDER — set before publishing"]) {
     assert.ok(publicationProblems({ ...reviewed, seller: { ...reviewed.seller, address } }).includes("Seller address is still a placeholder"));
   }
 });

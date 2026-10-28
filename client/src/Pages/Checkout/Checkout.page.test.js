@@ -10,6 +10,10 @@ import OrderConfirmation from "../OrderConfirmation/OrderConfirmation.page";
 import { CART_KEY } from "../../utils/cart";
 import review from "../../policies/review.json";
 import { getOrderAccess, getProofAccess } from "../../utils/orderAccess";
+import { fetchCheckoutStatus } from "../../utils/checkoutStatus";
+
+// Checkout status stays "unknown" (form shown) unless a test sets it.
+jest.mock("../../utils/checkoutStatus", () => ({ fetchCheckoutStatus: jest.fn() }));
 
 const cartItems = [
   { productId: "64b000000000000000000001", size: "UK 9", quantity: 2, name: "Nike Air Max Dn8", image: "https://example.test/dn8.jpg", price: 164.99, currency: "GBP" },
@@ -69,6 +73,7 @@ beforeEach(() => {
   sessionStorage.clear();
   localStorage.setItem(CART_KEY, JSON.stringify(cartItems));
   global.fetch = jest.fn();
+  fetchCheckoutStatus.mockReturnValue(new Promise(() => {}));
 });
 
 afterEach(() => {
@@ -270,4 +275,21 @@ test("with published policies, checkout links to them in a new tab and states th
   } finally {
     delete process.env.REACT_APP_POLICIES_STATUS;
   }
+});
+
+test("closed checkout says ordering opens soon, keeps the cart and shows no form", async () => {
+  fetchCheckoutStatus.mockResolvedValueOnce(false);
+  renderCheckout();
+  expect(await screen.findByText(/online ordering opens soon/i)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /place order request/i })).not.toBeInTheDocument();
+  expect(storedCart()).toEqual(cartItems);
+});
+
+test("a server-side closed checkout on submit switches to the opening-soon notice", async () => {
+  global.fetch.mockImplementation(() => jsonResponse(503, { error: "Online ordering opens soon.", code: "CHECKOUT_CLOSED" }));
+  renderCheckout();
+  await fillValidForm();
+  await submit();
+  expect(await screen.findByText(/online ordering opens soon/i)).toBeInTheDocument();
+  expect(storedCart()).toEqual(cartItems);
 });

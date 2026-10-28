@@ -26,6 +26,9 @@ services:
       ESCOWEAR_PAYMENT_INSTRUCTIONS: ${ESCOWEAR_PAYMENT_INSTRUCTIONS:-}
       TRUST_PROXY: ${TRUST_PROXY:-}
       ESCOWEAR_POLICIES_STATUS: ${ESCOWEAR_POLICIES_STATUS:-hidden}
+      # New order requests stay closed until "true"; the server refuses to start open
+      # unless npm run release:check passes.
+      ESCOWEAR_CHECKOUT_OPEN: ${ESCOWEAR_CHECKOUT_OPEN:-false}
       EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-none}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}

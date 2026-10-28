@@ -112,6 +112,17 @@ const assertPolicyPublication = (env = process.env, problems = () => require("..
   }
 };
 
+// Checkout only opens once every offline launch gate passes (payment details,
+// email, public URL, published policies and seller details), so a closed
+// gate can never be bypassed by setting ESCOWEAR_CHECKOUT_OPEN alone.
+const assertCheckoutReadiness = (env = process.env, problems = () => require("./scripts/releaseCheck").checkReleaseConfig(env)) => {
+  if (env.ESCOWEAR_CHECKOUT_OPEN !== "true") return;
+  const missing = problems();
+  if (missing.length) {
+    throw new Error(`ESCOWEAR_CHECKOUT_OPEN=true but ${missing.length} launch requirement(s) are missing; run npm run release:check`);
+  }
+};
+
 // setup port
 const port = process.env.PORT || 5000;
 
@@ -120,6 +131,7 @@ const startServer = async () => {
     throw new Error("Missing required environment variable JWT_SECRET");
   }
   assertPolicyPublication();
+  assertCheckoutReadiness();
   await connectDB();
   startEmailDelivery();
   return app.listen(port, () => console.log(`Listening on port ${port}`));
@@ -132,4 +144,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, assertPolicyPublication, createApp, startServer };
+module.exports = { app, assertCheckoutReadiness, assertPolicyPublication, createApp, startServer };

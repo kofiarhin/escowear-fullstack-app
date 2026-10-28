@@ -13,6 +13,10 @@ const checkReleaseConfig = (env, policyProblems = publicationProblems()) => {
   for (const name of ["ESCOWEAR_MONGO_URI", "JWT_SECRET", "ESCOWEAR_PAYMENT_INSTRUCTIONS"]) {
     if (!env[name]?.trim()) problems.push(`${name} is missing`);
   }
+  // Test placeholders must never reach customers as real payment details.
+  if (/\b(placeholder|example|test|dummy)\b|not a real/i.test(env.ESCOWEAR_PAYMENT_INSTRUCTIONS || "")) {
+    problems.push("ESCOWEAR_PAYMENT_INSTRUCTIONS still contains placeholder/test wording");
+  }
   if (env.EMAIL_TRANSPORT !== "smtp") problems.push("EMAIL_TRANSPORT must be smtp for checkout launch");
   try {
     readSmtpConfig({ ...env, NODE_ENV: "production" });

@@ -53,6 +53,7 @@ const createOrdersRouter = (deps = {}) => {
 
   const router = Router();
   router.get("/", auth, controller.getOrders);
+  router.get("/checkout-status", controller.checkoutStatus);
   router.post("/", createLimiter, optionalAuth, controller.createOrder);
   router.post("/tracking/request", trackingRequestLimiter, trackingRequestPerOrderLimiter, controller.requestTrackingCode);
   router.post("/tracking/verify", trackingVerifyLimiter, controller.verifyTrackingCode);

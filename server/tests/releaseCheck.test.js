@@ -5,7 +5,7 @@ const { checkReleaseConfig } = require("../scripts/releaseCheck");
 const ready = {
   ESCOWEAR_MONGO_URI: "mongodb://fixture.invalid/test",
   JWT_SECRET: "test-secret",
-  ESCOWEAR_PAYMENT_INSTRUCTIONS: "TEST ONLY",
+  ESCOWEAR_PAYMENT_INSTRUCTIONS: "MTN Mobile Money\\nNumber: 024 000 0000\\nName: Fixture Account",
   EMAIL_TRANSPORT: "smtp",
   SMTP_HOST: "smtp.example.test",
   SMTP_PORT: "465",

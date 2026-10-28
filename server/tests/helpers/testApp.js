@@ -64,7 +64,7 @@ const userToken = (userId) => jwt.sign({ id: String(userId) }, process.env.JWT_S
 // `models` may be real Mongoose models (see realDb.js); defaults to in-memory.
 const startTestApp = async ({ config: configOverrides = {}, deps = {}, models = createModels() } = {}) => {
   const proofDir = configOverrides.proofUploadDir || tempProofDir();
-  const config = { ...getOrderConfig({}), publicBaseUrl: "https://shop.example.test", proofUploadDir: proofDir, ...configOverrides };
+  const config = { ...getOrderConfig({}), checkoutOpen: true, publicBaseUrl: "https://shop.example.test", proofUploadDir: proofDir, ...configOverrides };
   const app = createApp({
     products: { Product: models.Product },
     orders: { models, config, logger: silentLogger, ...deps.orders },

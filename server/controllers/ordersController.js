@@ -28,6 +28,11 @@ const createOrdersController = (orderService, { logger = console, trackingServic
     }
   };
 
+  const checkoutStatus = (req, res) => {
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json(orderService.checkoutStatus());
+  };
+
   const getOrders = async (req, res) => {
     try {
       return res.status(200).json(await orderService.listOwnerOrders(req.user, req.query));
@@ -126,7 +131,7 @@ const createOrdersController = (orderService, { logger = console, trackingServic
     }
   };
 
-  return { authorizePaymentProof, createOrder, getOrder, getOrders, getPaymentInstructions, requestTrackingCode, submitPaymentProof, verifyTrackingCode };
+  return { authorizePaymentProof, checkoutStatus, createOrder, getOrder, getOrders, getPaymentInstructions, requestTrackingCode, submitPaymentProof, verifyTrackingCode };
 };
 
 module.exports = { createOrdersController, sendError };
