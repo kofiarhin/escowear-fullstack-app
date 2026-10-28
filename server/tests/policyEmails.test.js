@@ -24,7 +24,7 @@ test("payment instructions: MoMo reference, exact amount, Ghana-time expiry and 
   assert.match(text, /valid until 25 Oct 2026, 12:00 \(Ghana time\)/);
   assert.match(text, /Send the exact amount above and use your order number as the payment reference: EW-AAAAA-BBBBB/);
   assert.match(text, /If this quote expires before you pay, please reply to ask for an updated quote before paying\./);
-  assert.match(text, /only after the money has arrived in our account/);
+  assert.match(text, /only after we have checked that the money has arrived in our account/);
 });
 
 test("policy promises are absent while unpublished and present once published", () => {
@@ -50,4 +50,19 @@ test("ESCOWEAR_POLICIES_STATUS defaults to unpublished", () => {
   // Match the build-time policy switch exactly, so site and emails agree.
   assert.equal(getOrderConfig({ ESCOWEAR_POLICIES_STATUS: "Published" }).policiesPublished, false);
   assert.equal(getOrderConfig({ ESCOWEAR_POLICIES_STATUS: "published" }).policiesPublished, true);
+});
+
+test("estimated delivery appears only while the order is on its way", () => {
+  const withEstimate = (status) => ({ ...order, status, fulfilment: { estimatedDeliveryAt: "2026-11-12T00:00:00.000Z" } });
+  const render = (status) => renderEmail("order_status", { order: withEstimate(status), headline: "Update" }).text;
+  assert.match(render("dispatched"), /Estimated delivery/);
+  for (const status of ["cancelled", "refund_pending", "refunded", "sourcing_failed", "delivery_issue", "completed"]) {
+    assert.doesNotMatch(render(status), /Estimated delivery/, status);
+  }
+});
+
+test("proof receipt only quotes a reference ending when one is visible", () => {
+  const render = (referenceMasked) => renderEmail("payment_proof_received", { order, referenceMasked }).text;
+  assert.match(render("••••1234"), /\(transaction ID ending 1234\)/);
+  assert.doesNotMatch(render("••••"), /transaction ID ending/);
 });

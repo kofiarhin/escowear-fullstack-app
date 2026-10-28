@@ -212,6 +212,12 @@ const createMemoryModel = ({ uniques = [], hooks = {} } = {}) => {
       replaceContents(doc, next);
       return { matchedCount: 1, modifiedCount: 1 };
     },
+    async deleteOne(filter) {
+      const index = docs.findIndex((entry) => matches(entry, filter));
+      if (index === -1) return { deletedCount: 0 };
+      docs.splice(index, 1);
+      return { deletedCount: 1 };
+    },
     async updateMany(filter, update) {
       const targets = docs.filter((entry) => matches(entry, filter));
       targets.forEach((doc) => {

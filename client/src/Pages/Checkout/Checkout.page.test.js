@@ -8,7 +8,7 @@ import reducers from "../../redux/reducers";
 import Checkout from "./Checkout.page";
 import OrderConfirmation from "../OrderConfirmation/OrderConfirmation.page";
 import { CART_KEY } from "../../utils/cart";
-import { getOrderAccess } from "../../utils/orderAccess";
+import { getOrderAccess, getProofAccess } from "../../utils/orderAccess";
 
 const cartItems = [
   { productId: "64b000000000000000000001", size: "UK 9", quantity: 2, name: "Nike Air Max Dn8", image: "https://example.test/dn8.jpg", price: 164.99, currency: "GBP" },
@@ -19,7 +19,7 @@ const createdOrder = {
   orderNumber: "EW-ABCDE-23456",
   status: "pending_contact",
   statusLabel: "Order received — awaiting our email",
-  trackingHandoff: { accessToken: "access-token-1", expiresInMinutes: 60 },
+  trackingHandoff: { accessToken: "access-token-1", expiresInMinutes: 60, proofToken: "proof-token-1" },
   order: {
     id: "64b0000000000000000000aa",
     orderNumber: "EW-ABCDE-23456",
@@ -137,6 +137,8 @@ test("successful order sends only ids/sizes/quantities, clears the cart and show
 
   expect(storedCart()).toEqual([]);
   expect(getOrderAccess(createdOrder.orderId)).toBe("access-token-1");
+  expect(getProofAccess(createdOrder.orderId)).toBe("proof-token-1");
+  expect(screen.getByText(/upload your payment screenshot and transaction ID/i)).toBeInTheDocument();
   await waitFor(() =>
     expect(global.fetch).toHaveBeenCalledWith(
       `/api/orders/${createdOrder.orderId}`,

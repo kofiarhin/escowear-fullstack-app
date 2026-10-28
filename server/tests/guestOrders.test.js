@@ -421,3 +421,13 @@ test("Docker bridge and loopback hops are trusted; public addresses are not", ()
   ["127.0.0.1", "172.18.0.1", "10.0.0.5", "::1"].forEach((address) => assert.equal(trust(address, 0), true, address));
   ["203.0.113.10", "8.8.8.8"].forEach((address) => assert.equal(trust(address, 0), false, address));
 });
+
+test("the checkout proof capability uses the proof TTL, not the read-token TTL", async (t) => {
+  const ctx = await setup(t, { config: { checkoutAccessTtlMinutes: 60, proofAccessTtlMinutes: 1440 } });
+  const response = await placeOrder(ctx, validOrderBody(ctx.product._id));
+  assert.equal(response.status, 201);
+  const { exp, iat } = JSON.parse(Buffer.from(response.body.trackingHandoff.proofToken.split(".")[1], "base64url").toString());
+  assert.equal(exp - iat, 1440 * 60);
+  assert.equal(response.body.trackingHandoff.proofExpiresInMinutes, 1440);
+  assert.equal(response.body.trackingHandoff.expiresInMinutes, 60);
+});

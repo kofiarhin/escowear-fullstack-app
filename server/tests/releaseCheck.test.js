@@ -15,6 +15,7 @@ const ready = {
   EMAIL_FROM: "EscoWear <test@example.test>",
   ESCOWEAR_PUBLIC_URL: "https://example.test",
   ESCOWEAR_POLICIES_STATUS: "published",
+  ESCOWEAR_PROOF_UPLOAD_DIR: "/app/data/payment-proofs",
 };
 
 test("offline release check validates settings without disclosing values", () => {
@@ -29,4 +30,17 @@ test("email links require an HTTPS origin without embedded secrets or paths", ()
   for (const url of ["http://example.test", "https://user:secret@example.test", "https://example.test/path", "https://example.test/?secret=yes", "https://example.test/#token"]) {
     assert.ok(checkReleaseConfig({ ...ready, ESCOWEAR_PUBLIC_URL: url }, []).some((problem) => problem.startsWith("ESCOWEAR_PUBLIC_URL")));
   }
+});
+
+test("payment proofs must be stored on an absolute private path outside public directories", () => {
+  const path = require("node:path");
+  const repo = path.resolve(__dirname, "../..");
+  for (const dir of ["", "data/payment-proofs", path.join(repo, "client/public/proofs"), path.join(repo, "server/images/proofs")]) {
+    assert.ok(checkReleaseConfig({ ...ready, ESCOWEAR_PROOF_UPLOAD_DIR: dir }, []).some((problem) => problem.startsWith("ESCOWEAR_PROOF_UPLOAD_DIR")), dir);
+  }
+});
+
+test("a reply-to mailbox different from the sender is flagged for the one-support-mailbox rule", () => {
+  assert.deepEqual(checkReleaseConfig({ ...ready, EMAIL_REPLY_TO: "test@example.test" }, []), []);
+  assert.ok(checkReleaseConfig({ ...ready, EMAIL_REPLY_TO: "other@example.test" }, []).some((problem) => problem.startsWith("EMAIL_REPLY_TO")));
 });

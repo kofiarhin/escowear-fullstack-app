@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import OrderItems from "../../components/OrderItems/OrderItems.component";
+import PaymentPanel from "../../components/PaymentPanel/PaymentPanel.component";
 import { apiRequest, authHeader } from "../../utils/api";
 import { orderAccessHeader } from "../../utils/orderAccess";
-import { formatGHS } from "../../utils/money";
 import "../OrderConfirmation/orderConfirmation.styles.css";
 import "./orderDetails.styles.css";
 
@@ -26,6 +26,7 @@ const OrderDetails = () => {
   const { user } = useSelector((state) => state.userReducer);
   const [order, setOrder] = useState(null);
   const [state, setState] = useState("loading");
+  const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -36,7 +37,8 @@ const OrderDetails = () => {
       setState("unavailable");
       return undefined;
     }
-    setState("loading");
+    // Keep the current view while refreshing after a payment upload.
+    setState((current) => (current === "ready" ? current : "loading"));
     apiRequest(`/api/orders/${encodeURIComponent(id)}`, { headers })
       .then(({ ok, data }) => {
         if (!active) return;
@@ -49,7 +51,7 @@ const OrderDetails = () => {
     return () => {
       active = false;
     };
-  }, [id, user]);
+  }, [id, user, reloadCount]);
 
   if (state === "loading") {
     return (
@@ -75,7 +77,6 @@ const OrderDetails = () => {
     );
   }
 
-  const quote = order.pricing?.finalGHS;
   const trackingUrl = order.fulfilment?.trackingUrl ? safeLink(order.fulfilment.trackingUrl) : null;
   return (
     <main className="order-confirmation container">
@@ -83,13 +84,7 @@ const OrderDetails = () => {
       <h1 className="title">{order.statusLabel}</h1>
       {order.legacy && <p className="order-confirmation-lead">This order was placed before online checkout; contact us for details.</p>}
 
-      {quote && ["awaiting_payment", "payment_review", "payment_issue"].includes(order.status) && (
-        <div className="order-confirmation-reference">
-          <span>Amount to pay</span>
-          <strong>{formatGHS(quote.totalMinor)}</strong>
-          <span>Quote valid until {formatDate(quote.expiresAt)}. Payment details are in our email.</span>
-        </div>
-      )}
+      <PaymentPanel order={order} user={user} onChanged={() => setReloadCount((count) => count + 1)} />
 
       <section className="order-details-shipping" aria-labelledby="order-shipping">
         <h2 id="order-shipping">Delivery</h2>
@@ -123,6 +118,13 @@ const OrderDetails = () => {
         ) : (
           <p>No shipping details yet. We'll email you when your order is dispatched.</p>
         )}
+        {!order.fulfilment?.deliveredAt && !["cancelled", "refunded", "refund_pending"].includes(order.status) && (
+          <p>
+            {order.fulfilment?.estimatedDeliveryAt
+              ? `Estimated delivery: ${new Date(order.fulfilment.estimatedDeliveryAt).toLocaleDateString("en-GB", { dateStyle: "medium" })}`
+              : "Estimated delivery will be confirmed once your shoes are bought and shipped."}
+          </p>
+        )}
         {trackingUrl && (
           <a className="order-details-button" href={trackingUrl} target="_blank" rel="noopener noreferrer">
             Track with carrier
@@ -142,8 +144,9 @@ const OrderDetails = () => {
           </h2>
           <ol className="order-details-history">
             {order.history.map((entry, index) => (
-              <li key={`${entry.status}:${index}`}>
+              <li key={`${entry.status || entry.type}:${index}`}>
                 <strong>{entry.label}</strong>
+                {entry.message && <p className="order-details-update">{entry.message}</p>}
                 <span>{formatDate(entry.at)}</span>
               </li>
             ))}

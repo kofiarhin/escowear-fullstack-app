@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import PaymentProofReview from "./PaymentProofReview.component";
 import { Link, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../../redux/actions/user.action";
@@ -26,6 +27,7 @@ const ACTIONS = {
       money("duties", "Duties (GHS)"),
       { name: "expiresAt", label: "Quote valid until (your local time; defaults to 48 hours)", type: "datetime-local", required: true },
       { name: "rateSnapshot", label: "Rate / calculation note (internal, optional)", type: "text" },
+      { name: "estimatedDeliveryAt", label: "Estimated delivery date (optional; only if you know it)", type: "date" },
       { name: "message", label: "Message to customer (optional)", type: "textarea" },
     ],
     build: (v, order) => ({
@@ -37,6 +39,7 @@ const ACTIONS = {
         dutiesMinor: toMinorUnits(v.duties),
         expiresAt: localDateTimeToIso(v.expiresAt),
         rateSnapshot: v.rateSnapshot || undefined,
+        estimatedDeliveryAt: v.estimatedDeliveryAt || undefined,
       },
       message: v.message || undefined,
     }),
@@ -48,15 +51,15 @@ const ACTIONS = {
     build: (v) => ({ note: v.note }),
   },
   "payment-review": {
-    title: "Payment proof received by email",
-    help: "Use this when the customer has emailed a screenshot. This does not verify payment.",
+    title: "Proof received outside the website (fallback)",
+    help: "Only for proof sent another way (e.g. by email). Website uploads move the order to review automatically. This does not verify payment.",
     submit: "Mark proof under review",
     fields: [{ name: "note", label: "Note (internal, optional)", type: "textarea" }],
     build: (v) => ({ note: v.note || undefined }),
   },
   "verify-payment": {
     title: "Verify bank receipt",
-    help: "Only confirm after you have checked the receiving account yourself. A screenshot is never enough.",
+    help: "Open the receiving Mobile Money account and find this payment yourself: amount, sender, transaction ID and date. Only then confirm. A screenshot is never enough.",
     submit: "Confirm payment verified",
     fields: [
       money("amount", "Amount received (GHS)"),
@@ -90,7 +93,19 @@ const ACTIONS = {
     submit: "Save fulfilment step",
     fields: [
       { name: "toStatus", label: "Next step", type: "select", required: true },
-      { name: "supplierReference", label: "Retailer order reference (processing)", type: "text", when: (v) => v.toStatus === "processing" },
+      { name: "supplierReference", label: "UK retailer order reference (processing)", type: "text", when: (v) => v.toStatus === "processing" },
+      {
+        name: "estimatedDeliveryAt",
+        label: "Estimated delivery date (optional)",
+        type: "date",
+        when: (v) => ["processing", "dispatched"].includes(v.toStatus),
+      },
+      {
+        name: "issue",
+        label: "What went wrong? (lost, damaged, wrong item…) — shown in history",
+        type: "textarea",
+        when: (v) => v.toStatus === "delivery_issue",
+      },
       { name: "carrier", label: "Carrier", type: "text", when: (v) => v.toStatus === "dispatched" },
       { name: "trackingNumber", label: "Tracking number", type: "text", when: (v) => v.toStatus === "dispatched" },
       { name: "trackingUrl", label: "Tracking link", type: "url", when: (v) => v.toStatus === "dispatched" },
@@ -103,9 +118,21 @@ const ACTIONS = {
       carrier: v.carrier || undefined,
       trackingNumber: v.trackingNumber || undefined,
       trackingUrl: v.trackingUrl || undefined,
+      estimatedDeliveryAt: v.estimatedDeliveryAt || undefined,
+      issue: v.issue || undefined,
       note: v.note || undefined,
       customerMessage: v.customerMessage || undefined,
     }),
+  },
+  "customer-update": {
+    title: "Send the customer an update",
+    help: "For delays or news without a status change. The message is emailed and shown on the customer's order page.",
+    submit: "Send update",
+    fields: [
+      { name: "customerMessage", label: "Update for the customer", type: "textarea", required: true },
+      { name: "estimatedDeliveryAt", label: "New estimated delivery date (optional)", type: "date" },
+    ],
+    build: (v) => ({ customerMessage: v.customerMessage, estimatedDeliveryAt: v.estimatedDeliveryAt || undefined }),
   },
   cancel: {
     title: "Cancel order",
@@ -457,8 +484,14 @@ const AdminOrderDetail = () => {
                 Shipped with {order.fulfilment.carrier} {order.fulfilment.trackingNumber && `(${order.fulfilment.trackingNumber})`}
               </p>
             )}
+            {order.fulfilment?.estimatedDeliveryAt && <p>Estimated delivery: {formatDateTime(order.fulfilment.estimatedDeliveryAt)}</p>}
+            {order.fulfilment?.issue && order.status === "delivery_issue" && (
+              <p className="admin-warning">Delivery issue: {order.fulfilment.issue}</p>
+            )}
           </section>
         </div>
+
+        <PaymentProofReview order={order} user={user} />
 
         <section className="admin-actions" aria-labelledby="admin-actions-title">
           <h2 id="admin-actions-title">Actions</h2>
@@ -500,6 +533,9 @@ const AdminOrderDetail = () => {
                   <strong>{humanize(event.type)}</strong>
                   {event.toStatus && ` → ${humanize(event.toStatus)}`} · {event.actorType} · {formatDateTime(event.createdAt)}
                   {event.details?.note && <p>{event.details.note}</p>}
+                  {event.details?.message && <p>To customer: {event.details.message}</p>}
+                  {event.details?.issue && <p>Issue: {event.details.issue}</p>}
+                  {event.details?.proofChannel === "website_upload" && <p>Website upload · transaction ID {event.details.referenceMasked}</p>}
                   {event.details?.reason && <p>Reason: {event.details.reason}</p>}
                   {event.details?.email && !queuedKeys.has(event.details.email.dedupeKey) && (
                     <button

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiRequest } from "../../utils/api";
-import { saveOrderAccess } from "../../utils/orderAccess";
+import { saveOrderAccess, saveProofAccess } from "../../utils/orderAccess";
 import "./trackOrder.styles.css";
 
 const ORDER_NUMBER = /^EW-[0-9A-Z]{5}-[0-9A-Z]{5}$/;
@@ -59,6 +59,7 @@ const TrackOrder = () => {
       const response = await apiRequest("/api/orders/tracking/verify", { method: "POST", body: { orderNumber, email: email.trim(), code: cleaned } });
       if (response.ok && response.data?.orderId) {
         saveOrderAccess(response.data.orderId, response.data.accessToken, response.data.expiresInMinutes);
+        saveProofAccess(response.data.orderId, response.data.proofToken, response.data.proofExpiresInMinutes || response.data.expiresInMinutes);
         navigate(`/orders/${response.data.orderId}`);
         return;
       }
@@ -74,7 +75,10 @@ const TrackOrder = () => {
   return (
     <main className="track-order container">
       <h1 className="title">Track your order</h1>
-      <p className="track-order-lead">Enter your order number and email. We'll email you a one-time code to view your order.</p>
+      <p className="track-order-lead">
+        Enter your order number and email. We'll email you a one-time code to view your order, see payment details and upload your payment
+        screenshot.
+      </p>
 
       {step === "request" ? (
         <form className="track-order-form" onSubmit={requestCode} noValidate>

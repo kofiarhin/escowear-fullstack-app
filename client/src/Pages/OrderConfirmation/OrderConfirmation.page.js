@@ -88,8 +88,10 @@ const OrderConfirmation = () => {
           We email {order.customer?.email ? <strong>{order.customer.email}</strong> : "you"} the final amount in Ghana cedis
           (GHS) and how to pay.
         </li>
-        <li>After you pay, reply to that email with your payment screenshot.</li>
-        <li>We confirm your order once the payment is verified in our account, then source and ship it.</li>
+        <li>
+          You pay by Mobile Money, then upload your payment screenshot and transaction ID <strong>on your order page on this website</strong>.
+        </li>
+        <li>We confirm your order only after we have checked the money arrived in our account, then buy your shoes in the UK and ship them to Ghana.</li>
       </ol>
 
       <div className="order-confirmation-reference">

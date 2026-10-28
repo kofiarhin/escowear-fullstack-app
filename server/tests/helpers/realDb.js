@@ -27,6 +27,7 @@ const connectTestDb = async () => {
     EmailOutbox: require("../../Models/EmailOutbox.model"),
     Product: require("../../Models/Product.model"),
     User: require("../../Models/User.model"),
+    PaymentProof: require("../../Models/PaymentProof.model"),
   };
   try {
     models.TrackingChallenge = require("../../Models/TrackingChallenge.model");

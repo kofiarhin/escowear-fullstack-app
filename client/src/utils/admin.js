@@ -10,6 +10,7 @@ export const ORDER_STATUSES = [
   "processing",
   "dispatched",
   "delivered",
+  "delivery_issue",
   "completed",
   "sourcing_failed",
   "refund_pending",
@@ -23,8 +24,9 @@ export const humanize = (value) => (value ? String(value).replace(/_/g, " ") : "
 export const FULFILMENT_STEPS = {
   confirmed: ["processing", "sourcing_failed"],
   processing: ["dispatched", "sourcing_failed"],
-  dispatched: ["delivered"],
-  delivered: ["completed"],
+  dispatched: ["delivered", "delivery_issue"],
+  delivered: ["completed", "delivery_issue"],
+  delivery_issue: ["dispatched", "delivered", "completed"],
   sourcing_failed: ["processing"],
 };
 

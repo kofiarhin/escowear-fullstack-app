@@ -8,7 +8,7 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const { connectDB } = require("../db/db");
 
-const MODELS = ["User", "Order", "OrderEvent", "EmailOutbox", "TrackingChallenge"];
+const MODELS = ["User", "Order", "OrderEvent", "EmailOutbox", "TrackingChallenge", "PaymentProof"];
 
 const run = async () => {
   await connectDB();

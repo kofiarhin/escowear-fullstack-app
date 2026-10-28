@@ -151,7 +151,15 @@ const AdminOrders = () => {
                         <td>
                           <span className={`admin-badge is-${order.status}`}>{humanize(order.status)}</span>
                         </td>
-                        <td>{humanize(order.paymentStatus)}</td>
+                        <td>
+                          {humanize(order.paymentStatus)}
+                          {order.proofAwaitingReview && (
+                            <>
+                              <br />
+                              <strong className="admin-proof-flag">New proof to check</strong>
+                            </>
+                          )}
+                        </td>
                         <td>{formatGBP(order.subtotalGBPMinor)}</td>
                         <td>{order.quoteTotalGHSMinor !== null ? formatGHS(order.quoteTotalGHSMinor) : "—"}</td>
                       </tr>

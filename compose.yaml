@@ -37,6 +37,14 @@ services:
       ORDER_CHECKOUT_ACCESS_TTL_MINUTES: ${ORDER_CHECKOUT_ACCESS_TTL_MINUTES:-}
       ORDER_TRACKING_ACCESS_TTL_MINUTES: ${ORDER_TRACKING_ACCESS_TTL_MINUTES:-}
       ORDER_TRACKING_CODE_TTL_MINUTES: ${ORDER_TRACKING_CODE_TTL_MINUTES:-}
+      ORDER_PROOF_ACCESS_TTL_MINUTES: ${ORDER_PROOF_ACCESS_TTL_MINUTES:-}
+      # Payment screenshots: private named volume, never a public bind mount.
+      ESCOWEAR_PROOF_UPLOAD_DIR: /app/data/payment-proofs
+      ESCOWEAR_PROOF_MAX_BYTES: ${ESCOWEAR_PROOF_MAX_BYTES:-}
+      ESCOWEAR_PROOF_RETENTION_DAYS: ${ESCOWEAR_PROOF_RETENTION_DAYS:-}
+      ESCOWEAR_ADMIN_NOTIFY_EMAIL: ${ESCOWEAR_ADMIN_NOTIFY_EMAIL:-}
+    volumes:
+      - payment-proofs:/app/data/payment-proofs
     ports:
       - "127.0.0.1:${ESCOWEAR_HOST_PORT:-5080}:5000"
     healthcheck:
@@ -45,3 +53,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 45s
+
+volumes:
+  # Survives container rebuilds/recreation. Back it up with the database.
+  payment-proofs:
