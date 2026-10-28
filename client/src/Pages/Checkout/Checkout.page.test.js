@@ -8,6 +8,7 @@ import reducers from "../../redux/reducers";
 import Checkout from "./Checkout.page";
 import OrderConfirmation from "../OrderConfirmation/OrderConfirmation.page";
 import { CART_KEY } from "../../utils/cart";
+import review from "../../policies/review.json";
 import { getOrderAccess, getProofAccess } from "../../utils/orderAccess";
 
 const cartItems = [
@@ -252,7 +253,7 @@ test("an expired sign-in signs the customer out and lets them retry as a guest",
 test("policy link and policy lines appear in checkout only when policies are visible", () => {
   renderCheckout();
   expect(screen.queryByRole("link", { name: /shop policies/i })).not.toBeInTheDocument();
-  expect(screen.queryByText(/Delivery is confirmed individually/)).not.toBeInTheDocument();
+  expect(screen.queryByText(review.business.delivery)).not.toBeInTheDocument();
 });
 
 test("with published policies, checkout links to them in a new tab and states the key terms", () => {
@@ -264,7 +265,7 @@ test("with published policies, checkout links to them in a new tab and states th
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getByText(/pay nothing extra on arrival\. Quotes are valid for 48 hours/i)).toBeInTheDocument();
-    expect(screen.getByText("Delivery is confirmed individually after ordering.")).toBeInTheDocument();
+    expect(screen.getByText(review.business.delivery)).toBeInTheDocument();
     expect(screen.queryByText(/10–21 days/)).not.toBeInTheDocument();
   } finally {
     delete process.env.REACT_APP_POLICIES_STATUS;

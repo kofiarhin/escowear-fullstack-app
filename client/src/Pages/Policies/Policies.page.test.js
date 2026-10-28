@@ -4,6 +4,11 @@ import Policies from "./Policies.page";
 import Footer from "../../components/Footer/Footer.component";
 import { POLICY_VERSION } from "../../policies/content";
 import { POLICY_SECTIONS } from "../../policies/sections";
+// Seller details come from the review record, so filling it in for publication
+// does not break the build's frontend-test stage.
+import review from "../../policies/review.json";
+
+const { business, seller } = review;
 
 const renderWith = (status, ui = <Policies />) => {
   if (status === undefined) delete process.env.REACT_APP_POLICIES_STATUS;
@@ -34,7 +39,7 @@ test("draft shows every section with a DRAFT banner for review", () => {
   expect(screen.getByText(/includes everything: the shoes, shipping, import duties, taxes and delivery/i)).toBeInTheDocument();
   expect(screen.getByText(/valid for 48 hours/i)).toBeInTheDocument();
   expect(screen.getByText(/We accept Mobile Money only/i)).toBeInTheDocument();
-  expect(screen.getByText("Delivery is confirmed individually after ordering.")).toBeInTheDocument();
+  expect(screen.getByText(business.delivery)).toBeInTheDocument();
   expect(screen.queryByText(/10–21 days/)).not.toBeInTheDocument();
   expect(screen.getByText("We serve customers in Ghana.")).toBeInTheDocument();
   expect(screen.getByText("Payment method: Manual Mobile Money confirmation.")).toBeInTheDocument();
@@ -42,10 +47,12 @@ test("draft shows every section with a DRAFT banner for review", () => {
   expect(screen.getByText(/within 14 days of receiving it, without giving a reason/i)).toBeInTheDocument();
   expect(screen.getByText(/EscoWear pays the cost of returning the item/i)).toBeInTheDocument();
   expect(screen.getByText(/order and payment records for 6 years/i)).toBeInTheDocument();
-  expect(screen.getByText("Business name: EscoWear.")).toBeInTheDocument();
-  expect(screen.getByText("Business address: To be confirmed.")).toBeInTheDocument();
-  expect(screen.getByText(/Support email: support@escowear.com — UNVERIFIED; mailbox testing is pending/i)).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: /support@escowear.com/ })).not.toBeInTheDocument();
+  expect(screen.getByText(`Business name: ${business.name}.`)).toBeInTheDocument();
+  expect(screen.getByText(`Business address: ${seller.address || "To be confirmed"}.`)).toBeInTheDocument();
+  // An unverified mailbox is labelled as such and never offered as a link.
+  const unverified = seller.emailVerified ? "" : " — UNVERIFIED; mailbox testing is pending";
+  expect(screen.getByText(`Support email: ${seller.email}${unverified}.`)).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: new RegExp(seller.email.replace(/[.@]/g, "\\$&")) })).not.toBeInTheDocument();
   const toc = screen.getByRole("navigation", { name: /policy sections/i });
   expect(within(toc).getAllByRole("link")).toHaveLength(POLICY_SECTIONS.length);
 });
