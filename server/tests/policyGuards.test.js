@@ -16,6 +16,16 @@ test("the server refuses to start with published policies while the publication 
   }
 });
 
+test("the server refuses to start when its policy status differs from the site build's", () => {
+  const ok = () => [];
+  assert.throws(() => assertPolicyPublication({ ESCOWEAR_BUILD_POLICIES_STATUS: "hidden", ESCOWEAR_POLICIES_STATUS: "published" }, ok), /built with hidden; rebuild/);
+  assert.throws(() => assertPolicyPublication({ ESCOWEAR_BUILD_POLICIES_STATUS: "published" }, ok), /hidden but the site was built with published/);
+  assert.doesNotThrow(() => assertPolicyPublication({ ESCOWEAR_BUILD_POLICIES_STATUS: "hidden" }, ok));
+  assert.doesNotThrow(() => assertPolicyPublication({ ESCOWEAR_BUILD_POLICIES_STATUS: "published", ESCOWEAR_POLICIES_STATUS: "published" }, ok));
+  // Outside the image (local development) there is no recorded build status.
+  assert.doesNotThrow(() => assertPolicyPublication({ ESCOWEAR_POLICIES_STATUS: "draft" }, ok));
+});
+
 test("the policy version comes from the shared review record", () => {
   assert.equal(getOrderConfig({}).policyVersion, review.version);
 });
