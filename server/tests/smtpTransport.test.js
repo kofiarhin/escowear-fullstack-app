@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const net = require("node:net");
 const { createTransportFromEnv, isMailbox, readSmtpConfig } = require("../emails/transports");
 const { processOutboxBatch } = require("../services/emailOutbox");
-const { run: emailCheck } = require("../scripts/emailCheck");
+const { describeFailure, run: emailCheck } = require("../scripts/emailCheck");
 const { createMemoryModel } = require("./helpers/memoryModel");
 const { silentLogger } = require("./helpers/testApp");
 
@@ -226,4 +226,11 @@ test("email:check logs in, optionally sends a test, and never prints the passwor
   assert.ok(lines.every((line) => !line.includes(SECRET) && !line.includes("shop@example.test")), "user is masked, password never shown");
   assert.equal(smtp.messages.length, 1);
   assert.match(smtp.messages[0].data, /No order was created/);
+});
+
+test("email:check shows safe codes and setting-name diagnostics, never other provider messages", () => {
+  assert.equal(describeFailure(Object.assign(new Error("535 bad creds for kofi@example.test"), { code: "EAUTH" })), "EAUTH");
+  const invalid = new Error("Invalid SMTP configuration: SMTP_HOST is required");
+  assert.equal(describeFailure(invalid), invalid.message);
+  assert.equal(describeFailure(new Error("550 rejected secret@example.test")), "check configuration and connection privately");
 });

@@ -97,6 +97,14 @@ const startEmailDelivery = () => {
 // build-time switch. Refuse to start in "published" while the publication guard
 // fails, so emails can never make policy promises the site has not published.
 const assertPolicyPublication = (env = process.env, problems = () => require("../client/scripts/check-policies.cjs").publicationProblems()) => {
+  // The image records the status its site was built with. A different runtime
+  // status would make the server and site disagree (e.g. every order rejected
+  // as POLICY_VERSION_CHANGED), so require a rebuild instead.
+  const built = env.ESCOWEAR_BUILD_POLICIES_STATUS;
+  const runtime = env.ESCOWEAR_POLICIES_STATUS || "hidden";
+  if (built && built !== runtime) {
+    throw new Error(`ESCOWEAR_POLICIES_STATUS=${runtime} but the site was built with ${built}; rebuild the image`);
+  }
   if (env.ESCOWEAR_POLICIES_STATUS !== "published") return;
   const missing = problems();
   if (missing.length) {

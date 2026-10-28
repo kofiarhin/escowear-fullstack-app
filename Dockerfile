@@ -20,6 +20,9 @@ RUN npm run build
 
 FROM node:20-bookworm-slim
 ENV NODE_ENV=production
+# The server refuses to start if its runtime policy status differs from the site build's.
+ARG REACT_APP_POLICIES_STATUS=hidden
+ENV ESCOWEAR_BUILD_POLICIES_STATUS=${REACT_APP_POLICIES_STATUS}
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
