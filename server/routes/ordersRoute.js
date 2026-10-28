@@ -57,7 +57,7 @@ const createOrdersRouter = (deps = {}) => {
   router.post("/tracking/request", trackingRequestLimiter, trackingRequestPerOrderLimiter, controller.requestTrackingCode);
   router.post("/tracking/verify", trackingVerifyLimiter, controller.verifyTrackingCode);
   router.get("/:id/payment-instructions", optionalAuth, controller.getPaymentInstructions);
-  router.post("/:id/payment-proof", proofIpLimiter, proofOrderLimiter, optionalAuth, controller.submitPaymentProof);
+  router.post("/:id/payment-proof", proofIpLimiter, optionalAuth, controller.authorizePaymentProof, proofOrderLimiter, controller.submitPaymentProof);
   router.get("/:id", optionalAuth, controller.getOrder);
   router.orderService = orderService;
   return router;

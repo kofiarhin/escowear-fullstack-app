@@ -55,10 +55,13 @@ const readMultipart = (req, { maxBytes, fileField = "proofImage", allowedFields 
     parser.on("file", (name, stream) => {
       if (name !== fileField || file) {
         fail(new MultipartError(400, "UNEXPECTED_FILE", "Upload exactly one screenshot"));
+        stream.on("error", () => {});
         stream.resume();
         return;
       }
       const chunks = [];
+      // Truncated bodies error the file stream too; the reader reports them once.
+      stream.on("error", () => fail(new MultipartError(400, "INVALID_MULTIPART", "The upload could not be read. Please try again.")));
       stream.on("data", (chunk) => {
         received += chunk.length;
         if (!failure) chunks.push(chunk);
@@ -82,7 +85,17 @@ const readMultipart = (req, { maxBytes, fileField = "proofImage", allowedFields 
       if (!file || file.size === 0) return reject(new MultipartError(422, "FILE_REQUIRED", "Choose a screenshot of your payment to upload"));
       return resolve({ fields, file });
     });
-    req.on("aborted", () => fail(new MultipartError(400, "UPLOAD_ABORTED", "The upload was interrupted")));
+    // A dropped connection never ends the piped body, so busboy would never emit
+    // "close": settle here or the caller's finally (in-flight slot) never runs.
+    const interrupted = () => {
+      if (req.complete) return;
+      fail(new MultipartError(400, "UPLOAD_ABORTED", "The upload was interrupted"));
+      req.unpipe(parser);
+      parser.destroy();
+      reject(failure);
+    };
+    req.on("aborted", interrupted);
+    req.on("close", interrupted);
     req.pipe(parser);
   });
 

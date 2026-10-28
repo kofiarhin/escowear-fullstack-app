@@ -534,6 +534,10 @@ test("payment issue rejects the proof, customer resubmits, admin verifies; misma
   const viewed = await ctx.view(order.orderId, order.readToken);
   assert.equal(viewed.body.payment.canSubmitProof, true);
   assert.equal(viewed.body.statusLabel, "Payment needs attention");
+  // The rejected upload is history only: not shown to the customer as current.
+  assert.equal(viewed.body.payment.proof, null);
+  const rejectedDetail = await ctx.request("GET", `/api/admin/orders/${order.orderId}`, { token: ctx.adminToken });
+  assert.deepEqual(rejectedDetail.body.paymentProofs.map((proof) => [proof.reviewStatus, proof.active]), [["rejected", false]]);
 
   const resubmitted = await ctx.upload(order.orderId, { proofToken: order.proofToken, reference: "TOPUP-2222", image: await png(260, 520) });
   assert.equal(resubmitted.status, 201);
@@ -599,6 +603,10 @@ test("cancellation with refund from review, sourcing failure → refund, deliver
   const kinds = ctx.models.EmailOutbox.docs.filter((entry) => String(entry.orderId) === c.orderId).map((entry) => entry.dedupeKey.split(":")[0] + ":" + (entry.dedupeKey.split(":")[2] || ""));
   assert.equal(new Set(ctx.models.EmailOutbox.docs.map((entry) => entry.dedupeKey)).size, ctx.models.EmailOutbox.docs.length, "every email once");
   assert.ok(kinds.includes("update:1"));
+  // The replacement dispatch gets its own email with the new tracking number.
+  const keys = ctx.models.EmailOutbox.docs.map((entry) => entry.dedupeKey);
+  assert.ok(keys.includes(`status:${c.orderId}:dispatched`));
+  assert.ok(keys.includes(`status:${c.orderId}:dispatched:2`));
 });
 
 // --- instructions, email resilience, notices ------------------------------------------------
@@ -682,4 +690,14 @@ test("upload rate limits apply per order", async (t) => {
   let last;
   for (let attempt = 0; attempt < 11; attempt += 1) last = await ctx.upload(order.orderId, { proofToken: order.proofToken, reference: "<bad>" });
   assert.equal(last.status, 429);
+});
+
+test("unauthorised upload attempts do not use up the owner's per-order budget", async (t) => {
+  const ctx = await setup(t);
+  const order = await quotedOrder(ctx);
+  for (let attempt = 0; attempt < 11; attempt += 1) {
+    assert.equal((await ctx.upload(order.orderId, { reference: "<bad>" })).status, 404);
+  }
+  const owner = await ctx.upload(order.orderId, { proofToken: order.proofToken });
+  assert.equal(owner.status, 201);
 });

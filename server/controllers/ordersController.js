@@ -83,6 +83,28 @@ const createOrdersController = (orderService, { logger = console, trackingServic
 
   // Ownership is checked before the body is read, so strangers never get to
   // stream an upload. The order state is re-checked atomically on commit.
+  // Stop reading an upload we have rejected; close so it is not reused.
+  const abandonUpload = (req, res) => {
+    if (!req.complete) {
+      res.set("Connection", "close");
+      req.unpipe();
+      req.resume();
+    }
+  };
+
+  // Runs before the per-order upload limiter, so only the owner (or a holder of
+  // the proof capability) can use up an order's upload budget.
+  const authorizePaymentProof = async (req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    try {
+      req.proofOrder = await proofService.authorize(req.params.id, proofViewer(req));
+      return next();
+    } catch (error) {
+      abandonUpload(req, res);
+      return sendError(res, error, logger);
+    }
+  };
+
   const submitPaymentProof = async (req, res) => {
     res.set("Cache-Control", "no-store");
     if (uploadsInFlight >= maxConcurrentUploads) {
@@ -92,24 +114,19 @@ const createOrdersController = (orderService, { logger = console, trackingServic
     }
     uploadsInFlight += 1;
     try {
-      const order = await proofService.authorize(req.params.id, proofViewer(req));
+      const order = req.proofOrder || (await proofService.authorize(req.params.id, proofViewer(req)));
       const { fields, file } = await readMultipart(req, { maxBytes: proofMaxBytes, allowedFields: ["transactionReference", "quoteVersion"] });
       const result = await proofService.submit({ order, user: req.user, idempotencyKey: req.get("Idempotency-Key"), fields, file });
       return res.status(result.httpStatus).json(result.body);
     } catch (error) {
-      // Stop reading an upload we have rejected; close so it is not reused.
-      if (!req.complete) {
-        res.set("Connection", "close");
-        req.unpipe();
-        req.resume();
-      }
+      abandonUpload(req, res);
       return sendError(res, error, logger);
     } finally {
       uploadsInFlight -= 1;
     }
   };
 
-  return { createOrder, getOrder, getOrders, getPaymentInstructions, requestTrackingCode, submitPaymentProof, verifyTrackingCode };
+  return { authorizePaymentProof, createOrder, getOrder, getOrders, getPaymentInstructions, requestTrackingCode, submitPaymentProof, verifyTrackingCode };
 };
 
 module.exports = { createOrdersController, sendError };

@@ -138,6 +138,8 @@ const parsePage = (query = {}) => {
 
 const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, logger = console, randomBytes }) => {
   const baseUrl = () => config.publicBaseUrl;
+  // Test configs may omit the proof TTL; tracking uses the same fallback.
+  const proofTtl = () => config.proofAccessTtlMinutes || config.checkoutAccessTtlMinutes;
 
   const ensureCreationSideEffects = async (order, actor) => {
     const dedupeKey = `order_created:${order._id}`;
@@ -184,7 +186,8 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
         accessToken: issueOrderAccessToken(order._id, config.checkoutAccessTtlMinutes, { via: "checkout" }),
         expiresInMinutes: config.checkoutAccessTtlMinutes,
         // Separate, order-bound capability to upload payment proof later in this tab.
-        proofToken: issuePaymentProofToken(order._id, config.checkoutAccessTtlMinutes, { via: "checkout" }),
+        proofToken: issuePaymentProofToken(order._id, proofTtl(), { via: "checkout" }),
+        proofExpiresInMinutes: proofTtl(),
       },
       order: toCustomerOrder(order),
     },

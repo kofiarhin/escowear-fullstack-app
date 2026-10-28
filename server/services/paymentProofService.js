@@ -92,6 +92,11 @@ const createPaymentProofService = ({ Order, OrderEvent, EmailOutbox, PaymentProo
     },
   });
 
+  // A staged proof is live once its order references it (the pending mark can
+  // fail after the order transition commits); unreferenced staged proofs are not.
+  const isLive = (proof, order) =>
+    proof.reviewStatus !== "staged" || String(order?.payment?.proof?.id || "") === String(proof._id);
+
   // Retry with the same Idempotency-Key: same proof back, or 409 if the key
   // was used for a different upload.
   const replay = async (existing, fingerprint) => {
@@ -99,7 +104,11 @@ const createPaymentProofService = ({ Order, OrderEvent, EmailOutbox, PaymentProo
       throw new OrderError(409, "IDEMPOTENCY_CONFLICT", "This upload attempt was already used for a different screenshot. Reload and try again.");
     }
     if (existing.reviewStatus === "staged") {
-      throw new OrderError(409, "UPLOAD_IN_PROGRESS", "Your upload is still being processed. Reload the page in a moment.");
+      const order = await Order.findOne({ _id: existing.orderId }).lean();
+      if (!isLive(existing, order)) {
+        throw new OrderError(409, "UPLOAD_IN_PROGRESS", "Your upload is still being processed. Reload the page in a moment.");
+      }
+      return proofResponse({ ...existing, reviewStatus: "pending" }, 200);
     }
     return proofResponse(existing, 200);
   };
@@ -187,6 +196,8 @@ const createPaymentProofService = ({ Order, OrderEvent, EmailOutbox, PaymentProo
     const storageKey = await storage.save(orderId, image.buffer, image.extension);
     let proof;
     let duplicates = [];
+    // Once the order points at the proof, its record and file must be kept.
+    let committed = false;
     try {
       const referenceNormalized = normalizeReference(reference);
       duplicates = (
@@ -254,14 +265,19 @@ const createPaymentProofService = ({ Order, OrderEvent, EmailOutbox, PaymentProo
         assertSubmittable(current || order, quoteVersion);
         throw new OrderError(409, "STALE_STATUS", "This order changed while you were uploading. Reload the page.");
       }
+      committed = true;
 
-      await PaymentProof.updateOne({ _id: proof._id, reviewStatus: "staged" }, { $set: { reviewStatus: "pending" } });
+      // If this fails the proof stays "staged", but the order references it, so
+      // readers treat it as pending (see isLive) and admin settles it normally.
+      await PaymentProof.updateOne({ _id: proof._id, reviewStatus: "staged" }, { $set: { reviewStatus: "pending" } }).catch((error) =>
+        logger.error(`Proof ${proof._id} not marked pending: ${error.message}`)
+      );
       proof.reviewStatus = "pending";
       const updated = await Order.findOne({ _id: orderId }).lean();
       await queueSideEffects(updated || order, proof, before.status, duplicates);
       return proofResponse(proof, 201);
     } catch (error) {
-      if (proof?.reviewStatus !== "pending") await discard(proof?._id, storageKey);
+      if (!committed) await discard(proof?._id, storageKey);
       throw error;
     }
   };
@@ -314,14 +330,19 @@ const createPaymentProofService = ({ Order, OrderEvent, EmailOutbox, PaymentProo
   });
 
   const listForAdmin = async (order) => {
-    const proofs = await PaymentProof.find({ orderId: order._id, reviewStatus: { $ne: "staged" } }).sort({ createdAt: -1 }).lean();
-    return proofs.map((proof) => adminProof(proof, order.payment?.proof?.id));
+    const proofs = await PaymentProof.find({ orderId: order._id }).sort({ createdAt: -1 }).lean();
+    return proofs
+      .filter((proof) => isLive(proof, order))
+      .map((proof) => adminProof(proof.reviewStatus === "staged" ? { ...proof, reviewStatus: "pending" } : proof, order.payment?.proof?.id));
   };
 
   const readForAdmin = async (orderId, proofId) => {
     if (!isObjectId(orderId) || !isObjectId(proofId)) throw new OrderError(404, "NOT_FOUND", "Proof not found");
     const proof = await PaymentProof.findOne({ _id: proofId, orderId }).lean();
-    if (!proof || proof.reviewStatus === "staged") throw new OrderError(404, "NOT_FOUND", "Proof not found");
+    if (!proof) throw new OrderError(404, "NOT_FOUND", "Proof not found");
+    if (proof.reviewStatus === "staged" && !isLive(proof, await Order.findOne({ _id: orderId }).lean())) {
+      throw new OrderError(404, "NOT_FOUND", "Proof not found");
+    }
     let buffer;
     try {
       buffer = await storage.read(proof.storageKey);
@@ -336,7 +357,7 @@ const createPaymentProofService = ({ Order, OrderEvent, EmailOutbox, PaymentProo
   const settleActiveProof = async (order, reviewStatus, admin) => {
     const proofId = order.payment?.proof?.id;
     if (!proofId) return;
-    await PaymentProof.updateOne({ _id: proofId, reviewStatus: "pending" }, { $set: { reviewStatus, reviewedAt: now(), reviewedBy: admin._id } }).catch((error) =>
+    await PaymentProof.updateOne({ _id: proofId, reviewStatus: { $in: ["staged", "pending"] } }, { $set: { reviewStatus, reviewedAt: now(), reviewedBy: admin._id } }).catch((error) =>
       logger.error(`Proof ${proofId} review status not updated: ${error.message}`)
     );
   };

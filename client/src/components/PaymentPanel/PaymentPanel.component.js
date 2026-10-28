@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiRequest, authHeader } from "../../utils/api";
 import { clearProofAccess, proofAccessHeader } from "../../utils/orderAccess";
 import { formatGHS } from "../../utils/money";
+import { policiesStatus } from "../../policies/content";
 import {
   ACCEPTED_TYPES,
   DEFAULT_MAX_BYTES,
@@ -279,8 +280,9 @@ const PaymentPanel = ({ order, user, onChanged }) => {
           {issue}
           <Breakdown quote={instructions.quote} />
           <p>
-            Valid until <strong>{formatDate(instructions.quote.expiresAt)}</strong>. Customs and delivery to your address are included — you won't
-            pay anything extra on arrival.
+            Valid until <strong>{formatDate(instructions.quote.expiresAt)}</strong>.
+            {/* A policy promise: shown only once the reviewed policies are published, as in the emails. */}
+            {policiesStatus() === "published" && " Customs and delivery to your address are included — you won't pay anything extra on arrival."}
           </p>
           <div className="payment-panel-instructions">
             <h3>How to pay by Mobile Money</h3>

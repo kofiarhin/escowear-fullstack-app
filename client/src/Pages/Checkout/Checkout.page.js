@@ -106,7 +106,7 @@ const Checkout = () => {
 
       if (ok && data?.orderId && data?.orderNumber && (httpStatus === 201 || httpStatus === 200)) {
         saveOrderAccess(data.orderId, data.trackingHandoff?.accessToken, data.trackingHandoff?.expiresInMinutes || 60);
-        saveProofAccess(data.orderId, data.trackingHandoff?.proofToken, data.trackingHandoff?.expiresInMinutes || 60);
+        saveProofAccess(data.orderId, data.trackingHandoff?.proofToken, data.trackingHandoff?.proofExpiresInMinutes || data.trackingHandoff?.expiresInMinutes || 60);
         // Only now, after the server has confirmed the order, is the cart cleared.
         saveCart([]);
         forgetCheckoutAttempt();

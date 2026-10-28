@@ -5,6 +5,7 @@
 
 const TEMPLATE_VERSION = "2026-10-27.1";
 const { business } = require("../../client/src/policies/review.json");
+const { ORDER_STATUS: S } = require("../services/orderStatus");
 
 const formatMinor = (minor, currency) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(minor / 100);
@@ -39,6 +40,11 @@ const paymentPageLine = (order, baseUrl) =>
   baseUrl
     ? `Open your order to see these details and upload your payment screenshot: ${baseUrl}/track-order?order=${encodeURIComponent(order.orderNumber)}`
     : `On our website, open "Track order" with order number ${order.orderNumber} and this email address to upload your payment screenshot.`;
+
+// Statuses where the parcel is still on its way to the customer.
+const EN_ROUTE = new Set([S.PROCESSING, S.DISPATCHED]);
+// Visible tail of a masked reference ("••••1234" → "1234"); empty when fully masked.
+const referenceEnding = (masked) => String(masked || "").replace(/•/g, "");
 
 // Policy promises appear in emails only once the reviewed policies are
 // published (ESCOWEAR_POLICIES_STATUS=published).
@@ -157,7 +163,8 @@ const templates = {
       "",
       `${headline} (order #${order.orderNumber}).`,
       ...(message ? ["", message] : []),
-      ...(order.fulfilment?.estimatedDeliveryAt && !order.fulfilment?.deliveredAt ? ["", ...estimateLine(order)] : []),
+      // Only while the order is on its way; never on cancellation, refund or issue emails.
+      ...(EN_ROUTE.has(order.status) && order.fulfilment?.estimatedDeliveryAt ? ["", ...estimateLine(order)] : []),
       ...(order.fulfilment?.carrier ? ["", `Carrier: ${order.fulfilment.carrier}`] : []),
       ...(order.fulfilment?.trackingNumber ? [`Tracking number: ${order.fulfilment.trackingNumber}`] : []),
       ...(order.fulfilment?.trackingUrl ? [`Carrier tracking: ${order.fulfilment.trackingUrl}`] : []),
@@ -172,7 +179,7 @@ const templates = {
     text: [
       `Hi ${order.customer.name},`,
       "",
-      `We have received your payment screenshot for order #${order.orderNumber}${referenceMasked ? ` (transaction ID ending ${referenceMasked.replace(/•/g, "")})` : ""}.`,
+      `We have received your payment screenshot for order #${order.orderNumber}${referenceEnding(referenceMasked) ? ` (transaction ID ending ${referenceEnding(referenceMasked)})` : ""}.`,
       `Submitted: ${formatDate(submittedAt || new Date())}`,
       "",
       "Your payment is now under review. Your order is NOT confirmed yet.",

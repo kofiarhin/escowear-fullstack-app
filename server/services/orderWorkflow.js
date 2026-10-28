@@ -195,10 +195,14 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
     return { order: updated, event, email: emailResult };
   };
 
-  const statusEmail = (order, toStatus, message) =>
-    STATUS_EMAILS[toStatus]
-      ? { kind: "order_status", dedupeKey: `status:${order._id}:${toStatus}`, headline: STATUS_EMAILS[toStatus].headline, message: message || undefined }
-      : null;
+  // Orders can re-enter a status (dispatched → delivery_issue → dispatched), so
+  // repeat entries get their own key; the first keeps the original key.
+  const statusEmail = async (order, toStatus, message) => {
+    if (!STATUS_EMAILS[toStatus]) return null;
+    const entry = (await OrderEvent.countDocuments({ orderId: order._id, toStatus })) + 1;
+    const dedupeKey = `status:${order._id}:${toStatus}${entry > 1 ? `:${entry}` : ""}`;
+    return { kind: "order_status", dedupeKey, headline: STATUS_EMAILS[toStatus].headline, message: message || undefined };
+  };
 
   // --- actions ---------------------------------------------------------------
 
@@ -286,7 +290,9 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       order,
       admin,
       toStatus: S.PAYMENT_REVIEW,
-      set: { "payment.status": P.UNDER_REVIEW, "payment.reviewNote": note || undefined },
+      // The proof being reviewed now came from outside the website, so no
+      // earlier upload stays marked as the current proof.
+      set: { "payment.status": P.UNDER_REVIEW, "payment.reviewNote": note || undefined, "payment.proof": null },
       type: "payment_proof_received",
       // Fallback for proof sent outside the website (e.g. by email). Website
       // uploads move the order to payment_review automatically.
@@ -360,7 +366,8 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       order,
       admin,
       toStatus: S.PAYMENT_ISSUE,
-      set: { "payment.status": P.REJECTED },
+      // The rejected upload stays in the proof history, but is no longer current.
+      set: { "payment.status": P.REJECTED, "payment.proof": null },
       type: "payment_issue",
       details: { note: note || undefined, issueNumber },
       email: { kind: "payment_issue", dedupeKey: `payment_issue:${order._id}:${issueNumber}`, message: customerMessage },
@@ -428,7 +435,7 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       guard: { "payment.status": P.VERIFIED },
       type: `fulfilment_${toStatus}`,
       details,
-      email: statusEmail(order, toStatus, customerMessage),
+      email: await statusEmail(order, toStatus, customerMessage),
     });
   };
 
@@ -456,7 +463,7 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       set: refund ? { "payment.status": P.REFUND_PENDING } : {},
       type: refund ? "cancelled_refund_pending" : "cancelled",
       details: { reason, refundRequired: refund },
-      email: statusEmail(order, toStatus, customerMessage),
+      email: await statusEmail(order, toStatus, customerMessage),
     });
   };
 
@@ -482,7 +489,7 @@ const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = pro
       },
       type: "refunded",
       details: { refundReference, amountRefundedGHSMinor: amount, note: multiline(body.note, 2000) || undefined },
-      email: statusEmail(order, S.REFUNDED, multiline(body.customerMessage, 2000)),
+      email: await statusEmail(order, S.REFUNDED, multiline(body.customerMessage, 2000)),
     });
   };
 
