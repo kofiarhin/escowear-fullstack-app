@@ -277,8 +277,16 @@ test("admin proof image route: admin only, correct order only, no-store and nosn
   assert.equal((await ctx.request("GET", proofPath, { headers: { "X-Order-Proof-Token": order.proofToken } })).status, 401);
   assert.equal((await ctx.request("GET", `/api/admin/orders/${other.orderId}/payment-proof/${uploaded.body.proofId}`, { token: ctx.adminToken })).status, 404);
   // Not reachable through any static route either.
+  // (In production the SPA fallback answers unknown paths with index.html, so
+  // assert the stored image is never what comes back, not just the status.)
   const file = filesIn(ctx.proofDir)[0];
-  assert.notEqual((await fetch(`${ctx.base}/images/../../data/payment-proofs/${file}`)).status, 200);
+  const stored = fs.readFileSync(path.join(ctx.proofDir, file));
+  for (const probe of [`/images/../../data/payment-proofs/${file}`, `/data/payment-proofs/${file}`, `/${file}`]) {
+    const leaked = await fetch(`${ctx.base}${probe}`);
+    const body = Buffer.from(await leaked.arrayBuffer());
+    assert.ok(!/^image\//.test(leaked.headers.get("content-type") || ""), probe);
+    assert.ok(!body.equals(stored), probe);
+  }
 
   const detail = await ctx.request("GET", `/api/admin/orders/${order.orderId}`, { token: ctx.adminToken });
   assert.equal(detail.body.paymentProofs.length, 1);
