@@ -291,5 +291,14 @@ test("a server-side closed checkout on submit switches to the opening-soon notic
   await fillValidForm();
   await submit();
   expect(await screen.findByText(/online ordering opens soon/i)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /place order request/i })).not.toBeInTheDocument();
   expect(storedCart()).toEqual(cartItems);
+});
+
+test("an open checkout shows the order form", async () => {
+  fetchCheckoutStatus.mockResolvedValueOnce(true);
+  renderCheckout();
+  await waitFor(() => expect(fetchCheckoutStatus).toHaveBeenCalled());
+  expect(await screen.findByRole("button", { name: /place order request/i })).toBeInTheDocument();
+  expect(screen.queryByText(/online ordering opens soon/i)).not.toBeInTheDocument();
 });

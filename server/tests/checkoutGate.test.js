@@ -46,7 +46,18 @@ test("the server refuses to start with checkout open while launch requirements a
 
 test("release check rejects placeholder or test payment details", () => {
   const problems = (instructions) => checkReleaseConfig({ ESCOWEAR_PAYMENT_INSTRUCTIONS: instructions }, []);
-  for (const value of ["PLACEHOLDER — set real details", "TEST MOMO CHANNEL\\nNot a real account", "Example number"]) {
+  const rejected = [
+    "PLACEHOLDER — set real details",
+    "TEST MOMO CHANNEL\\nNot a real account",
+    "Example number",
+    // The layout from .env.example, pasted unchanged.
+    "MTN Mobile Money\\nNumber: 0XX XXX XXXX\\nName: <account name>",
+    "TESTING ONLY",
+    "Fake number 0240000000",
+    "Sample account",
+    "placeholders",
+  ];
+  for (const value of rejected) {
     assert.ok(problems(value).some((p) => /placeholder\/test wording/.test(p)), value);
   }
   assert.ok(!problems("MTN Mobile Money\\nNumber: 024 000 0000\\nName: Latest Trading").some((p) => /placeholder/.test(p)));
