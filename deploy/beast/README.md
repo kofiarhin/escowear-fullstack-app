@@ -61,6 +61,6 @@ On a failed application release, first inspect symptoms and preserve logs. With 
 
 **Reported by Codex:** Escowear container healthy on localhost 5080; read-only DB/product checks for 3,258 records; Nginx and two-domain HTTPS configured; certificate renewal dry-run passed; existing Beast apps stayed healthy. **Confirmed by owner's browser screenshots:** HTTPS homepage and store catalogue display sneaker photos, GBP prices and sizes.
 
-**Not yet end-to-end verified:** product details in browser, real registration/login, cart/order or payment flows. The MVP was launched without a verified MongoDB backup by owner decision; backup/recovery remains outstanding. Dependence on older Node/React packages and limited shared VPS disk are maintenance concerns.
+**New checkout:** automated isolated tests cover product, cart, checkout, admin and tracking; live registration, payment and email acceptance still need approval and verification. The initial MVP launched without a verified backup; subsequent IDE-119 recovery evidence and current release gates are recorded in [the launch checklist](../../docs/mvp-launch-checklist.md). IDE-123 credential remediation is deferred by the owner. Older dependencies and limited shared VPS disk remain concerns.
 
 After permanent VPS changes, run and verify Beast's established profile reconciliation workflow and update the Linear execution record.

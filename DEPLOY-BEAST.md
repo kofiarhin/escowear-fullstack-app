@@ -51,7 +51,7 @@ For rollback, preserve the previously tested image identifier and deployment con
 
 At launch, Codex reported: Docker health green; read-only MongoDB smoke with 3,258 products; frontend tests 4/4; backend tests 6/6; isolated auth/order smoke passed; public HTTPS homepage, product API, image and health endpoint successful; `www` operational; Certbot renewal dry-run successful. Owner browser screenshots independently confirmed homepage and `/store` sneaker images, GBP prices and sizes. See [the preparation report](deploy/beast/REPORT.md) for pre-launch findings, which are historical and should not be treated as today's state.
 
-**Outstanding:** independently verify product details, account and checkout flow, resource monitoring, and a recoverable database backup. Owner accepted launch without a verified MongoDB backup. Credentials were rotated by the owner before deployment. Do not store credentials in logs, docs or issues.
+**Current checkout release:** follow [the current launch checklist](docs/mvp-launch-checklist.md). The initial launch proceeded without a verified backup; later IDE-119 evidence records an encrypted backup and isolated restore. Recheck recovery readiness before this release. Earlier reports of credential rotation do not establish remediation: the historical MongoDB credential was subsequently verified as valid. IDE-123 is now deferred by the owner. Do not change credentials or dependent apps as part of checkout preparation, or store secrets in logs, docs or issues.
 
 ## Infrastructure reconciliation
 

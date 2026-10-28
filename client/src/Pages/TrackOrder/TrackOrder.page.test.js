@@ -101,6 +101,8 @@ test("order page without access asks the visitor to verify and makes no request"
 test("order page shows a safe state when there are no shipping details and hides unsafe links", async () => {
   saveOrderAccess(order.id, "token", 30);
   global.fetch.mockImplementation(() =>
+    // Deliberately hostile fixture: verify it never becomes a clickable link.
+    // eslint-disable-next-line no-script-url
     json(200, { ...order, status: "processing", statusLabel: "Sourcing your order", fulfilment: { carrier: null, trackingNumber: null, trackingUrl: "javascript:alert(1)" } })
   );
   renderAt(`/orders/${order.id}`);

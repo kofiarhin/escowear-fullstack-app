@@ -86,15 +86,13 @@ test("verifying payment requires the bank-receipt attestation and sends the expe
   expect(global.fetch.mock.calls.filter(([, options]) => options?.method === "POST")).toHaveLength(0);
 
   await userEvent.click(screen.getByLabelText(/personally confirmed these funds arrived/i));
-  await act(async () => {
-    userEvent.click(screen.getByRole("button", { name: "Confirm payment verified" }));
-  });
-  await waitFor(() => expect(global.fetch.mock.calls.filter(([, options]) => options?.method === "POST")).toHaveLength(1));
+  await userEvent.click(screen.getByRole("button", { name: "Confirm payment verified" }));
+  expect(await screen.findByText(/saved\. email queued/i)).toBeInTheDocument();
+  expect(global.fetch.mock.calls.filter(([, options]) => options?.method === "POST")).toHaveLength(1);
   const [url, options] = global.fetch.mock.calls.find(([, opts]) => opts?.method === "POST");
   expect(url).toBe(`/api/admin/orders/${baseOrder.id}/verify-payment`);
   const body = JSON.parse(options.body);
   expect(body).toMatchObject({ expectedStatus: "payment_review", amountReceivedGHSMinor: 300000, bankReference: "TXN-1", bankReceiptConfirmed: true });
-  expect(await screen.findByText(/saved\. email queued/i)).toBeInTheDocument();
   await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(3));
   await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 });
@@ -148,12 +146,21 @@ test("re-quotes send the current quote version and uncertain-funds cancels ask a
   await screen.findByRole("heading", { name: order.orderNumber });
   await userEvent.type(screen.getByLabelText("Reason (internal)"), "Customer cannot pay the balance");
   await userEvent.click(screen.getByLabelText(/money was received for this order and must be refunded/i));
-  await act(async () => {
-    userEvent.click(screen.getByRole("button", { name: "Cancel order" }));
-  });
-  await waitFor(() => expect(global.fetch.mock.calls.some(([, options]) => options?.method === "POST")).toBe(true));
+  await userEvent.click(screen.getByRole("button", { name: "Cancel order" }));
+  expect(await screen.findByText(/cancel order: saved/i)).toBeInTheDocument();
   const [, options] = global.fetch.mock.calls.find(([, opts]) => opts?.method === "POST");
   expect(JSON.parse(options.body)).toMatchObject({ expectedStatus: "payment_issue", refundRequired: true });
   await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(3));
   await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+});
+
+test("quote expiry defaults to 48 hours from now", async () => {
+  global.fetch.mockImplementation(() =>
+    ok({ ...baseOrder, status: "pending_contact", allowedActions: ["payment-instructions"], paymentChannelConfigured: true, pricing: { subtotalGBPMinor: 16499 } })
+  );
+  renderAt(`/admin/orders/${baseOrder.id}`);
+  const input = await screen.findByLabelText(/quote valid until/i);
+  const hours = (new Date(input.value).getTime() - Date.now()) / 3600000;
+  expect(hours).toBeGreaterThan(47.9);
+  expect(hours).toBeLessThan(48.1);
 });

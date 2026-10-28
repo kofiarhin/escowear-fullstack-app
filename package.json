@@ -5,7 +5,7 @@
   "main": "node server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run test:server",
     "server": "nodemon server/server.js",
     "client": "npm start --prefix client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
@@ -17,7 +17,8 @@
     "admin:set-role": "node server/scripts/setUserRole.js",
     "test:e2e": "node e2e/browser-smoke.cjs",
     "test:realdb": "node --test server/tests/realDb.*.test.js",
-    "email:check": "node server/scripts/emailCheck.js"
+    "email:check": "node server/scripts/emailCheck.js",
+    "release:check": "node server/scripts/releaseCheck.js"
   },
   "keywords": [],
   "author": "",

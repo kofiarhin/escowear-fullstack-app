@@ -17,7 +17,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "prebuild": "node scripts/check-policies.cjs",
     "build": "react-scripts build",
+    "lint": "eslint src --max-warnings=0",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

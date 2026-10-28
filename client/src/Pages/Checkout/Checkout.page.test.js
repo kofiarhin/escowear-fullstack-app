@@ -246,3 +246,25 @@ test("an expired sign-in signs the customer out and lets them retry as a guest",
   expect(calls[0][1].headers.Authorization).toBe("Bearer expired-token");
   expect(calls[1][1].headers.Authorization).toBeUndefined();
 });
+
+test("policy link and policy lines appear in checkout only when policies are visible", () => {
+  renderCheckout();
+  expect(screen.queryByRole("link", { name: /shop policies/i })).not.toBeInTheDocument();
+  expect(screen.queryByText(/Delivery is confirmed individually/)).not.toBeInTheDocument();
+});
+
+test("with published policies, checkout links to them in a new tab and states the key terms", () => {
+  process.env.REACT_APP_POLICIES_STATUS = "published";
+  try {
+    renderCheckout();
+    const link = screen.getByRole("link", { name: /shop policies \(opens in a new tab\)/i });
+    expect(link).toHaveAttribute("href", "/policies");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.getByText(/pay nothing extra on arrival\. Quotes are valid for 48 hours/i)).toBeInTheDocument();
+    expect(screen.getByText("Delivery is confirmed individually after ordering.")).toBeInTheDocument();
+    expect(screen.queryByText(/10–21 days/)).not.toBeInTheDocument();
+  } finally {
+    delete process.env.REACT_APP_POLICIES_STATUS;
+  }
+});

@@ -8,8 +8,8 @@ Implements the proposed [manual order checkout specification](https://github.com
 |---|---|---|
 | D1 | GHS rate, fees, shipping, quote validity | No rate or fee rules in code. An admin enters every final GHS amount (in pesewas) and the expiry by hand. |
 | D2 | Receiving payment channel and reply-to mailbox — **decided 22 Oct 2026: Mobile Money only for the MVP** | No bank details in source. Payment instructions only render from the private `ESCOWEAR_PAYMENT_INSTRUCTIONS` env value, and the action is refused if it is unset. |
-| D3 | Mail provider, sender, secrets — **decided 22 Oct 2026: Gmail SMTP (`EMAIL_TRANSPORT=smtp`), see [email-setup.md](email-setup.md)** | No provider package. Mail goes into a durable `emailoutboxes` queue. With the default `EMAIL_TRANSPORT=none`, messages stay queued and visible to admins; nothing is sent. |
-| D4 | Admin identities — **decided 22 Oct 2026: one owner admin (address recorded privately in Linear IDE-125)** | Admins can only be granted with the operator CLI (`npm run admin:set-role`), never through the API. |
+| D3 | Mail provider, sender, secrets — **decided 22 Oct 2026: Gmail SMTP (`EMAIL_TRANSPORT=smtp`), see [email-setup.md](email-setup.md)** | SMTP adapter (`nodemailer`, pinned). Mail goes into a durable `emailoutboxes` queue. With `EMAIL_TRANSPORT=none`, messages stay queued and visible to admins; nothing is sent. |
+| D4 | Admin identities — **decided 22 Oct 2026: a single admin account, the owner's (address recorded privately in Linear IDE-125, not in this public repo)** | Admins can only be granted with the operator CLI (`npm run admin:set-role`), never through the API. |
 | D5 | Ghana delivery, duties, refund policy | Only the address fields are validated (16 regions, Ghana phone format). Refunds are recorded by hand; nothing is automatic. |
 | D6 | Retention of orders, mail and audit PII; token lifetimes | Nothing is deleted automatically. Token and code lifetimes below are provisional defaults set by env. |
 

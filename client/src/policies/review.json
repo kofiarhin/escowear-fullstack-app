@@ -1,0 +1,18 @@
+{
+  "approvedForPublication": false,
+  "version": "mvp-2026-10-24-draft",
+  "business": {
+    "name": "EscoWear",
+    "customerMarket": "Ghana",
+    "payment": "Manual Mobile Money confirmation",
+    "delivery": "Delivery is confirmed individually after ordering."
+  },
+  "seller": {
+    "name": "",
+    "legalStatus": "",
+    "address": "To be confirmed",
+    "email": "support@escowear.com",
+    "emailVerified": false,
+    "phone": ""
+  }
+}

@@ -93,6 +93,25 @@ const startEmailDelivery = () => {
   return startEmailWorker({ ...models, orderService, transport, trackingCodeTtlMinutes: config.trackingCodeTtlMinutes });
 };
 
+// Emails read ESCOWEAR_POLICIES_STATUS at runtime, separately from the site's
+// build-time switch. Refuse to start in "published" while the publication guard
+// fails, so emails can never make policy promises the site has not published.
+const assertPolicyPublication = (env = process.env, problems = () => require("../client/scripts/check-policies.cjs").publicationProblems()) => {
+  // The image records the status its site was built with. A different runtime
+  // status would make the server and site disagree (e.g. every order rejected
+  // as POLICY_VERSION_CHANGED), so require a rebuild instead.
+  const built = env.ESCOWEAR_BUILD_POLICIES_STATUS;
+  const runtime = env.ESCOWEAR_POLICIES_STATUS || "hidden";
+  if (built && built !== runtime) {
+    throw new Error(`ESCOWEAR_POLICIES_STATUS=${runtime} but the site was built with ${built}; rebuild the image`);
+  }
+  if (env.ESCOWEAR_POLICIES_STATUS !== "published") return;
+  const missing = problems();
+  if (missing.length) {
+    throw new Error(`ESCOWEAR_POLICIES_STATUS=published but ${missing.length} publication requirement(s) are missing; run npm run release:check`);
+  }
+};
+
 // setup port
 const port = process.env.PORT || 5000;
 
@@ -100,6 +119,7 @@ const startServer = async () => {
   if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
     throw new Error("Missing required environment variable JWT_SECRET");
   }
+  assertPolicyPublication();
   await connectDB();
   startEmailDelivery();
   return app.listen(port, () => console.log(`Listening on port ${port}`));
@@ -112,4 +132,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, createApp, startServer };
+module.exports = { app, assertPolicyPublication, createApp, startServer };

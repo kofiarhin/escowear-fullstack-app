@@ -10,17 +10,25 @@ ENV NODE_OPTIONS=--max-old-space-size=1536
 RUN CI=true npm test -- --watchAll=false --runInBand
 
 FROM frontend-deps AS frontend
+# Draft policies stay hidden unless explicitly published after legal review.
+ARG REACT_APP_POLICIES_STATUS=hidden
+ENV REACT_APP_POLICIES_STATUS=${REACT_APP_POLICIES_STATUS}
 COPY client/ ./
-ENV CI=false
+ENV CI=true
 ENV NODE_OPTIONS=--max-old-space-size=1536
 RUN npm run build
 
 FROM node:20-bookworm-slim
 ENV NODE_ENV=production
+# The server refuses to start if its runtime policy status differs from the site build's.
+ARG REACT_APP_POLICIES_STATUS=hidden
+ENV ESCOWEAR_BUILD_POLICIES_STATUS=${REACT_APP_POLICIES_STATUS}
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY server/ ./server/
+COPY client/scripts/check-policies.cjs ./client/scripts/check-policies.cjs
+COPY client/src/policies/review.json ./client/src/policies/review.json
 COPY --from=frontend /app/client/build ./client/build
 USER node
 EXPOSE 5000

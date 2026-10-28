@@ -1,5 +1,3 @@
-import { GET_USER_PENDING } from "../constanst";
-
 const handleUser = () => {
   const user = localStorage.getItem("user");
   if (!user) return null;

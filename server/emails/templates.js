@@ -3,7 +3,8 @@
 // Bank/payment-channel details are never in source: they come from private
 // server configuration (ESCOWEAR_PAYMENT_INSTRUCTIONS) at send-queue time.
 
-const TEMPLATE_VERSION = "2026-10-21.1";
+const TEMPLATE_VERSION = "2026-10-24.1";
+const { business } = require("../../client/src/policies/review.json");
 
 const formatMinor = (minor, currency) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(minor / 100);
@@ -25,8 +26,14 @@ const itemLines = (order) =>
 
 const signOff = ["", "Thank you,", "EscoWear"];
 
+// Policy promises appear in emails only once the reviewed policies are
+// published (ESCOWEAR_POLICIES_STATUS=published).
+const DELIVERY_DETAILS = business.delivery;
+const policyLines = (published, baseUrl, lines) =>
+  published ? ["", ...lines, ...(baseUrl ? [`Shop policies: ${baseUrl}/policies`] : [])] : [];
+
 const templates = {
-  order_received: ({ order, baseUrl }) => ({
+  order_received: ({ order, baseUrl, policiesPublished }) => ({
     subject: `EscoWear order received — #${order.orderNumber}`,
     text: [
       `Hi ${order.customer.name},`,
@@ -40,6 +47,10 @@ const templates = {
       ...itemLines(order),
       "",
       `Indicative subtotal: ${formatMinor(order.pricing.subtotalGBPMinor, "GBP")} (estimate in GBP only)`,
+      ...policyLines(policiesPublished, baseUrl, [
+        "Your final GHS quote will include shipping, import duties, taxes and delivery, so you won't pay anything extra on arrival.",
+        DELIVERY_DETAILS,
+      ]),
       "",
       "Delivery to:",
       order.shippingAddress.recipient,
@@ -53,7 +64,7 @@ const templates = {
     ].join("\n"),
   }),
 
-  payment_instructions: ({ order, baseUrl, paymentInstructions, message }) => {
+  payment_instructions: ({ order, baseUrl, paymentInstructions, message, policiesPublished }) => {
     const quote = order.pricing.finalGHS;
     return {
       subject: `EscoWear payment details — #${order.orderNumber}`,
@@ -68,15 +79,19 @@ const templates = {
         `  Shipping: ${formatMinor(quote.shippingMinor, "GHS")}`,
         `  Duties: ${formatMinor(quote.dutiesMinor, "GHS")}`,
         `This quote is valid until ${formatDate(quote.expiresAt)}.`,
+        ...policyLines(policiesPublished, null, [
+          "This total includes shipping, import duties, taxes and delivery. You won't pay anything extra on arrival.",
+        ]),
         "",
         "How to pay:",
         paymentInstructions,
         "",
-        `Use this payment reference: ${order.orderNumber}`,
+        `Send the exact amount above and use your order number as the payment reference: ${order.orderNumber}`,
         "",
         "After paying, reply to this email with a screenshot of your payment.",
-        "We will confirm your order only after the funds are verified in our account.",
-        "If the quote expires before payment, reply and we will send an updated quote.",
+        "We will confirm your order only after the money has arrived in our account.",
+        "If this quote expires before you pay, please reply to ask for an updated quote before paying.",
+        ...policyLines(policiesPublished, baseUrl, [DELIVERY_DETAILS]),
         ...(message ? ["", message] : []),
         "",
         trackingLine(order, baseUrl),

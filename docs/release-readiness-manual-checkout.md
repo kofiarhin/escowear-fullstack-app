@@ -1,5 +1,8 @@
 # Release readiness — manual checkout (IDE-114 to IDE-118)
 
+> Historical verification report (21 October). For current merged-code evidence,
+> owner decisions, backup status and launch gates, use [mvp-launch-checklist.md](mvp-launch-checklist.md).
+
 **Date:** 21 October 2026
 **Status:** Verified locally in isolation, including against a real MongoDB 7.0 server. Reviewed and fixed on 21 October 2026. **Not released.** Production is blocked by the items below.
 **Branches** (stacked; each builds on the previous one, starting from `master@a7c650c`):

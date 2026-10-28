@@ -140,7 +140,7 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
         orderId: order._id,
         kind: "order_received",
         to: order.customer.emailNormalized,
-        context: { order, baseUrl: baseUrl() },
+        context: { order, baseUrl: baseUrl(), policiesPublished: Boolean(config.policiesPublished) },
       });
       await Order.updateOne(
         { _id: order._id, "email.acknowledgementState": { $ne: EMAIL_STATE.SENT } },
@@ -197,6 +197,13 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
 
     const existing = await findByIdempotency(keyHash);
     if (existing) return replay(existing, fingerprint, user);
+
+    // New orders must be placed against the published policy version, so a
+    // stale or altered client cannot record terms the customer was not shown.
+    if (config.policiesPublished && input.termsVersion !== config.policyVersion) {
+      const message = "Our shop policies have been updated. Please refresh the page and review them before ordering.";
+      throw new OrderError(422, "POLICY_VERSION_CHANGED", message, { termsVersion: message });
+    }
 
     const ids = [...new Set(input.items.map((item) => item.productId))];
     const products = await Product.find({ _id: { $in: ids } }).lean();

@@ -4,6 +4,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # hidden | draft | published — publish only after the legal review (IDE-126).
+        REACT_APP_POLICIES_STATUS: ${ESCOWEAR_POLICIES_STATUS:-hidden}
     restart: unless-stopped
     init: true
     mem_limit: 512m
@@ -22,6 +25,7 @@ services:
       ESCOWEAR_PUBLIC_URL: ${ESCOWEAR_PUBLIC_URL:-}
       ESCOWEAR_PAYMENT_INSTRUCTIONS: ${ESCOWEAR_PAYMENT_INSTRUCTIONS:-}
       TRUST_PROXY: ${TRUST_PROXY:-}
+      ESCOWEAR_POLICIES_STATUS: ${ESCOWEAR_POLICIES_STATUS:-hidden}
       EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-none}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}

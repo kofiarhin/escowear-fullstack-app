@@ -27,7 +27,7 @@ beforeEach(() => {
 test("starts empty: no pre-filled name, email or password", () => {
   renderRegister();
   screen.getAllByRole("textbox").forEach((input) => expect(input).toHaveValue(""));
-  document.querySelectorAll('input[type="password"]').forEach((input) => {
+  [screen.getByLabelText("Password"), screen.getByLabelText("Confirm Password")].forEach((input) => {
     expect(input).toHaveValue("");
     expect(input).toHaveAttribute("minLength", "10");
     expect(input).toHaveAttribute("autoComplete", "new-password");
@@ -39,7 +39,8 @@ test("short passwords are refused before anything is sent; success signs in", as
     .mockResolvedValueOnce({ ok: true, json: async () => ({ _id: "u1", name: "Kofi", email: "kofi@example.test" }) })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ id: "u1", name: "Kofi", email: "kofi@example.test", token: "t" }) });
   renderRegister();
-  const [password, confirm] = document.querySelectorAll('input[type="password"]');
+  const password = screen.getByLabelText("Password");
+  const confirm = screen.getByLabelText("Confirm Password");
   await userEvent.type(screen.getByPlaceholderText("Enter name"), "Kofi");
   await userEvent.type(screen.getAllByRole("textbox")[1], "kofi@example.test");
   await userEvent.type(password, "short");

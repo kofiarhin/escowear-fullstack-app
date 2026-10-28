@@ -28,11 +28,20 @@ const run = async (argv = process.argv.slice(2), { env = process.env, log = cons
   }
 };
 
+// Provider error messages can echo recipients or authentication details, so only
+// safe error codes and readSmtpConfig's own messages (setting names, never values) are shown.
+const SAFE_CODES = new Set(["EAUTH", "ETIMEDOUT", "ECONNECTION", "ECONNREFUSED", "ESOCKET", "ENOTFOUND"]);
+const describeFailure = (error) => {
+  if (SAFE_CODES.has(error?.code)) return error.code;
+  if (String(error?.message).startsWith("Invalid SMTP configuration: ")) return error.message;
+  return "check configuration and connection privately";
+};
+
 if (require.main === module) {
   run().catch((error) => {
-    console.error(`Email check failed: ${error.message}`);
+    console.error(`Email check failed: ${describeFailure(error)}`);
     process.exitCode = 1;
   });
 }
 
-module.exports = { run };
+module.exports = { describeFailure, run };
