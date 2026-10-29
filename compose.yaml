@@ -24,6 +24,8 @@ services:
       # Listed one by one so unrelated secrets in .env never reach the container.
       ESCOWEAR_PUBLIC_URL: ${ESCOWEAR_PUBLIC_URL:-}
       ESCOWEAR_PAYMENT_INSTRUCTIONS: ${ESCOWEAR_PAYMENT_INSTRUCTIONS:-}
+      MOMO_PAYMENT_NUMBER: ${MOMO_PAYMENT_NUMBER:-}
+      MOMO_ACCOUNT_NAME: ${MOMO_ACCOUNT_NAME:-}
       TRUST_PROXY: ${TRUST_PROXY:-}
       ESCOWEAR_POLICIES_STATUS: ${ESCOWEAR_POLICIES_STATUS:-hidden}
       # New order requests stay closed until "true"; the server refuses to start open
