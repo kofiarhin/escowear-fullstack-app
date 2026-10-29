@@ -9,6 +9,7 @@ const { ORDER_STATUS: S, PAYMENT_STATUS: P, EMAIL_STATE } = require("./orderStat
 const { enqueueEmail } = require("./emailOutbox");
 const { OrderError } = require("./orderService");
 const { isObjectId } = require("../validators/orderValidator");
+const { paymentInstructionsText } = require("../config/paymentInstructions");
 
 const TRANSITIONS = Object.freeze({
   [S.PENDING_CONTACT]: [S.AWAITING_CUSTOMER, S.AWAITING_PAYMENT, S.CANCELLED],
@@ -94,7 +95,7 @@ const optionalUrl = (value) => {
 };
 
 const createOrderWorkflow = ({ Order, OrderEvent, EmailOutbox, config, env = process.env, now = () => new Date(), logger = console, proofs = null }) => {
-  const paymentInstructions = () => (env.ESCOWEAR_PAYMENT_INSTRUCTIONS || "").replace(/\\n/g, "\n").trim();
+  const paymentInstructions = () => paymentInstructionsText(env);
 
   const loadOrder = async (orderId) => {
     if (!isObjectId(orderId)) throw new OrderError(404, "NOT_FOUND", "Order not found");

@@ -46,6 +46,8 @@ Status (28 Oct 2026): **merged (PRs #18, #19); launch prep on `fix/ide-129-launc
 
 `ESCOWEAR_PROOF_UPLOAD_DIR`, `ESCOWEAR_PROOF_MAX_BYTES`, `ESCOWEAR_PROOF_RETENTION_DAYS` (unset = keep), `ESCOWEAR_ADMIN_NOTIFY_EMAIL` (optional), `ORDER_PROOF_ACCESS_TTL_MINUTES`. Existing: `ESCOWEAR_PAYMENT_INSTRUCTIONS`, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `ESCOWEAR_PUBLIC_URL`. See `.env.example`.
 
+Payment instructions: set **either** `ESCOWEAR_PAYMENT_INSTRUCTIONS` **or** `MOMO_PAYMENT_NUMBER` + `MOMO_ACCOUNT_NAME` (optional `MOMO_NETWORK`, default "Mobile Money"). The MoMo settings are read at request time by the order and proof services. `release:check` names a half-set or doubly-set configuration without printing values. Run `release:check` inside the candidate container: on the host it reports `ESCOWEAR_PROOF_UPLOAD_DIR`, which only `compose.yaml` sets.
+
 Retention is **undecided**. `server/scripts/purgePaymentProofs.js` only reports unless retention is set **and** `--apply` is passed. It only touches finished orders and keeps the metadata.
 
 ## Checkout switch

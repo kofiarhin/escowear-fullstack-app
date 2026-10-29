@@ -7,7 +7,6 @@ const { createOrdersRouter } = require("./routes/ordersRoute");
 const usersRoute = require("./routes/usersRoute");
 const { createAdminRouter } = require("./routes/adminRoute");
 require("dotenv").config();
-require("./config/paymentInstructions").applyPaymentInstructions();
 const path = require("path");
 
 // `deps` lets tests inject in-memory models; production uses the defaults.

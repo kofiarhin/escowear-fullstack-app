@@ -2,7 +2,7 @@
 // connects to a database, sends email or changes the environment.
 const { readSmtpConfig } = require("../emails/transports");
 const path = require("path");
-const { paymentInstructions } = require("../config/paymentInstructions");
+const { paymentInstructions, paymentSettingsProblems } = require("../config/paymentInstructions");
 const { publicationProblems } = require("../../client/scripts/check-policies.cjs");
 
 const REPO = path.resolve(__dirname, "../..");
@@ -21,6 +21,7 @@ const checkReleaseConfig = (env, policyProblems = publicationProblems()) => {
   if (PLACEHOLDER_PAYMENT.test(paymentInstructions(env))) {
     problems.push("ESCOWEAR_PAYMENT_INSTRUCTIONS still contains placeholder/test wording");
   }
+  problems.push(...paymentSettingsProblems(env));
   if (env.EMAIL_TRANSPORT !== "smtp") problems.push("EMAIL_TRANSPORT must be smtp for checkout launch");
   try {
     readSmtpConfig({ ...env, NODE_ENV: "production" });
