@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../../redux/actions/user.action";
@@ -7,6 +7,7 @@ import { getProductImage, useFallbackProductImage } from "../../utils/product";
 import { formatGBP } from "../../utils/money";
 import { apiRequest, authHeader, NetworkError } from "../../utils/api";
 import { saveOrderAccess, saveProofAccess } from "../../utils/orderAccess";
+import { fetchCheckoutStatus } from "../../utils/checkoutStatus";
 import {
   GHANA_REGIONS,
   buildOrderPayload,
@@ -52,6 +53,18 @@ const Checkout = () => {
   const [status, setStatus] = useState({ state: "idle", message: "" });
   const submitting = useRef(false);
   const formRef = useRef(null);
+  // null = not known yet; false = the shop is not taking orders yet.
+  const [checkoutOpen, setCheckoutOpen] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchCheckoutStatus().then((open) => {
+      if (active) setCheckoutOpen(open);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (!items.length) {
     return (
@@ -59,6 +72,20 @@ const Checkout = () => {
         <section className="checkout-empty">
           <h1 className="title">Checkout</h1>
           <p>Your cart is empty, so there is nothing to order yet.</p>
+          <Link className="checkout-button checkout-button-dark" to="/store">
+            Continue Shopping
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  if (checkoutOpen === false) {
+    return (
+      <main className="checkout container">
+        <section className="checkout-empty">
+          <h1 className="title">Checkout</h1>
+          <p>Online ordering opens soon. Your cart is saved, so you can come back and place your order then.</p>
           <Link className="checkout-button checkout-button-dark" to="/store">
             Continue Shopping
           </Link>
@@ -133,6 +160,8 @@ const Checkout = () => {
           state: "error",
           message: "Your sign-in has expired, so you have been signed out. Submit again to order as a guest, or sign in again first.",
         });
+      } else if (httpStatus === 503 && data?.code === "CHECKOUT_CLOSED") {
+        setCheckoutOpen(false);
       } else if (httpStatus === 409) {
         forgetCheckoutAttempt();
         setStatus({ state: "error", message: "Your details changed since the last attempt. Please submit again." });

@@ -8,8 +8,11 @@ const { newIdempotencyKey, sampleProduct, startTestApp, validOrderBody } = requi
 test("the server refuses to start with published policies while the publication guard fails", () => {
   const published = { ESCOWEAR_POLICIES_STATUS: "published" };
   assert.throws(() => assertPolicyPublication(published, () => ["Seller name is missing"]), /1 publication requirement/);
-  // The real draft is incomplete, so the default guard must also refuse.
-  assert.throws(() => assertPolicyPublication(published), /publication requirement/);
+  // The default guard follows the real review record: it refuses while the
+  // record is incomplete and allows startup once it is complete.
+  const { publicationProblems } = require("../../client/scripts/check-policies.cjs");
+  if (publicationProblems().length) assert.throws(() => assertPolicyPublication(published), /publication requirement/);
+  else assert.doesNotThrow(() => assertPolicyPublication(published));
   assert.doesNotThrow(() => assertPolicyPublication(published, () => []));
   for (const status of [undefined, "hidden", "draft"]) {
     assert.doesNotThrow(() => assertPolicyPublication({ ESCOWEAR_POLICIES_STATUS: status }, () => ["missing"]));

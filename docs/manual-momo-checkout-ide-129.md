@@ -1,6 +1,6 @@
 # IDE-129 — Manual Mobile Money checkout and fulfilment
 
-Status: **implemented and tested locally on branch `feat/ide-129-momo-checkout` (based on PR #18). Not deployed, not launch-approved.**
+Status (28 Oct 2026): **merged (PRs #18, #19); launch prep on `fix/ide-129-launch-prep`. Not deployed. Checkout stays closed until the launch gates below pass.**
 
 ## Customer journey
 
@@ -48,15 +48,26 @@ Status: **implemented and tested locally on branch `feat/ide-129-momo-checkout` 
 
 Retention is **undecided**. `server/scripts/purgePaymentProofs.js` only reports unless retention is set **and** `--apply` is passed. It only touches finished orders and keeps the metadata.
 
-## Production prerequisites (each needs separate owner approval)
+## Checkout switch
 
-1. **Nginx body limit.** `/etc/nginx/sites-enabled/escowear.com.conf` has no `client_max_body_size`, so Nginx's 1 MiB default applies.
-   - The client shrinks images over about 900 KB, so typical screenshots already fit.
-   - To honour the full 5 MiB, add `client_max_body_size 6m;` to that site and reload Nginx.
-2. **Persistent volume.** The first `docker compose up` with the new `compose.yaml` creates the named volume `escowear_payment-proofs`. Add it to backups next to MongoDB.
-3. **Indexes.** After a verified backup, run `npm run db:ensure-order-indexes` (additive). This adds the `PaymentProof` collection indexes.
-4. **Private settings.** Set the real `ESCOWEAR_PAYMENT_INSTRUCTIONS`, a verified single support mailbox (`EMAIL_FROM`, and `EMAIL_REPLY_TO` if needed), `EMAIL_TRANSPORT=smtp` and `ESCOWEAR_PUBLIC_URL`.
-5. **Launch gates still open from PR #18 and IDE-123:** credential rotation (exposed MongoDB/SMTP/JWT values), seller details, legal and policy approval, and support mailbox verification.
+`ESCOWEAR_CHECKOUT_OPEN` (default `false`). While closed, the site, catalogue, admin and existing orders work, but new order requests get `503 CHECKOUT_CLOSED` and checkout shows "Online ordering opens soon" (cart kept). `GET /api/orders/checkout-status` returns only `{ open }`. The server **refuses to start** with `ESCOWEAR_CHECKOUT_OPEN=true` unless `npm run release:check` passes, so payment collection cannot open without real Mobile Money details (placeholder/test wording, `0XX` or `<slots>` are rejected), SMTP email, the HTTPS URL and published policies with complete seller details.
+
+## Production state (28 Oct 2026)
+
+| Prerequisite | State |
+|---|---|
+| Nginx `client_max_body_size 6m` on the EscoWear site | **Done**, `nginx -t` + reload, other sites checked |
+| Pre-release backup | **Done**, encrypted, restore-tested in isolation (`/var/backups/escowear/IDE-129-20261028`) |
+| Indexes (`db:ensure-order-indexes`) | **Done** on production after the backup; definitions verified against the models |
+| Email | `EMAIL_TRANSPORT=smtp`, `ESCOWEAR_PUBLIC_URL=https://escowear.com` set (owner-approved); Gmail login and a test send passed; inbox receipt and reply still to be confirmed by the owner |
+| Persistent volume `escowear_payment-proofs` | Created by the first deploy of this compose file; add to backups then |
+
+## Launch gates still open
+
+1. **Seller details** in `client/src/policies/review.json` (`PLACEHOLDER — set before publishing`): seller name, legal status, address, phone. The owner approved the policy text on 28 Oct; publication waits for these.
+2. **Support mailbox** `kofiarhin69@gmail.com`: owner confirms test-email receipt and a reply, then `emailVerified: true`.
+3. **Mobile Money details** (`ESCOWEAR_PAYMENT_INSTRUCTIONS`): real network, number and account name, verified by the owner.
+4. **IDE-123**: the MongoDB Atlas user leaked in public history (`863cca1`) is shared by nine Beast apps; rotate with a coordinated per-app plan. Current SMTP and JWT values are not in history.
 
 ## Verification commands
 

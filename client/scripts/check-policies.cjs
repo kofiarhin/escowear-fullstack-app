@@ -8,7 +8,7 @@ const publicationProblems = (record = review) => {
   for (const field of ["name", "legalStatus", "address", "email", "phone"]) {
     const value = record.seller?.[field];
     if (typeof value !== "string" || !value.trim()) problems.push(`Seller ${field} is missing`);
-    else if (/^(to be confirmed|tbc|tbd)$/i.test(value.trim())) problems.push(`Seller ${field} is still a placeholder`);
+    else if (/^(to be confirmed|tbc|tbd)$/i.test(value.trim()) || /^placeholder\b/i.test(value.trim())) problems.push(`Seller ${field} is still a placeholder`);
   }
   if (record.seller?.emailVerified !== true) problems.push("Support email mailbox verification is missing");
   return problems;

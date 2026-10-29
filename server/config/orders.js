@@ -33,6 +33,9 @@ const getOrderConfig = (env = process.env) => ({
   policiesPublished: env.ESCOWEAR_POLICIES_STATUS === "published",
   // While published, orders must record this version (not one the browser chose).
   policyVersion: POLICY_VERSION,
+  // New order requests are refused until the launch gates pass (see
+  // assertCheckoutReadiness in server.js). Closed unless explicitly "true".
+  checkoutOpen: env.ESCOWEAR_CHECKOUT_OPEN === "true",
   // Short-lived capability that lets the proven order owner upload payment proof.
   proofAccessTtlMinutes: positiveInt(env.ORDER_PROOF_ACCESS_TTL_MINUTES, 60),
   // Private directory for payment screenshots (never under a static/web root).

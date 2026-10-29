@@ -212,6 +212,9 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
   const findByIdempotency = (keyHash) =>
     Order.findOne({ idempotencyKeyHash: keyHash }).select("+idempotencyKeyHash +requestFingerprint").lean();
 
+  // Public: whether new order requests are accepted (no other settings exposed).
+  const checkoutStatus = () => ({ open: Boolean(config.checkoutOpen) });
+
   const createGuestOrder = async ({ body, idempotencyKey, user }) => {
     if (!isValidIdempotencyKey(idempotencyKey)) {
       throw new OrderError(400, "IDEMPOTENCY_KEY_REQUIRED", "A valid Idempotency-Key header is required");
@@ -226,6 +229,11 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
 
     const existing = await findByIdempotency(keyHash);
     if (existing) return replay(existing, fingerprint, user);
+
+    // Retries of existing orders still replay above; only new requests are refused.
+    if (!config.checkoutOpen) {
+      throw new OrderError(503, "CHECKOUT_CLOSED", "Online ordering opens soon. Please check back shortly.");
+    }
 
     // New orders must be placed against the published policy version, so a
     // stale or altered client cannot record terms the customer was not shown.
@@ -336,7 +344,7 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
     return toCustomerOrder(order, events);
   };
 
-  return { createGuestOrder, ensureCreationSideEffects, getOrderForViewer, listOwnerOrders };
+  return { checkoutStatus, createGuestOrder, ensureCreationSideEffects, getOrderForViewer, listOwnerOrders };
 };
 
 module.exports = {

@@ -59,7 +59,7 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
 
   // Uploaded screenshots go to a throwaway private directory, removed on stop.
   const proofDir = fs.mkdtempSync(path.join(os.tmpdir(), "escowear-e2e-proofs-"));
-  const config = { ...getOrderConfig({}), publicBaseUrl: "", proofUploadDir: proofDir };
+  const config = { ...getOrderConfig({}), checkoutOpen: true, publicBaseUrl: "", proofUploadDir: proofDir };
   const paymentEnv = { ESCOWEAR_PAYMENT_INSTRUCTIONS: TEST_PAYMENT_CHANNEL };
   const inbox = [];
   const transport = {
