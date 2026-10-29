@@ -48,8 +48,8 @@ test("a reply-to mailbox different from the sender is flagged for the one-suppor
 
 test("MoMo number and account name supply payment instructions without editing code", () => {
   const { paymentInstructions, applyPaymentInstructions } = require("../config/paymentInstructions");
-  const env = { ...ready, ESCOWEAR_PAYMENT_INSTRUCTIONS: "", MOMO_PAYMENT_NUMBER: "0508025370", MOMO_ACCOUNT_NAME: "ofiarhin" };
-  assert.equal(paymentInstructions(env), "Mobile Money\\nNumber: 0508025370\\nName: ofiarhin");
+  const env = { ...ready, ESCOWEAR_PAYMENT_INSTRUCTIONS: "", MOMO_PAYMENT_NUMBER: "0240000000", MOMO_ACCOUNT_NAME: "Fixture Recipient" };
+  assert.equal(paymentInstructions(env), "Mobile Money\\nNumber: 0240000000\\nName: Fixture Recipient");
   assert.deepEqual(checkReleaseConfig(env, []), []);
   assert.equal(applyPaymentInstructions(env), paymentInstructions(env));
   assert.equal(env.ESCOWEAR_PAYMENT_INSTRUCTIONS, paymentInstructions(env));
