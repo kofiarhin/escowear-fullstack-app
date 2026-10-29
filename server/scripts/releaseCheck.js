@@ -2,6 +2,7 @@
 // connects to a database, sends email or changes the environment.
 const { readSmtpConfig } = require("../emails/transports");
 const path = require("path");
+const { paymentInstructions } = require("../config/paymentInstructions");
 const { publicationProblems } = require("../../client/scripts/check-policies.cjs");
 
 const REPO = path.resolve(__dirname, "../..");
@@ -11,13 +12,13 @@ const PUBLIC_ROOTS = ["client", "server/images"].map((dir) => path.join(REPO, di
 const checkReleaseConfig = (env, policyProblems = publicationProblems()) => {
   const problems = [];
   for (const name of ["ESCOWEAR_MONGO_URI", "JWT_SECRET", "ESCOWEAR_PAYMENT_INSTRUCTIONS"]) {
-    if (!env[name]?.trim()) problems.push(`${name} is missing`);
+    if (!(name === "ESCOWEAR_PAYMENT_INSTRUCTIONS" ? paymentInstructions(env) : env[name])?.trim()) problems.push(`${name} is missing`);
   }
   // Test placeholders must never reach customers as real payment details:
   // placeholder words, masked digits (0XX) or template slots (<account name>).
   // Fails safe: a real name containing "Test" is refused too, so reword it.
   const PLACEHOLDER_PAYMENT = /\b(placeholders?|examples?|test|testing|dummy|fake|sample)\b|not a real|X{2,}|<[^>]*>/i;
-  if (PLACEHOLDER_PAYMENT.test(env.ESCOWEAR_PAYMENT_INSTRUCTIONS || "")) {
+  if (PLACEHOLDER_PAYMENT.test(paymentInstructions(env))) {
     problems.push("ESCOWEAR_PAYMENT_INSTRUCTIONS still contains placeholder/test wording");
   }
   if (env.EMAIL_TRANSPORT !== "smtp") problems.push("EMAIL_TRANSPORT must be smtp for checkout launch");
