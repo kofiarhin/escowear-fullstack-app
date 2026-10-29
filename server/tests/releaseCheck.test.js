@@ -44,3 +44,15 @@ test("a reply-to mailbox different from the sender is flagged for the one-suppor
   assert.deepEqual(checkReleaseConfig({ ...ready, EMAIL_REPLY_TO: "test@example.test" }, []), []);
   assert.ok(checkReleaseConfig({ ...ready, EMAIL_REPLY_TO: "other@example.test" }, []).some((problem) => problem.startsWith("EMAIL_REPLY_TO")));
 });
+
+
+test("MoMo number and account name supply payment instructions without editing code", () => {
+  const { paymentInstructions, applyPaymentInstructions } = require("../config/paymentInstructions");
+  const env = { ...ready, ESCOWEAR_PAYMENT_INSTRUCTIONS: "", MOMO_PAYMENT_NUMBER: "0508025370", MOMO_ACCOUNT_NAME: "ofiarhin" };
+  assert.equal(paymentInstructions(env), "Mobile Money\\nNumber: 0508025370\\nName: ofiarhin");
+  assert.deepEqual(checkReleaseConfig(env, []), []);
+  assert.equal(applyPaymentInstructions(env), paymentInstructions(env));
+  assert.equal(env.ESCOWEAR_PAYMENT_INSTRUCTIONS, paymentInstructions(env));
+  assert.ok(checkReleaseConfig({ ...env, ESCOWEAR_PAYMENT_INSTRUCTIONS: "", MOMO_ACCOUNT_NAME: "" }, []).some(p => p.includes("ESCOWEAR_PAYMENT_INSTRUCTIONS is missing")));
+  assert.equal(paymentInstructions({ ...env, ESCOWEAR_PAYMENT_INSTRUCTIONS: "Approved recipient" }), "Approved recipient");
+});
