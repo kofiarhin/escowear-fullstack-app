@@ -1,6 +1,6 @@
-# EscoWear MVP policies — DRAFT
+# EscoWear MVP policies
 
-> **Status: DRAFT, not published.** These are Kofi's business decisions, written up for review. **The Ghana legal requirements must be verified before anything is published or shown to customers.** That means a check by a Ghana-qualified lawyer, plus the current status of the Electronic Transactions Act 2008 (Act 772) and the draft Electronic Transactions Bill 2025. This document is not legal advice.
+> **Status (30 Oct 2026): owner-approved for publication; formal legal verification deferred.** Earlier status: DRAFT. These are Kofi's business decisions, written up for review. The owner chose to publish before formal legal verification; that verification is **still outstanding**. It means a check by a Ghana-qualified lawyer, plus the current status of the Electronic Transactions Act 2008 (Act 772) and the draft Electronic Transactions Bill 2025. This document is not legal advice.
 
 ## Where the draft lives in the site (unpublished)
 
@@ -12,15 +12,15 @@
 | Legal status | Individual-run online store; not a registered company | Owner-confirmed; registration deferred |
 | Postal address | P.O. Box 1222, Mataheko, Accra, Ghana | Owner-confirmed |
 | Phone | +233 50 802 5370 | Owner-confirmed |
-| Support email | kofiarhin69@gmail.com | **Provisional and UNVERIFIED**: spelling, receipt and replies still to be confirmed by the owner |
+| Support email | kofiarhin69@gmail.com | Owner confirmed on 30 Oct 2026 that it sends and receives email |
 | Customer market | Ghana | Owner-approved |
 | Payment | Manual Mobile Money confirmation | Receiving wallet details still required privately |
 | Delivery | Confirmed individually after ordering | Replaces the earlier fixed-range estimate |
 
 On 30 Oct 2026 the owner approved the MVP policy text and these seller details.
 Formal legal verification and business registration are **deferred, not done**. The
-site stays unpublished until the support mailbox is confirmed (`emailVerified`).
-The previous Gmail authentication check did not verify the support mailbox.
+owner confirmed the support mailbox the same day and approved publishing the MVP
+policies (`emailVerified: true`, build `REACT_APP_POLICIES_STATUS=published`).
 
 Edit `client/src/policies/review.json` to change these details. The draft page,
 checkout delivery wording and policy email delivery wording read that file. Keep
@@ -138,5 +138,5 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
 
 ## Open questions (to be decided)
 
-- Seller details were confirmed on 30 Oct 2026 (see the table above). The support mailbox kofiarhin69@gmail.com is still unverified; legal review of seller identification for an unregistered, individual-run store is deferred.
+- Seller details were confirmed on 30 Oct 2026 (see the table above). The support mailbox kofiarhin69@gmail.com was owner-confirmed on 30 Oct 2026; legal review of seller identification for an unregistered, individual-run store is deferred.
 - Privacy notice: the local draft now identifies database/email/delivery processing; applicable rights and complaint routes, legal basis, storage countries and international transfers still need review before publication. Confirm manual deletion procedures are practical before promising them.

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { POLICY_VERSION, loadPolicySections, policiesStatus } from "../../policies/content";
 import "./policies.styles.css";
 
-// Draft policies stay unpublished until the legal review is complete
+// Policies stay unpublished until the owner approves them and the build guard passes
 // (see policies/content.js for the build-time switch).
 const Policies = () => {
   const status = policiesStatus();
