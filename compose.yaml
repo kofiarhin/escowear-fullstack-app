@@ -49,6 +49,10 @@ services:
       ESCOWEAR_PROOF_MAX_BYTES: ${ESCOWEAR_PROOF_MAX_BYTES:-}
       ESCOWEAR_PROOF_RETENTION_DAYS: ${ESCOWEAR_PROOF_RETENTION_DAYS:-}
       ESCOWEAR_ADMIN_NOTIFY_EMAIL: ${ESCOWEAR_ADMIN_NOTIFY_EMAIL:-}
+      # Owner admin account, created on startup if missing (never reset). See .env.example.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-}
     volumes:
       - payment-proofs:/app/data/payment-proofs
     ports:

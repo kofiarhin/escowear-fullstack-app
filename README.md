@@ -44,7 +44,9 @@ PORT=5000
 NODE_ENV=development
 ```
 
-`JWT_SECRET` is required in production. The database connection refuses to use a database with a different name.
+`JWT_SECRET` is required in production.
+
+**Admin account:** set `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12+ characters) in the private `.env`. On startup the server creates that admin account if no account with the email exists, storing only a bcrypt hash. It never changes an existing account: a later `ADMIN_PASSWORD` change does not reset the password, and an existing customer account with that email is not promoted (use `server/scripts/setUserRole.js` after confirming it is yours). The password is never logged; you may remove it from `.env` after the first start. The database connection refuses to use a database with a different name.
 
 Run the backend and frontend development servers:
 

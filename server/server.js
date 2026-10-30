@@ -123,6 +123,17 @@ const assertCheckoutReadiness = (env = process.env, problems = () => require("./
   }
 };
 
+// Creates the owner's admin account from ADMIN_EMAIL / ADMIN_PASSWORD when it
+// does not exist yet. A failure is logged (never the password) and the shop
+// still starts; admin access can then be fixed without downtime.
+const ensureAdminFromEnv = async () => {
+  try {
+    await require("./services/adminBootstrap").ensureAdminAccount();
+  } catch (error) {
+    console.error(`Admin account check failed: ${error.message}`);
+  }
+};
+
 // setup port
 const port = process.env.PORT || 5000;
 
@@ -133,6 +144,7 @@ const startServer = async () => {
   assertPolicyPublication();
   assertCheckoutReadiness();
   await connectDB();
+  await ensureAdminFromEnv();
   startEmailDelivery();
   return app.listen(port, () => console.log(`Listening on port ${port}`));
 };

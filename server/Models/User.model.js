@@ -17,7 +17,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "password is required"],
     },
-    // Only the operator CLI (server/scripts/setUserRole.js) grants "admin";
+    // Only the operator CLI (server/scripts/setUserRole.js) and the create-only
+    // startup bootstrap (services/adminBootstrap.js) grant "admin";
     // registration never accepts this field.
     role: {
       type: String,
