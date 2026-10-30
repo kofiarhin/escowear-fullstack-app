@@ -29,7 +29,7 @@ export const POLICY_SECTIONS = [
     paragraphs: [
       `Payment method: ${business.payment}.`,
       "We accept Mobile Money only. Send the exact amount in your quote to the Mobile Money number in our email, using your order number as the payment reference.",
-      "After paying, reply to our email with a screenshot of your payment. We confirm your order once we have seen the money arrive in our account. A screenshot on its own is not proof of payment.",
+      "After paying, upload a screenshot of your Mobile Money confirmation and its transaction ID on your order page (use the link in our email or the Track order page). We confirm your order only once we have seen the money arrive in our account. A screenshot on its own is not proof of payment.",
     ],
   },
   {
@@ -75,7 +75,7 @@ export const POLICY_SECTIONS = [
       "We keep order and payment records for 6 years after your order, for tax, accounting and disputes, and then delete them.",
       "One-time tracking codes are deleted automatically within a day of expiring.",
       "You can ask us to delete your account at any time by replying to any order email. We will keep only the order records the law requires.",
-      "Payment screenshots you email us are deleted once your order is completed, unless we need them to resolve a dispute.",
+      "Payment screenshots you upload are stored privately, are seen only by us and are never shown publicly. We keep them with your order's payment records.",
     ],
   },
   {
@@ -84,8 +84,8 @@ export const POLICY_SECTIONS = [
     paragraphs: [
       "Questions about an order? Reply to any of our order emails.",
       `Business name: ${business.name}.`,
-      `Seller name: ${seller.name || "To be confirmed"}. Legal status: ${seller.legalStatus || "To be confirmed"}.`,
-      `Business address: ${seller.address || "To be confirmed"}.`,
+      `Seller: ${seller.name || "To be confirmed"}. Legal status: ${seller.legalStatus || "To be confirmed"}.`,
+      `Postal address: ${seller.address || "To be confirmed"}.`,
       `Support email: ${seller.email || "To be confirmed"}${seller.emailVerified ? "" : " — UNVERIFIED; mailbox testing is pending"}.`,
       `Phone: ${seller.phone || "To be confirmed"}.`,
     ],

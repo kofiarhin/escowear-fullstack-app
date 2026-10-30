@@ -59,7 +59,8 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
 
   // Uploaded screenshots go to a throwaway private directory, removed on stop.
   const proofDir = fs.mkdtempSync(path.join(os.tmpdir(), "escowear-e2e-proofs-"));
-  const config = { ...getOrderConfig({}), checkoutOpen: true, publicBaseUrl: "", proofUploadDir: proofDir };
+  // E2E_POLICIES_STATUS=published exercises the launch configuration (needs a published client build).
+  const config = { ...getOrderConfig({ ESCOWEAR_POLICIES_STATUS: process.env.E2E_POLICIES_STATUS }), checkoutOpen: true, publicBaseUrl: "", proofUploadDir: proofDir };
   const paymentEnv = { ESCOWEAR_PAYMENT_INSTRUCTIONS: TEST_PAYMENT_CHANNEL };
   const inbox = [];
   const transport = {

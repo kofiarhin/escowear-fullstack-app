@@ -48,7 +48,7 @@ test("draft shows every section with a DRAFT banner for review", () => {
   expect(screen.getByText(/EscoWear pays the cost of returning the item/i)).toBeInTheDocument();
   expect(screen.getByText(/order and payment records for 6 years/i)).toBeInTheDocument();
   expect(screen.getByText(`Business name: ${business.name}.`)).toBeInTheDocument();
-  expect(screen.getByText(`Business address: ${seller.address || "To be confirmed"}.`)).toBeInTheDocument();
+  expect(screen.getByText(`Postal address: ${seller.address || "To be confirmed"}.`)).toBeInTheDocument();
   // An unverified mailbox is labelled as such and never offered as a link.
   const unverified = seller.emailVerified ? "" : " — UNVERIFIED; mailbox testing is pending";
   expect(screen.getByText(`Support email: ${seller.email}${unverified}.`)).toBeInTheDocument();

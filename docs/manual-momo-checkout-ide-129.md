@@ -66,7 +66,7 @@ Retention is **undecided**. `server/scripts/purgePaymentProofs.js` only reports 
 
 ## Launch gates still open
 
-1. **Seller details** in `client/src/policies/review.json` (`PLACEHOLDER — set before publishing`): seller name, legal status, address, phone. The owner approved the policy text on 28 Oct; publication waits for these.
+1. **Seller details:** done 30 Oct (owner-confirmed, in `client/src/policies/review.json`). Formal legal verification and registration are deferred.
 2. **Support mailbox** `kofiarhin69@gmail.com`: owner confirms test-email receipt and a reply, then `emailVerified: true`.
 3. **Mobile Money details** (`ESCOWEAR_PAYMENT_INSTRUCTIONS`): real network, number and account name, verified by the owner.
 4. **IDE-123**: the MongoDB Atlas user leaked in public history (`863cca1`) is shared by nine Beast apps; rotate with a coordinated per-app plan. Current SMTP and JWT values are not in history.
