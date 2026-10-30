@@ -1,6 +1,6 @@
 {
   "approvedForPublication": true,
-  "version": "mvp-2026-10-28",
+  "version": "mvp-2026-10-30",
   "business": {
     "name": "EscoWear",
     "customerMarket": "Ghana",
@@ -8,12 +8,12 @@
     "delivery": "Delivery is confirmed individually after ordering."
   },
   "seller": {
-    "name": "PLACEHOLDER — set before publishing",
-    "legalStatus": "PLACEHOLDER — set before publishing",
-    "address": "PLACEHOLDER — set before publishing",
+    "name": "EscoWear",
+    "legalStatus": "Individual-run online store; not a registered company",
+    "address": "P.O. Box 1222, Mataheko, Accra, Ghana",
     "email": "kofiarhin69@gmail.com",
-    "emailVerified": false,
-    "phone": "PLACEHOLDER — set before publishing"
+    "emailVerified": true,
+    "phone": "+233 50 802 5370"
   },
-  "approvedBy": "Kofi (owner), 2026-10-28: policy text approved; publication still requires complete seller details"
+  "approvedBy": "Kofi (owner), 2026-10-30: MVP policy text and seller details approved for publication; owner confirmed kofiarhin69@gmail.com sends and receives email; formal legal verification and business registration deferred"
 }

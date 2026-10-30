@@ -1,11 +1,12 @@
-// EscoWear MVP policies — DRAFT, from Kofi's recorded decisions
-// (docs/mvp-policies-draft.md, Linear IDE-126). NOT legally reviewed.
+// EscoWear MVP policies, from Kofi's recorded decisions (docs/mvp-policies-draft.md,
+// Linear IDE-126). Owner-approved for publication on 30 Oct 2026; formal legal
+// review is deferred, not done.
 //
 // Visibility is set at build time by REACT_APP_POLICIES_STATUS:
 //   hidden (default) — /policies shows a "being finalised" notice and nothing links to it
 //   draft            — full text with a DRAFT banner, for review only (never deploy publicly)
 //   published        — full text, linked from checkout and the footer
-// Only switch to "published" after the UK/Ghana legal review is complete.
+// "published" also requires the build guard (scripts/check-policies.cjs) to pass.
 
 import review from "./review.json";
 

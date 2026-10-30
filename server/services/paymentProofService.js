@@ -17,6 +17,7 @@ const { enqueueEmail, isDuplicateKey } = require("./emailOutbox");
 const { OrderError } = require("./orderService");
 const { ProofImageError, processProofImage } = require("./proofImage");
 const { isObjectId, isValidIdempotencyKey } = require("../validators/orderValidator");
+const { paymentInstructionsText } = require("../config/paymentInstructions");
 
 const SUBMITTABLE = [S.AWAITING_PAYMENT, S.PAYMENT_ISSUE];
 const REFERENCE = /^[A-Za-z0-9][A-Za-z0-9 ._:#/-]{2,63}$/;
@@ -37,7 +38,7 @@ const quoteState = (order, time) => {
 };
 
 const createPaymentProofService = ({ Order, OrderEvent, EmailOutbox, PaymentProof, storage, config, env = process.env, now = () => new Date(), logger = console, processImage = processProofImage }) => {
-  const paymentInstructions = () => (env.ESCOWEAR_PAYMENT_INSTRUCTIONS || "").replace(/\\n/g, "\n").trim();
+  const paymentInstructions = () => paymentInstructionsText(env);
 
   // The caller must be the logged-in owner, or hold a proof capability for
   // exactly this order. Anything else is a 404 so order ids cannot be probed.

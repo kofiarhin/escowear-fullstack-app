@@ -46,6 +46,8 @@ Status (28 Oct 2026): **merged (PRs #18, #19); launch prep on `fix/ide-129-launc
 
 `ESCOWEAR_PROOF_UPLOAD_DIR`, `ESCOWEAR_PROOF_MAX_BYTES`, `ESCOWEAR_PROOF_RETENTION_DAYS` (unset = keep), `ESCOWEAR_ADMIN_NOTIFY_EMAIL` (optional), `ORDER_PROOF_ACCESS_TTL_MINUTES`. Existing: `ESCOWEAR_PAYMENT_INSTRUCTIONS`, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `ESCOWEAR_PUBLIC_URL`. See `.env.example`.
 
+Payment instructions: set **either** `ESCOWEAR_PAYMENT_INSTRUCTIONS` **or** `MOMO_PAYMENT_NUMBER` + `MOMO_ACCOUNT_NAME` (optional `MOMO_NETWORK`, default "Mobile Money"). The MoMo settings are read at request time by the order and proof services. `release:check` names a half-set or doubly-set configuration without printing values. Run `release:check` inside the candidate container: on the host it reports `ESCOWEAR_PROOF_UPLOAD_DIR`, which only `compose.yaml` sets.
+
 Retention is **undecided**. `server/scripts/purgePaymentProofs.js` only reports unless retention is set **and** `--apply` is passed. It only touches finished orders and keeps the metadata.
 
 ## Checkout switch
@@ -64,8 +66,8 @@ Retention is **undecided**. `server/scripts/purgePaymentProofs.js` only reports 
 
 ## Launch gates still open
 
-1. **Seller details** in `client/src/policies/review.json` (`PLACEHOLDER — set before publishing`): seller name, legal status, address, phone. The owner approved the policy text on 28 Oct; publication waits for these.
-2. **Support mailbox** `kofiarhin69@gmail.com`: owner confirms test-email receipt and a reply, then `emailVerified: true`.
+1. **Seller details:** done 30 Oct (owner-confirmed, in `client/src/policies/review.json`). Formal legal verification and registration are deferred.
+2. **Support mailbox:** done 30 Oct (owner confirmed `kofiarhin69@gmail.com` sends and receives; `emailVerified: true`). Policies are built `published`.
 3. **Mobile Money details** (`ESCOWEAR_PAYMENT_INSTRUCTIONS`): real network, number and account name, verified by the owner.
 4. **IDE-123**: the MongoDB Atlas user leaked in public history (`863cca1`) is shared by nine Beast apps; rotate with a coordinated per-app plan. Current SMTP and JWT values are not in history.
 

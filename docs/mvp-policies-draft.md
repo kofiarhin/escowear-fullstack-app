@@ -1,6 +1,6 @@
-# EscoWear MVP policies — DRAFT
+# EscoWear MVP policies
 
-> **Status: DRAFT, not published.** These are Kofi's business decisions, written up for review. **The Ghana legal requirements must be verified before anything is published or shown to customers.** That means a check by a Ghana-qualified lawyer, plus the current status of the Electronic Transactions Act 2008 (Act 772) and the draft Electronic Transactions Bill 2025. This document is not legal advice.
+> **Status (30 Oct 2026): owner-approved for publication; formal legal verification deferred.** Earlier status: DRAFT. These are Kofi's business decisions, written up for review. The owner chose to publish before formal legal verification; that verification is **still outstanding**. It means a check by a Ghana-qualified lawyer, plus the current status of the Electronic Transactions Act 2008 (Act 772) and the draft Electronic Transactions Bill 2025. This document is not legal advice.
 
 ## Where the draft lives in the site (unpublished)
 
@@ -8,16 +8,19 @@
 
 | Detail | Current draft value | Status |
 |---|---|---|
-| Business name | EscoWear | Owner-approved temporary detail |
-| Support email | support@escowear.com | **UNVERIFIED**; receipt and replies have not been tested |
-| Business address | To be confirmed | Placeholder; cannot be published as a completed address |
+| Business name | EscoWear | Owner-confirmed (30 Oct 2026) |
+| Legal status | Individual-run online store; not a registered company | Owner-confirmed; registration deferred |
+| Postal address | P.O. Box 1222, Mataheko, Accra, Ghana | Owner-confirmed |
+| Phone | +233 50 802 5370 | Owner-confirmed |
+| Support email | kofiarhin69@gmail.com | Owner confirmed on 30 Oct 2026 that it sends and receives email |
 | Customer market | Ghana | Owner-approved |
 | Payment | Manual Mobile Money confirmation | Receiving wallet details still required privately |
 | Delivery | Confirmed individually after ordering | Replaces the earlier fixed-range estimate |
 
-These details do **not** approve the policies for publication. Seller legal identity,
-legal status and phone are still missing. Policy text remains **DRAFT** and unpublished.
-The previous Gmail authentication check did not verify the proposed support mailbox.
+On 30 Oct 2026 the owner approved the MVP policy text and these seller details.
+Formal legal verification and business registration are **deferred, not done**. The
+owner confirmed the support mailbox the same day and approved publishing the MVP
+policies (`emailVerified: true`, build `REACT_APP_POLICIES_STATUS=published`).
 
 Edit `client/src/policies/review.json` to change these details. The draft page,
 checkout delivery wording and policy email delivery wording read that file. Keep
@@ -83,7 +86,8 @@ Delivery is **confirmed individually after ordering**. If anything delays your o
 - We keep your order and payment records for **6 years** after your order, for tax, accounting and disputes. Then we delete them.
 - One-time tracking codes are deleted automatically within a day of expiring. We never store your codes in readable form.
 - You can ask us to **delete your account** at any time by replying to any order email. We'll delete your account details and keep only the order records the law requires.
-- Payment screenshots you email us are **deleted once your order is completed**, unless we need them to resolve a dispute.
+- Payment screenshots you upload are **stored privately**, seen only by us, and kept with your order's payment records.
+  _(Corrected 30 Oct 2026: screenshots are now uploaded on the site and no automatic deletion exists; retention is still an open decision.)_
 
 _Implementation notes (not yet built):_
 - _Account deletion is a manual admin step for the MVP; no self-service button yet._
@@ -134,5 +138,5 @@ From Act 772 (official copy: Cyber Security Authority, <https://www.csa.gov.gh/r
 
 ## Open questions (to be decided)
 
-- Final seller identity, legal status, physical address and phone remain required; the business name is EscoWear and the address remains "To be confirmed". Support email support@escowear.com is unverified.
+- Seller details were confirmed on 30 Oct 2026 (see the table above). The support mailbox kofiarhin69@gmail.com was owner-confirmed on 30 Oct 2026; legal review of seller identification for an unregistered, individual-run store is deferred.
 - Privacy notice: the local draft now identifies database/email/delivery processing; applicable rights and complaint routes, legal basis, storage countries and international transfers still need review before publication. Confirm manual deletion procedures are practical before promising them.

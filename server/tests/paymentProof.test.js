@@ -642,6 +642,16 @@ test("payment instructions: owner sees quote and configured details; unconfigure
   assert.equal(info.body.reason, "NO_QUOTE");
 });
 
+test("MoMo recipient settings alone reach the customer's order page and quote email", async (t) => {
+  const ctx = await setup(t, { env: { MOMO_NETWORK: "MTN Mobile Money", MOMO_PAYMENT_NUMBER: "0240000000", MOMO_ACCOUNT_NAME: "Fixture Recipient" } });
+  const order = await quotedOrder(ctx);
+  const response = await ctx.request("GET", `/api/orders/${order.orderId}/payment-instructions`, { headers: { "X-Order-Proof-Token": order.proofToken } });
+  assert.equal(response.body.available, true);
+  assert.equal(response.body.instructions, "MTN Mobile Money\nNumber: 0240000000\nName: Fixture Recipient");
+  const email = ctx.models.EmailOutbox.docs.find((doc) => doc.kind === "payment_instructions");
+  assert.match(email.payload.text, /MTN Mobile Money\nNumber: 0240000000\nName: Fixture Recipient/);
+});
+
 test("email outage does not lose the proof or the review state; admin notice has no image or contact data", async (t) => {
   const ctx = await setup(t, { config: { adminNotifyEmail: "ops@example.test" } });
   const order = await quotedOrder(ctx);
