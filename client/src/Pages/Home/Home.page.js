@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import "./home.styles.css";
 import Product from "../../components/Product/Product.component";
+import HeroCarousel from "../../components/HeroCarousel/HeroCarousel.component";
 import { getProducts } from "../../redux/actions/products.actions";
 
 const categories = [
@@ -84,36 +85,7 @@ const Home = () => {
 
   return (
     <main className="home">
-      <section className="sneaker-hero" aria-labelledby="hero-title">
-        <div className="hero-grid-lines" aria-hidden="true"></div>
-        <div className="sneaker-hero-copy">
-          <p className="eyebrow">Escowear / UK sneakers to Ghana</p>
-          <h1 id="hero-title">
-            <span>UK sneakers</span>
-            <span>to Ghana</span>
-          </h1>
-          <div className="hero-lower">
-            <p>
-              Shop authentic sneakers from trusted UK retailers. Pay in Ghana cedis; we buy your pair in the UK and deliver it to Ghana.
-            </p>
-            <Link to="/store" className="button button-dark">
-              Shop Sneakers <ArrowIcon />
-            </Link>
-          </div>
-        </div>
-
-        <div className="sneaker-hero-media">
-          <span className="hero-vertical-copy">Sourced in the UK / Delivered to Ghana</span>
-          <img
-            src="/images/shoes/SUPREME X NIKE AIR FORCE 1 LOW 'BOX LOGO - BLACK'/1.jpg"
-            alt="Supreme x Nike Air Force 1 Low in black"
-          />
-          <div className="hero-shoe-label">
-            <span>Featured silhouette</span>
-            <strong>Nike Air Force 1</strong>
-          </div>
-        </div>
-      </section>
+      <HeroCarousel />
 
       <section className="category-rail" id="collections" aria-label="Shop sneaker categories">
         {categories.map((category) => (

@@ -2,16 +2,16 @@
 
 ## Last Task
 
-Fixed the IDE-113 app-level cart test for required size selection and localStorage persistence.
+Implemented the database-driven homepage hero carousel with protected admin management.
 
 ## Progress
 
-- Updated the cart navigation test to select `UK 8` and assert the versioned localStorage cart.
-- Client tests and production build pass; local browser checks verified cart selection, quantities, merge, persistence, removal, and GBP subtotals.
+- Added MongoDB hero slides, public read API, protected CRUD, explicit index provisioner and active-slide cap.
+- Added responsive carousel and admin UI; focused tests, client suite, lint, build and disposable-browser smoke completed.
 
 ## Files
 
-- `client/src/App.test.js`
-- `client/src/utils/cart.js`
-- `client/src/Pages/Details/Details.page.js`
-- `client/src/Pages/Cart/Cart.page.js`
+- `server/controllers/heroSlidesController.js`
+- `server/Models/HeroSlide.model.js`
+- `client/src/components/HeroCarousel/HeroCarousel.component.js`
+- `client/src/Pages/AdminHeroSlides/AdminHeroSlides.page.js`

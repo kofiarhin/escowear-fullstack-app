@@ -6,6 +6,7 @@ const imagesRoute = require("./routes/imagesRoute");
 const { createOrdersRouter } = require("./routes/ordersRoute");
 const usersRoute = require("./routes/usersRoute");
 const { createAdminRouter } = require("./routes/adminRoute");
+const { createHeroSlidesRouter } = require("./routes/heroSlidesRoute");
 require("dotenv").config();
 const path = require("path");
 
@@ -28,6 +29,7 @@ const createApp = (deps = {}) => {
   // setup middlewares
   app.use(express.json({ limit: "32kb" }));
   app.use("/api/products", deps.products ? productsRoutes.createProductsRouter(deps.products.Product) : productsRoutes);
+  app.use("/api/hero-slides", createHeroSlidesRouter(deps.heroSlides || {}));
   app.use("/api/orders", createOrdersRouter(deps.orders));
   app.use("/images", imagesRoute);
   app.use("/api/users", usersRoute);

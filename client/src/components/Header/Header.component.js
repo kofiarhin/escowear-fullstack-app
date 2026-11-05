@@ -73,9 +73,10 @@ const Header = ({ setShowSideNav }) => {
           {user ? (
             <div className="account-actions">
               {user.role === "admin" && (
-                <Link to="/admin/orders" className="icon-action">
-                  <span>Admin</span>
-                </Link>
+                <>
+                  <Link to="/admin/orders" className="icon-action" aria-label="Admin orders"><span>Orders</span></Link>
+                  <Link to="/admin/hero-slides" className="icon-action" aria-label="Manage hero slides"><span>Hero slides</span></Link>
+                </>
               )}
               <Link to="/dashboard" className="icon-action">
                 <AccountIcon />

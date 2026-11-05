@@ -12,5 +12,6 @@ import TrackOrder from "./TrackOrder/TrackOrder.page";
 import OrderDetails from "./OrderDetails/OrderDetails.page";
 import Policies from "./Policies/Policies.page";
 import AdminOrderDetail from "./AdminOrderDetail/AdminOrderDetail.page";
+import AdminHeroSlides from "./AdminHeroSlides/AdminHeroSlides.page";
 
-export { Register, Login, Cart, Store, Home, Details, DashBoard, Checkout, OrderConfirmation, AdminOrders, AdminOrderDetail, TrackOrder, OrderDetails, Policies };
+export { Register, Login, Cart, Store, Home, Details, DashBoard, Checkout, OrderConfirmation, AdminOrders, AdminOrderDetail, AdminHeroSlides, TrackOrder, OrderDetails, Policies };

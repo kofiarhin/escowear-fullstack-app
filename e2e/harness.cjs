@@ -41,6 +41,7 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
       User: createMemoryModel({ uniques: ["email"] }),
       TrackingChallenge: createMemoryModel(),
       PaymentProof: createMemoryModel({ uniques: ["idempotencyKeyHash"] }),
+      HeroSlide: createMemoryModel({ uniques: ["productId"] }),
     };
   }
   const product = await models.Product.create({
@@ -56,6 +57,36 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
     category: "shoes",
   });
   const admin = await models.User.create({ name: "E2E Admin", email: "admin@e2e.test", password: "unused", role: "admin" });
+  const secondProduct = await models.Product.create({
+    _id: new Types.ObjectId(),
+    name: "E2E Second Runner",
+    brand: "TestBrand",
+    price: 109.99,
+    currency: "GBP",
+    sizes: ["8", "9", "10"],
+    inStock: false,
+    status: "active",
+    image: "/images/default.jpg",
+    category: "shoes",
+  });
+  await models.HeroSlide.create({
+    productId: product._id,
+    headline: "E2E HERO SLIDE",
+    description: "Disposable browser-smoke content.",
+    desktopImage: "/images/default.jpg",
+    mobileImage: "/images/default.jpg",
+    order: 0,
+    isActive: true,
+  });
+  await models.HeroSlide.create({
+    productId: secondProduct._id,
+    headline: "E2E SECOND SLIDE",
+    description: "A second disposable slide for carousel controls.",
+    desktopImage: "/images/default.jpg",
+    mobileImage: "/images/default.jpg",
+    order: 1,
+    isActive: true,
+  });
 
   // Uploaded screenshots go to a throwaway private directory, removed on stop.
   const proofDir = fs.mkdtempSync(path.join(os.tmpdir(), "escowear-e2e-proofs-"));
@@ -80,6 +111,7 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
   outer.use(
     createApp({
       products: { Product: models.Product },
+      heroSlides: { Product: models.Product, HeroSlide: models.HeroSlide },
       orders: { models, config, logger, env: paymentEnv },
       admin: { models, config, logger, env: paymentEnv },
     })

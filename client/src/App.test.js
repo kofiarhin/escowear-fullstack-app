@@ -28,14 +28,28 @@ const productPage = {
   pagination: { total: 25, page: 1, limit: 8, pages: 4 },
 };
 
+const heroPage = {
+  items: [{
+    id: "slide-1",
+    productId: "product-1",
+    productName: "Nike Air Max Dn8",
+    productInStock: true,
+    headline: "AIR MAX, ALL DAY",
+    description: "Authentic pairs sourced in the UK.",
+    desktopImage: "https://example.test/hero.jpg",
+    mobileImage: "https://example.test/hero-mobile.jpg",
+    order: 0,
+  }],
+};
+
 beforeEach(() => {
   window.history.pushState({}, "", "/");
   localStorage.clear();
   sessionStorage.clear();
-  global.fetch = jest.fn().mockResolvedValue({
+  global.fetch = jest.fn().mockImplementation((path) => Promise.resolve({
     ok: true,
-    json: async () => productPage,
-  });
+    json: async () => path === "/api/hero-slides" ? heroPage : productPage,
+  }));
 });
 
 afterEach(() => {
@@ -55,11 +69,11 @@ test("renders the sneaker homepage and products from the API", async () => {
   renderApp();
 
   expect(
-    screen.getByRole("heading", { name: /uk sneakers to ghana/i })
+    await screen.findByRole("heading", { name: /air max, all day/i })
   ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Shop Sneakers" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Shop Now" })).toHaveAttribute(
     "href",
-    "/store"
+    "/details/product-1"
   );
 
   expect(await screen.findByText("Nike Air Max Dn8")).toBeInTheDocument();
@@ -72,6 +86,10 @@ test("renders the sneaker homepage and products from the API", async () => {
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/products?limit=8&page=1"
     )
+  );
+  expect(global.fetch).toHaveBeenCalledWith(
+    "/api/hero-slides",
+    expect.objectContaining({ signal: expect.any(AbortSignal) })
   );
 });
 

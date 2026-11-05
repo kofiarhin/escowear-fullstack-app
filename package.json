@@ -14,6 +14,7 @@
     "test:server": "node --test server/tests/*.test.js",
     "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client",
     "db:ensure-order-indexes": "node server/scripts/ensureOrderIndexes.js",
+    "db:ensure-hero-slide-indexes": "node server/scripts/ensureHeroSlideIndexes.js",
     "admin:set-role": "node server/scripts/setUserRole.js",
     "test:e2e": "node e2e/browser-smoke.cjs",
     "test:realdb": "node --test server/tests/realDb.*.test.js",

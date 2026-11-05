@@ -16,6 +16,7 @@ import {
   OrderConfirmation,
   AdminOrders,
   AdminOrderDetail,
+  AdminHeroSlides,
   TrackOrder,
   OrderDetails,
   Policies,
@@ -64,6 +65,7 @@ const App = () => {
           <Route path="/track-order" element={<TrackOrder />} />
           <Route path="/policies" element={<Policies />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
+          <Route path="/admin/hero-slides" element={<AdminHeroSlides />} />
           <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
           <Route path="/details/:id" element={<Details />} />
           <Route path="/dashboard" element={<DashBoard />} />

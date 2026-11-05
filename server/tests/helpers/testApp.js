@@ -23,6 +23,7 @@ const createModels = () => ({
   User: createMemoryModel({ uniques: ["email"] }),
   TrackingChallenge: createMemoryModel(),
   PaymentProof: createMemoryModel({ uniques: ["idempotencyKeyHash"] }),
+  HeroSlide: createMemoryModel({ uniques: ["productId"] }),
 });
 
 // A private, throwaway directory for uploaded proofs in each test app.
@@ -67,6 +68,7 @@ const startTestApp = async ({ config: configOverrides = {}, deps = {}, models = 
   const config = { ...getOrderConfig({}), checkoutOpen: true, publicBaseUrl: "https://shop.example.test", proofUploadDir: proofDir, ...configOverrides };
   const app = createApp({
     products: { Product: models.Product },
+    heroSlides: { Product: models.Product, HeroSlide: models.HeroSlide },
     orders: { models, config, logger: silentLogger, ...deps.orders },
     admin: { models, config, logger: silentLogger, ...deps.admin },
   });
