@@ -1,1 +1,246 @@
-.hero-carousel{position:relative;display:grid;min-height:clamp(560px,calc(100dvh - 106px),860px);overflow:hidden;isolation:isolate;background:#151515;color:var(--white);touch-action:pan-y}.hero-carousel__slides,.hero-carousel__media,.hero-carousel__overlay{position:absolute;inset:0}.hero-carousel__media{z-index:-2;display:block;opacity:0;transition:opacity 800ms var(--ease-out)}.hero-carousel__media.is-active{opacity:1}.hero-carousel__media img{width:100%;height:100%;object-fit:cover;object-position:center 38%;transform:scale(1.035);transition:transform 6.8s var(--ease-out)}.hero-carousel__media.is-active img{transform:scale(1.09)}.hero-carousel__overlay{z-index:-1;background:linear-gradient(90deg,rgba(6,6,6,.83),rgba(6,6,6,.44) 43%,rgba(6,6,6,.16) 75%),linear-gradient(0deg,rgba(6,6,6,.45),transparent 56%)}.hero-carousel__copy{align-self:end;width:min(680px,calc(100% - 128px));margin:0 0 clamp(82px,10vh,122px) clamp(32px,7vw,112px);animation:hero-copy-in 800ms 140ms var(--ease-out) both}.hero-carousel__eyebrow{margin-bottom:18px;font-family:var(--font-condensed);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.hero-carousel h1{max-width:10ch;margin-bottom:22px;color:var(--white);font-family:var(--font-display);font-size:clamp(3.6rem,8.6vw,8.6rem);font-weight:900;letter-spacing:-.07em;line-height:.79;text-transform:uppercase;overflow-wrap:anywhere}.hero-carousel__copy>p:not(.hero-carousel__eyebrow){max-width:43ch;margin-bottom:30px;color:rgba(250,250,250,.88);font-size:clamp(.94rem,1.4vw,1.08rem);line-height:1.55}.hero-carousel__cta{display:inline-flex;min-height:46px;align-items:center;padding:13px 20px;background:var(--white);color:var(--ink);font-family:var(--font-condensed);font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;transition:transform 220ms var(--ease-out),background-color 220ms ease}.hero-carousel__cta:hover{background:#dedede}.hero-carousel__cta:active{transform:scale(.98)}.hero-carousel__controls{position:absolute;right:clamp(18px,4vw,56px);bottom:28px;left:clamp(18px,4vw,56px);display:flex;align-items:center;justify-content:space-between;gap:16px}.hero-carousel__arrows,.hero-carousel__dots{display:flex;align-items:center;gap:8px}.hero-carousel__arrows button,.hero-carousel__pause,.hero-carousel__dots button{min-width:44px;min-height:44px;color:var(--white)}.hero-carousel__arrows button{display:grid;place-items:center;border:1px solid rgba(255,255,255,.7);transition:background-color 220ms ease,color 220ms ease,transform 220ms var(--ease-out)}.hero-carousel__arrows button:hover{background:var(--white);color:var(--ink)}.hero-carousel__arrows button:active{transform:scale(.96)}.hero-carousel__arrows svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7}.hero-carousel__dots button{display:grid;place-items:center}.hero-carousel__dots span{display:block;width:22px;height:2px;background:rgba(255,255,255,.45);transition:width 220ms ease,background-color 220ms ease}.hero-carousel__dots button[aria-selected="true"] span{width:42px;background:var(--white)}.hero-carousel__pause{border-bottom:1px solid currentColor;font-family:var(--font-condensed);font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.hero-carousel--loading span{width:100%;background:linear-gradient(100deg,#1a1a1a 25%,#303030 50%,#1a1a1a 75%);background-size:200% 100%;animation:hero-shimmer 1.5s ease infinite}.hero-carousel--fallback{background:#1c1c1c}.hero-carousel__fallback-image{position:absolute;inset:0;z-index:-2;background:radial-gradient(circle at 72% 25%,#686868 0,#333 24%,#151515 68%)}.hero-carousel__copy--fallback{animation:none}@keyframes hero-copy-in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}@keyframes hero-shimmer{to{background-position:-200% 0}}@media (max-width:760px){.hero-carousel{min-height:max(500px,calc(75dvh - 94px))}.hero-carousel__media img{object-position:center 28%}.hero-carousel__overlay{background:linear-gradient(0deg,rgba(5,5,5,.94),rgba(5,5,5,.64) 44%,rgba(5,5,5,.08) 74%)}.hero-carousel__copy{width:calc(100% - 40px);margin:0 20px max(76px,env(safe-area-inset-bottom))}.hero-carousel__eyebrow{margin-bottom:12px;font-size:.68rem}.hero-carousel h1{max-width:11ch;margin-bottom:14px;font-size:clamp(2rem,10vw,2.75rem);line-height:.86}.hero-carousel__copy>p:not(.hero-carousel__eyebrow){max-width:34ch;margin-bottom:20px;font-size:.92rem;line-height:1.4}.hero-carousel__controls{right:10px;bottom:12px;left:10px;gap:4px}.hero-carousel__arrows{order:2}.hero-carousel__dots{overflow:hidden}.hero-carousel__dots span{width:14px}.hero-carousel__dots button[aria-selected="true"] span{width:25px}.hero-carousel__pause{order:3;min-width:54px;font-size:.64rem}}@media (prefers-reduced-motion:reduce){.hero-carousel__media,.hero-carousel__media img,.hero-carousel__copy{animation:none;transition:none;transform:none}}
+/* Editorial sneaker showcase. Catalogue images are contained, not cropped. */
+.hero-carousel {
+  position: relative;
+  display: grid;
+  min-height: clamp(560px, calc(100dvh - 106px), 820px);
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--white);
+  background:
+    radial-gradient(ellipse at 76% 38%, #a5adb6 0%, #7e8792 23%, #414955 47%, #1b2129 68%, #0d1117 100%);
+  touch-action: pan-y;
+}
+.hero-carousel__slides,
+.hero-carousel__overlay { position: absolute; inset: 0; }
+.hero-carousel__slides { z-index: -2; }
+.hero-carousel__media {
+  position: absolute;
+  top: 7%;
+  right: 2%;
+  width: 71%;
+  height: 85%;
+  display: block;
+  opacity: 0;
+  transition: opacity 850ms ease;
+}
+.hero-carousel__media.is-active { opacity: 1; }
+.hero-carousel__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: scale(.97);
+  transition: transform 6.8s var(--ease-out);
+}
+.hero-carousel__media.is-active img { transform: scale(1); }
+/* Multiply removes the white rectangle around ordinary catalogue cut-outs
+   while preserving the entire shoe and the underlying studio backdrop. */
+.hero-carousel__media--catalogue { mix-blend-mode: multiply; }
+.hero-carousel__media--custom {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hero-carousel__media--custom img { object-fit: cover; object-position: center; }
+.hero-carousel__overlay {
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(7,10,15,.92) 0%, rgba(9,13,19,.78) 26%, rgba(11,16,23,.28) 52%, transparent 78%),
+    linear-gradient(0deg, rgba(7,9,13,.65), transparent 26%);
+}
+.hero-carousel__copy {
+  align-self: center;
+  position: relative;
+  z-index: 1;
+  width: min(44%, 670px);
+  margin: 0 0 35px clamp(60px, 7.3vw, 148px);
+}
+.hero-carousel__copy > * { animation: hero-copy-in 760ms var(--ease-out) both; }
+.hero-carousel__copy > :nth-child(1) { animation-delay: 80ms; }
+.hero-carousel__copy > :nth-child(2) { animation-delay: 170ms; }
+.hero-carousel__copy > :nth-child(3) { animation-delay: 300ms; }
+.hero-carousel__copy > :nth-child(4) { animation-delay: 430ms; }
+.hero-carousel__eyebrow {
+  margin-bottom: 22px;
+  font-family: var(--font-condensed);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .21em;
+  text-transform: uppercase;
+}
+.hero-carousel h1 {
+  max-width: 11.5ch;
+  margin-bottom: 24px;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 5.65vw, 6.7rem);
+  font-weight: 900;
+  letter-spacing: -.065em;
+  line-height: .98;
+  overflow-wrap: break-word;
+  text-transform: uppercase;
+}
+.hero-carousel__copy > p:not(.hero-carousel__eyebrow) {
+  max-width: 37ch;
+  margin-bottom: 28px;
+  color: rgba(250,250,250,.84);
+  font-size: clamp(.96rem, 1.2vw, 1.15rem);
+  line-height: 1.5;
+}
+.hero-carousel__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 26px;
+  min-height: 54px;
+  padding: 16px 23px;
+  background: #fafafa;
+  color: #0e1115;
+  font-family: var(--font-condensed);
+  font-size: .83rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  transition: background-color 200ms ease, transform 200ms var(--ease-out);
+}
+.hero-carousel__cta span { font-size: 1.3rem; line-height: 0; }
+.hero-carousel__cta:hover { background: #dedede; }
+.hero-carousel__cta:active { transform: scale(.98); }
+.hero-carousel a:focus-visible,
+.hero-carousel button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+.hero-carousel__controls {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.hero-carousel__arrows {
+  position: absolute;
+  inset: 44% 28px auto;
+  display: flex;
+  justify-content: space-between;
+}
+.hero-carousel__arrows button,
+.hero-carousel__dots button,
+.hero-carousel__pause {
+  pointer-events: auto;
+  min-width: 44px;
+  min-height: 44px;
+  color: #fff;
+}
+.hero-carousel__arrows button {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255,255,255,.55);
+  border-radius: 50%;
+  background: rgba(12,17,23,.24);
+  transition: background 200ms ease, color 200ms ease;
+}
+.hero-carousel__arrows button:hover { background: #fff; color: #111; }
+.hero-carousel__arrows svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+.hero-carousel__dots {
+  position: absolute;
+  left: 50%;
+  bottom: 19px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  transform: translateX(-50%);
+}
+.hero-carousel__dots button { display: grid; place-items: center; }
+.hero-carousel__dots span {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border: 1px solid rgba(255,255,255,.9);
+  border-radius: 50%;
+  transition: background-color 200ms ease, transform 200ms ease;
+}
+.hero-carousel__dots button[aria-selected="true"] span { background: #fff; transform: scale(1.2); }
+.hero-carousel__pause {
+  position: absolute;
+  right: clamp(20px, 4vw, 70px);
+  bottom: 19px;
+  font-family: var(--font-condensed);
+  font-size: .77rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.hero-carousel--loading span {
+  width: 100%;
+  background: linear-gradient(100deg, #171c22 25%, #343c46 50%, #171c22 75%);
+  background-size: 200% 100%;
+  animation: hero-shimmer 1.5s ease infinite;
+}
+.hero-carousel--fallback { background: #171c22; }
+.hero-carousel__fallback-image {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: radial-gradient(circle at 75% 35%, #747f8b, #222b34 45%, #11151b 76%);
+}
+.hero-carousel__copy--fallback > * { animation: none; }
+@keyframes hero-copy-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes hero-shimmer { to { background-position: -200% 0; } }
+@media (max-width: 900px) and (min-width: 761px) {
+  .hero-carousel__copy { margin-left: 65px; width: 47%; }
+  .hero-carousel h1 { font-size: clamp(3rem, 6.3vw, 5.6rem); }
+  .hero-carousel__media { right: -5%; width: 72%; }
+}
+@media (max-width: 760px) {
+  .hero-carousel {
+    min-height: max(550px, calc(75dvh - 94px));
+    background: radial-gradient(ellipse at 52% 24%, #a2aab2, #707986 29%, #272f39 58%, #10141a 86%);
+  }
+  .hero-carousel__media {
+    top: 0;
+    left: 2%;
+    right: 2%;
+    width: 96%;
+    height: 56%;
+  }
+  .hero-carousel__media img { object-fit: contain; object-position: center 32%; }
+  .hero-carousel__media--custom { inset: 0; width: 100%; height: 100%; }
+  .hero-carousel__media--custom img { object-fit: cover; object-position: center 24%; }
+  .hero-carousel__overlay {
+    background: linear-gradient(0deg, rgba(6,9,14,.98) 0%, rgba(7,10,15,.92) 27%, rgba(7,10,15,.69) 47%, rgba(7,10,15,.05) 78%);
+  }
+  .hero-carousel__copy {
+    align-self: end;
+    width: calc(100% - 44px);
+    margin: 0 22px max(89px, env(safe-area-inset-bottom));
+  }
+  .hero-carousel__eyebrow { margin-bottom: 12px; font-size: .68rem; letter-spacing: .14em; }
+  .hero-carousel h1 {
+    max-width: 13ch;
+    margin-bottom: 14px;
+    font-size: clamp(2rem, 9vw, 2.75rem);
+    line-height: .94;
+  }
+  .hero-carousel__copy > p:not(.hero-carousel__eyebrow) {
+    max-width: 34ch;
+    margin-bottom: 17px;
+    font-size: .91rem;
+    line-height: 1.38;
+  }
+  .hero-carousel__cta { min-height: 46px; padding: 12px 17px; font-size: .73rem; }
+  .hero-carousel__arrows { inset: 28% 11px auto; }
+  .hero-carousel__arrows button { width: 44px; height: 44px; background: rgba(8,12,18,.3); }
+  .hero-carousel__dots { bottom: 9px; }
+  .hero-carousel__pause { right: 10px; bottom: 8px; font-size: .68rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-carousel__media,
+  .hero-carousel__media img,
+  .hero-carousel__copy > * { animation: none; transition: none; transform: none; }
+}
