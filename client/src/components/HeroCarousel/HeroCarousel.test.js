@@ -28,17 +28,41 @@ test("loads slide content from the public endpoint and keeps only the active sli
   expect(global.fetch).toHaveBeenCalledWith("/api/hero-slides", expect.objectContaining({ signal: expect.any(AbortSignal) }));
 });
 
-test("supports manual navigation, pause and six-second autoplay", async () => {
+test("supports manual navigation, pause and ten-second autoplay and infinite looping", async () => {
   renderCarousel();
   await screen.findByRole("heading", { name: "FIRST PAIR" });
   fireEvent.click(screen.getByRole("button", { name: /next slide/i }));
   expect(screen.getByRole("heading", { name: "SECOND PAIR" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /shop now/i })).toHaveAttribute("href", "/details/product-2");
   fireEvent.click(screen.getByRole("button", { name: /pause carousel/i }));
-  act(() => jest.advanceTimersByTime(6100));
+  act(() => jest.advanceTimersByTime(10_100));
   expect(screen.getByRole("heading", { name: "SECOND PAIR" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /play carousel/i }));
-  act(() => jest.advanceTimersByTime(6100));
+  act(() => jest.advanceTimersByTime(10_100));
+  expect(screen.getByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
+});
+
+test("starts on the first slide, waits ten seconds, loops, and resets after manual navigation", async () => {
+  renderCarousel();
+  expect(await screen.findByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
+
+  act(() => jest.advanceTimersByTime(9_999));
+  expect(screen.getByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
+
+  act(() => jest.advanceTimersByTime(1));
+  expect(screen.getByRole("heading", { name: "SECOND PAIR" })).toBeInTheDocument();
+
+  act(() => jest.advanceTimersByTime(10_000));
+  expect(screen.getByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
+
+  act(() => jest.advanceTimersByTime(5_000));
+  fireEvent.click(screen.getByRole("button", { name: /next slide/i }));
+  expect(screen.getByRole("heading", { name: "SECOND PAIR" })).toBeInTheDocument();
+
+  act(() => jest.advanceTimersByTime(9_999));
+  expect(screen.getByRole("heading", { name: "SECOND PAIR" })).toBeInTheDocument();
+
+  act(() => jest.advanceTimersByTime(1));
   expect(screen.getByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
 });
 
