@@ -11,6 +11,10 @@ import "./adminHeroSlides.styles.css";
 
 const blankForm = (order = 0) => ({ productId: "", headline: "", description: "", desktopImage: "", mobileImage: "", order: String(order), isActive: false });
 const formFromSlide = (slide) => ({ productId: slide.productId, headline: slide.headline, description: slide.description || "", desktopImage: slide.desktopImage || "", mobileImage: slide.mobileImage || "", order: String(slide.order), isActive: Boolean(slide.isActive) });
+const productIdentifier = (product) => {
+  const value = product?._id ?? product?.id;
+  return value == null ? "" : String(value);
+};
 
 const ProductPreview = ({ product, label }) => product ? <div className="hero-admin-preview"><img src={getProductImage(product)} alt="" onError={useFallbackProductImage} /><div><strong>{label || product.name}</strong><span>{product.inStock === false ? "Out of stock" : "In stock"}</span>{product.id && <Link to={`/details/${product.id}`}>View product</Link>}</div></div> : null;
 
@@ -60,12 +64,28 @@ const AdminHeroSlides = () => {
   const openNew = () => { setEditingId(null); setForm(blankForm(slides.length)); setSelectedProduct(null); setSearch(""); setResults([]); setErrors({}); setMessage(""); setShowForm(true); };
   const openEdit = (slide) => { setEditingId(slide.id); setForm(formFromSlide(slide)); setSelectedProduct(slide.product); setSearch(""); setResults([]); setErrors({}); setMessage(""); setShowForm(true); };
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
-  const chooseProduct = (product) => { setSelectedProduct({ ...product, id: product._id }); update("productId", product._id); setSearch(product.name || product.title || ""); setResults([]); };
+  const chooseProduct = (product) => {
+    const id = productIdentifier(product);
+    if (!id) return;
+    setSelectedProduct({ ...product, id });
+    update("productId", id);
+    setSearch(product.name || product.title || "");
+    setResults([]);
+  };
   const submit = async (event) => {
     event.preventDefault();
     if (saving) return;
     setSaving(true); setErrors({}); setMessage("");
-    const body = { ...form, order: Number(form.order) };
+    const body = {
+      ...form,
+      productId: productIdentifier(selectedProduct) || form.productId,
+      headline: form.headline.trim(),
+      description: form.description.trim(),
+      desktopImage: form.desktopImage.trim(),
+      mobileImage: form.mobileImage.trim(),
+      order: Number(form.order),
+      isActive: Boolean(form.isActive),
+    };
     try {
       const response = await apiRequest(editingId ? `/api/admin/hero-slides/${editingId}` : "/api/admin/hero-slides", { method: editingId ? "PATCH" : "POST", headers: authHeader(user), body });
       if (response.ok) { await load(); resetForm(); }

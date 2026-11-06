@@ -44,7 +44,11 @@ test("supports manual navigation, pause and ten-second autoplay and infinite loo
 
 test("starts on the first slide, waits ten seconds, loops, and resets after manual navigation", async () => {
   renderCarousel();
-  expect(await screen.findByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(screen.getByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
 
   act(() => jest.advanceTimersByTime(9_999));
   expect(screen.getByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
