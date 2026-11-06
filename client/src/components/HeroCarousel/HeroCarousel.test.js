@@ -33,6 +33,7 @@ test("supports manual navigation, pause and six-second autoplay", async () => {
   await screen.findByRole("heading", { name: "FIRST PAIR" });
   fireEvent.click(screen.getByRole("button", { name: /next slide/i }));
   expect(screen.getByRole("heading", { name: "SECOND PAIR" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /shop now/i })).toHaveAttribute("href", "/details/product-2");
   fireEvent.click(screen.getByRole("button", { name: /pause carousel/i }));
   act(() => jest.advanceTimersByTime(6100));
   expect(screen.getByRole("heading", { name: "SECOND PAIR" })).toBeInTheDocument();
@@ -46,4 +47,15 @@ test("renders a usable static fallback for empty and failed responses", async ()
   renderCarousel();
   expect(await screen.findByRole("heading", { name: /authentic uk sneakers/i })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Shop Now" })).toHaveAttribute("href", "/store");
+});
+
+
+test("uses a non-cropped catalogue image treatment and preserves the product destination", async () => {
+  global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ items: [
+    { ...slides[0], desktopImage: "/images/shoes/nike-run/1.jpg" },
+  ] }) });
+  const { container } = renderCarousel();
+  await screen.findByRole("heading", { name: "FIRST PAIR" });
+  expect(container.querySelector(".hero-carousel__media--catalogue img")).toHaveAttribute("src", "/images/shoes/nike-run/1.jpg");
+  expect(screen.getByRole("link", { name: /shop now/i })).toHaveAttribute("href", "/details/product-1");
 });
