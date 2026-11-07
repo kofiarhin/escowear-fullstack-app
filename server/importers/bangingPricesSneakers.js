@@ -1,4 +1,6 @@
 const SOURCE_PROVIDER = "banging-prices";
+const { extractProductBrand } = require("../services/productBrands");
+const { normalizeColors } = require("../services/productColors");
 const SOURCE_DATABASE_NAME = "price_pulse_test";
 const DESTINATION_DATABASE_NAME = "escowear-sneaker-import-test";
 const PRODUCTS_COLLECTION = "products";
@@ -76,13 +78,6 @@ const buildSneakerQuery = () => ({
   ],
 });
 
-const inferBrand = (product = {}) => {
-  const explicitBrand = cleanString(product.brand);
-  if (explicitBrand) return explicitBrand;
-
-  return normalizeCategory(product.store) === "nike" ? "Nike" : null;
-};
-
 const optionalNumber = (value) => {
   if (value == null || value === "") return null;
   const number = Number(value);
@@ -115,7 +110,9 @@ const mapSourceProduct = (product, now = new Date()) => {
     };
   }
 
-  const colors = uniqueStrings(product.colors);
+  // Banging Prices currently appends related-product and page-chrome text after
+  // the primary colourway. Only its first value is an authoritative colour.
+  const colors = normalizeColors([product.color, Array.isArray(product.colors) ? product.colors[0] : null]);
   const sizesRaw = uniqueStrings(product.sizesRaw);
   const sizes = uniqueStrings(
     Array.isArray(product.sizes) && product.sizes.length
@@ -140,7 +137,7 @@ const mapSourceProduct = (product, now = new Date()) => {
       color: colors[0] || null,
       colors,
       category: "shoes",
-      brand: inferBrand(product),
+      brand: extractProductBrand(product),
       retailer: {
         slug: retailerSlug,
         name: retailerName,

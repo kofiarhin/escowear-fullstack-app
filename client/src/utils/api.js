@@ -9,8 +9,8 @@ export const apiRequest = async (path, { method = "GET", body, headers = {} } = 
   try {
     response = await fetch(path, {
       method,
-      headers: { ...(body !== undefined ? { "Content-Type": "application/json" } : {}), ...headers },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: { ...(body !== undefined && !(body instanceof FormData) ? { "Content-Type": "application/json" } : {}), ...headers },
+      body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
     });
   } catch (error) {
     throw new NetworkError(error?.message || "Network request failed");

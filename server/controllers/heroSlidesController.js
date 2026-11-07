@@ -95,7 +95,7 @@ const validatePayload = (body, mode) => {
 
 const serializeSlide = async (slide, ProductModel, { publicView = false } = {}) => {
   const product = await readProduct(ProductModel, slide.productId);
-  if (!product) return null;
+  if (!product || (publicView && product.status === "draft")) return null;
   const desktopImage = validImageSource(slide.desktopImage) && slide.desktopImage ? slide.desktopImage : resolveProductImage(product);
   const mobileImage = validImageSource(slide.mobileImage) && slide.mobileImage ? slide.mobileImage : desktopImage;
   const base = {

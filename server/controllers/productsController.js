@@ -19,6 +19,8 @@ const parsePagination = ({ page, limit }) => {
 };
 
 const buildProductFilter = ({ search, category }) => {
+  // `status` was introduced for manual publishing. Legacy/imported records
+  // omit it and stay visible; drafts never leak through public routes.
   const clauses = [];
   const normalizedCategory = String(category || "").trim();
   const normalizedSearch = String(search || "").trim();
@@ -42,9 +44,10 @@ const buildProductFilter = ({ search, category }) => {
     });
   }
 
-  if (clauses.length === 0) return {};
-  if (clauses.length === 1) return clauses[0];
-  return { $and: clauses };
+  const visibility = { status: { $ne: "draft" } };
+  if (clauses.length === 0) return visibility;
+  if (clauses.length === 1) return { ...clauses[0], ...visibility };
+  return { $and: clauses, ...visibility };
 };
 
 // Existing catalogue documents may use title; normalize responses without writes.
@@ -86,7 +89,7 @@ const createProductsController = (ProductModel) => {
     try {
       const product = await ProductModel.findById(req.params.id).lean();
 
-      if (!product) {
+      if (!product || product.status === "draft") {
         return res.status(404).json({ error: "Product not found" });
       }
 

@@ -22,8 +22,8 @@ test("public hero slides return only active, resolved products in stable order",
   await ctx.models.HeroSlide.create(createSlide(first._id, { order: 3, isActive: true }));
   await ctx.models.HeroSlide.create(createSlide(second._id, { order: 1, isActive: true, desktopImage: "/images/hero/second.jpg" }));
   await ctx.models.HeroSlide.create(createSlide(new Types.ObjectId(), { order: 0, isActive: true }));
-  const draft = await ctx.models.Product.create(sampleProduct({ name: "Draft" }));
-  await ctx.models.HeroSlide.create(createSlide(draft._id, { order: 0, isActive: false }));
+  const draft = await ctx.models.Product.create(sampleProduct({ name: "Draft", status: "draft" }));
+  await ctx.models.HeroSlide.create(createSlide(draft._id, { order: 0, isActive: true }));
 
   const response = await ctx.request("GET", "/api/hero-slides");
   assert.equal(response.status, 200);

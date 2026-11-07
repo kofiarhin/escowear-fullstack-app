@@ -18,6 +18,14 @@ const sourceSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const managedImageSchema = new mongoose.Schema(
+  {
+    publicId: { type: String, required: true },
+    secureUrl: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     // Legacy imported documents retain title; no migration is required.
@@ -52,11 +60,21 @@ const productSchema = new mongoose.Schema(
     status: String,
     source: sourceSchema,
     sourceLastSeenAt: Date,
+    // Manual drafts intentionally permit incomplete catalogue fields. Imported
+    // products retain their historical required validation contract.
+    description: { type: String, maxlength: 2000 },
+    managedImages: [managedImageSchema],
   },
   {
     timestamps: true,
   }
 );
+
+for (const field of ["name", "price"]) {
+  productSchema.path(field).required(function requiredProductField() {
+    return this.status === "active" || this.source?.provider !== "manual";
+  });
+}
 
 productSchema.index(
   { "source.provider": 1, "source.canonicalKey": 1 },

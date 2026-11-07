@@ -27,6 +27,7 @@ const SOURCE_PROJECTION = {
   saleUrl: 1,
   category: 1,
   gender: 1,
+  color: 1,
   colors: 1,
   sizesRaw: 1,
   sizes: 1,

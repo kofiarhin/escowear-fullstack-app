@@ -13,5 +13,6 @@ import OrderDetails from "./OrderDetails/OrderDetails.page";
 import Policies from "./Policies/Policies.page";
 import AdminOrderDetail from "./AdminOrderDetail/AdminOrderDetail.page";
 import AdminHeroSlides from "./AdminHeroSlides/AdminHeroSlides.page";
+import AdminProducts, { AdminProductForm } from "./AdminProducts/AdminProducts.page";
 
-export { Register, Login, Cart, Store, Home, Details, DashBoard, Checkout, OrderConfirmation, AdminOrders, AdminOrderDetail, AdminHeroSlides, TrackOrder, OrderDetails, Policies };
+export { Register, Login, Cart, Store, Home, Details, DashBoard, Checkout, OrderConfirmation, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, TrackOrder, OrderDetails, Policies };

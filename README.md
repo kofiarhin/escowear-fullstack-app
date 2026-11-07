@@ -71,6 +71,17 @@ For Windows PowerShell, set `$env:CI='true'` before the frontend command.
 - `GET /api/products?category=trainers` — category filter (the stored category must match)
 - `GET /api/products/:id` — one product
 
+### Manual product administration
+
+Admins can manage manual drafts at `/admin/products`; imported catalogue records remain read-only. Configure `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in the private root `.env` before image uploads are available. The API validates and normalizes JPEG, PNG and WebP files server-side, and stores only Cloudinary delivery URLs and asset identifiers in MongoDB. Preview orphan candidates with `npm run images:cleanup-product-orphans`; use `npm run images:cleanup-product-orphans -- --apply` only in an approved maintenance window.
+
+The product form loads its Brand selector from the protected `GET /api/admin/products/brands` API. The API exposes only normalized manufacturer names from the MongoDB catalogue, and product writes are validated against the same server-derived options. Historical records with no `brand` field are safely classified from recognised manufacturer title patterns; unknown titles are omitted rather than shown as brands.
+
+The Colour control provides a predefined multi-select list plus an optional custom colour. Selected values are deduplicated case-insensitively and stored in the existing `colors` array; the first selection is also retained in `color` for legacy storefront compatibility.
+
+To preview repairs for historical product brand values without changing MongoDB, run `npm run brands:migrate-products`. It is dry-run only by default; `npm run brands:migrate-products -- --apply` writes changes and requires explicit approval.
+
+
 ## Orders API (manual checkout)
 
 - `POST /api/orders` — guest order (server-priced; `Idempotency-Key` header required)

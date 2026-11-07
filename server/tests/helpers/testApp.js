@@ -24,6 +24,7 @@ const createModels = () => ({
   TrackingChallenge: createMemoryModel(),
   PaymentProof: createMemoryModel({ uniques: ["idempotencyKeyHash"] }),
   HeroSlide: createMemoryModel({ uniques: ["productId"] }),
+  ProductImageUpload: createMemoryModel({ uniques: ["publicId"] }),
 });
 
 // A private, throwaway directory for uploaded proofs in each test app.
@@ -36,6 +37,8 @@ const sampleProduct = (overrides = {}) => ({
   price: 164.99,
   currency: "GBP",
   sizes: ["8", "9", "UK 10"],
+  color: "Black",
+  colors: ["Black"],
   inStock: true,
   status: "active",
   image: "https://example.test/dn8.jpg",

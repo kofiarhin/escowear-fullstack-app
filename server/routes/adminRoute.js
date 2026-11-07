@@ -5,6 +5,8 @@ const EmailOutbox = require("../Models/EmailOutbox.model");
 const User = require("../Models/User.model");
 const PaymentProof = require("../Models/PaymentProof.model");
 const HeroSlide = require("../Models/HeroSlide.model");
+const Product = require("../Models/Product.model");
+const ProductImageUpload = require("../Models/ProductImageUpload.model");
 const { createAuth } = require("../middlewares/auth.middleware");
 const { createRateLimiter } = require("../middlewares/rateLimit");
 const { createOrderWorkflow } = require("../services/orderWorkflow");
@@ -13,10 +15,12 @@ const { createProofStorage } = require("../services/proofStorage");
 const { createAdminOrdersController } = require("../controllers/adminOrdersController");
 const { getOrderConfig } = require("../config/orders");
 const { createHeroSlidesController } = require("../controllers/heroSlidesController");
+const { createAdminProductsController } = require("../controllers/adminProductsController");
+const { createProductImageStorage } = require("../services/productImageStorage");
 
 // Every route here requires a logged-in user whose stored role is "admin".
 const createAdminRouter = (deps = {}) => {
-  const models = { Order, OrderEvent, EmailOutbox, User, PaymentProof, HeroSlide, ...deps.models };
+  const models = { Order, OrderEvent, EmailOutbox, User, PaymentProof, HeroSlide, Product, ProductImageUpload, ...deps.models };
   const config = deps.config || getOrderConfig();
   const { auth, requireAdmin } = createAuth(models.User);
   const storage = deps.proofStorage || createProofStorage({ rootDir: config.proofUploadDir });
@@ -25,7 +29,9 @@ const createAdminRouter = (deps = {}) => {
   const workflow = deps.workflow || createOrderWorkflow({ ...models, config, env: deps.env, now: deps.now, logger: deps.logger, proofs });
   const controller = createAdminOrdersController({ ...models, workflow, proofs, logger: deps.logger });
   const heroSlides = createHeroSlidesController({ HeroSlide: models.HeroSlide, Product: models.Product });
+  const products = createAdminProductsController({ Product: models.Product, ProductImageUpload: models.ProductImageUpload, imageStorage: deps.imageStorage || createProductImageStorage({ env: deps.env }), logger: deps.logger });
   const limiter = createRateLimiter({ windowMs: 60 * 1000, max: 120, keyFn: (req) => String(req.user?._id || req.ip) });
+  const uploadLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, keyFn: (req) => String(req.user?._id || req.ip), message: "Too many image uploads, please try again later" });
 
   const router = Router();
   router.use(auth, requireAdmin, limiter);
@@ -34,6 +40,14 @@ const createAdminRouter = (deps = {}) => {
   router.post("/hero-slides", heroSlides.createSlide);
   router.patch("/hero-slides/:id", heroSlides.updateSlide);
   router.delete("/hero-slides/:id", heroSlides.deleteSlide);
+  router.get("/products", products.listProducts);
+  router.get("/products/brands", products.listBrands);
+  router.get("/products/:id", products.getProduct);
+  router.post("/products", products.createProduct);
+  router.patch("/products/:id", products.updateProduct);
+  router.patch("/products/:id/publish", products.publishProduct);
+  router.patch("/products/:id/unpublish", products.unpublishProduct);
+  router.post("/products/images", uploadLimiter, products.uploadImage);
   router.get("/orders/:id", controller.getOrder);
   router.post("/orders/:id/payment-instructions", controller.paymentInstructions);
   router.post("/orders/:id/awaiting-customer", controller.awaitingCustomer);

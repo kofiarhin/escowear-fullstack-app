@@ -96,6 +96,19 @@ test("maps Banging Prices fields and preserves source identity", () => {
   });
 });
 
+test("maps product title collections to manufacturers instead of copying product names into brand", () => {
+  assert.equal(mapSourceProduct(sourceProduct({ title: "NikeCourt Borough Low", brand: null })).product.brand, "Nike");
+  assert.equal(mapSourceProduct(sourceProduct({ title: "NikeSKIMS Rift Satin", brand: null })).product.brand, "Nike");
+  assert.equal(mapSourceProduct(sourceProduct({ title: "Air Jordan 1 Low", brand: null })).product.brand, "Jordan");
+  assert.equal(mapSourceProduct(sourceProduct({ title: "Black trainers", brand: null, storeName: "ASOS" })).product.brand, null);
+});
+
+test("keeps only the authoritative source colourway and normalizes its casing", () => {
+  const result = mapSourceProduct(sourceProduct({ colors: ["black/WHITE", "Nike Air Max Dn8 trainers in black.", "Thumbnail 1 of 5"] }));
+  assert.equal(result.product.color, "Black / White");
+  assert.deepEqual(result.product.colors, ["Black / White"]);
+});
+
 test("rejects incomplete products and skips existing source references", () => {
   const invalid = sourceProduct({ canonicalKey: null });
   const existing = sourceProduct();

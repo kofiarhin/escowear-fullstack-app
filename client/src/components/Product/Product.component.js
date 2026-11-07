@@ -9,12 +9,13 @@ import {
 } from "../../utils/product";
 
 const Product = ({ data, index }) => {
-  const { name, color, _id, inStock } = data;
+  const { name, color, colors, _id, inStock } = data;
+  const colourLabel = Array.isArray(colors) && colors.length ? colors.join(", ") : color;
 
   const imgUrl = getProductImage(data);
   const imageAlt =
-    color && !name.toLowerCase().includes(color.toLowerCase())
-      ? `${name} in ${color}`
+    colourLabel && !name.toLowerCase().includes(colourLabel.toLowerCase())
+      ? `${name} in ${colourLabel}`
       : name;
   const formattedPrice = formatProductPrice(data);
 
