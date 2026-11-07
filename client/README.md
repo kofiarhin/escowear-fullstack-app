@@ -2,7 +2,7 @@
 
 The frontend for [Escowear](https://escowear.com), a UK-to-Ghana sneaker-store MVP.
 
-The React app is in `client/`; the Express API is in `../server/`. In development the React server proxies API requests to `http://localhost:5000`. In production, Express serves the compiled React app and API from the same origin behind the Beast VPS's Nginx and HTTPS.
+The React app is in `client/`; the Express API is in `../server/`. In development the React server proxies API and image requests to the backend port configured in the root `.env` (default `5000`). An optional `ESCOWEAR_DEV_API_URL` in `client/.env.development.local` overrides that target. Browser requests retain the frontend origin because forwarding happens on the dev server. In production, Express serves the compiled React app and API from the same origin behind the Beast VPS's Nginx and HTTPS.
 
 ## Run locally
 

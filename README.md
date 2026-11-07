@@ -42,6 +42,7 @@ ESCOWEAR_MONGO_URI=<private MongoDB URI ending in /escowear-sneaker-import-test>
 JWT_SECRET=<strong random secret>
 PORT=5000
 NODE_ENV=development
+ESCOWEAR_CHECKOUT_OPEN=false
 ```
 
 `JWT_SECRET` is required in production.
@@ -55,6 +56,36 @@ npm run dev
 ```
 
 React development server: `http://localhost:3000`; backend: `http://localhost:5000`.
+Both ports must be available. The frontend startup wrapper supplies `localhost`
+when Create React App cannot detect an allowed host; host validation stays enabled.
+
+If another application occupies these ports, set the backend `PORT` in the root
+`.env` (for example `5100`) and create an ignored `client/.env.development.local`:
+
+```dotenv
+HOST=127.0.0.1
+PORT=41801
+```
+
+The development proxy automatically reads the backend `PORT` from the root
+`.env` (default `5000`); the client's `PORT` only controls the frontend listener.
+An inherited shell `PORT` takes precedence for the backend. If a separate backend
+is needed, set `ESCOWEAR_DEV_API_URL` in `client/.env.development.local` explicitly.
+Remove stale overrides when using the automatic local configuration. Restart
+`npm run dev` after changing these settings and use the frontend URL printed in
+the terminal. Both `/api` and `/images` use the printed proxy target. Browser
+DevTools will still show requests to the **frontend** origin, such as
+`localhost:3000/api/products`; forwarding to the backend happens on the dev server.
+
+For browsing against the shared database, set `EMAIL_TRANSPORT=none` and
+leave `ADMIN_EMAIL` / `ADMIN_PASSWORD` unset in the root `.env` to avoid startup
+email delivery or admin-account creation.
+
+Keep checkout disabled locally until all launch requirements pass. If startup reports
+missing launch requirements, run `npm run release:check` to identify them. Docker
+Compose supplies `ESCOWEAR_PROOF_UPLOAD_DIR` on a private persistent volume; local
+`npm run dev` does not. Leave checkout closed instead of bypassing the checks or
+using a public upload directory.
 
 ### Tests
 
