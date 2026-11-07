@@ -29,6 +29,7 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY server/ ./server/
 COPY client/scripts/check-policies.cjs ./client/scripts/check-policies.cjs
 COPY client/src/policies/review.json ./client/src/policies/review.json
+COPY client/src/constants/productColors.json ./client/src/constants/productColors.json
 COPY --from=frontend /app/client/build ./client/build
 # Private payment-proof store (mounted as a named volume); owned by the app user only.
 RUN mkdir -p /app/data/payment-proofs && chown -R node:node /app/data && chmod 700 /app/data /app/data/payment-proofs
