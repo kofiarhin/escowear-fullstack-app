@@ -2,7 +2,7 @@
 
 ## Last Task
 
-Replaced the MongoDB-derived Colour selector with a predefined multi-select and optional custom-colour entry in the admin product form.
+Upgraded the admin product gallery to combine Cloudinary uploads with validated external image URLs and retain imported product galleries on edit.
 
 ## Progress
 
@@ -14,6 +14,7 @@ Replaced the MongoDB-derived Colour selector with a predefined multi-select and 
 - Replaced unsafe title-prefix inference with shared manufacturer normalization in the importer and brand API, plus a dry-run-only product-brand migration script. No MongoDB migration has been run.
 - Colour selections now use the shared `client/src/constants/productColors.json` list, support removable custom values, preserve legacy `color`/`colors` records on edit, and store the first selected value in `color` for storefront compatibility.
 - Removed the MongoDB colour-options API and migration script; no product database migration is required for the multi-select redesign.
+- Admin galleries now support add, replace, remove, reorder, and cover selection for uploaded and external URLs. Imported product details remain protected while admins can update their image galleries; focused frontend/backend tests and the production build passed.
 
 ## Files
 
@@ -30,3 +31,5 @@ Replaced the MongoDB-derived Colour selector with a predefined multi-select and 
 - `client/src/constants/productColors.json`
 - `server/services/productColors.js`
 - `client/src/Pages/AdminProducts/AdminProducts.page.js`
+- `server/validators/adminProductValidator.js`
+- `server/controllers/adminProductsController.js`

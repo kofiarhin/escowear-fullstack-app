@@ -117,6 +117,32 @@ test("only server-owned images can publish a manual product and drafts stay out 
   assert.equal(unpublished.status, 200); assert.equal((await ctx.request("GET", `/api/products/${created.body.item._id}`)).status, 404);
 });
 
+test("admin galleries retain imported URLs, allow mixed image sources, and keep imported fields read-only", async (t) => {
+  const ctx = await startTestApp(); t.after(ctx.close);
+  const admin = await ctx.addUser({ role: "admin" }); const token = userToken(admin._id);
+  const imported = await ctx.models.Product.create(sampleProduct({
+    name: undefined,
+    title: "Nike Air Max 95",
+    source: { provider: "banging-prices", canonicalKey: "nike:air-max-95" },
+    image: "https://catalogue.example.test/air-max-cover.jpg",
+    images: ["https://catalogue.example.test/air-max-cover.jpg", "https://catalogue.example.test/air-max-side.jpg"],
+  }));
+  const opened = await ctx.request("GET", `/api/admin/products/${imported._id}`, { token });
+  assert.equal(opened.status, 200);
+  assert.deepEqual(opened.body.item.images, imported.images);
+  const gallery = ["https://catalogue.example.test/air-max-side.jpg", "https://cdn.example.test/admin-detail.webp"];
+  const saved = await ctx.request("PATCH", `/api/admin/products/${imported._id}`, { token, headers: version(opened.body.item), body: { images: gallery, managedImages: [] } });
+  assert.equal(saved.status, 200);
+  assert.deepEqual(saved.body.item.images, gallery);
+  assert.equal(saved.body.item.image, gallery[0]);
+  assert.equal(saved.body.item.title, "Nike Air Max 95");
+  assert.equal((await ctx.request("GET", `/api/products/${imported._id}`)).status, 200);
+  const nonImageEdit = await ctx.request("PATCH", `/api/admin/products/${imported._id}`, { token, headers: version(saved.body.item), body: { brand: "Nike" } });
+  assert.equal(nonImageEdit.status, 409);
+  const invalidUrl = await ctx.request("POST", "/api/admin/products", { token, body: draftPayload({ images: ["javascript:alert(1)"], managedImages: [] }) });
+  assert.equal(invalidUrl.status, 422);
+});
+
 test("admin image endpoint is authenticated before multipart parsing", async (t) => {
   const ctx = await startTestApp(); t.after(ctx.close);
   const response = await fetch(`${ctx.base}/api/admin/products/images`, { method: "POST", body: new FormData() });

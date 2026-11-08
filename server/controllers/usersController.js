@@ -2,13 +2,13 @@ const User = require("../Models/User.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { ADMIN_SESSION_SECONDS } = require("../middlewares/auth.middleware");
+const { createPasswordResetService, PASSWORD_MAX, PASSWORD_MIN } = require("../services/passwordResetService");
 
 // Admins get short sessions; customers keep the existing 30-day sign-in.
 const createToken = (id, role) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: role === "admin" ? ADMIN_SESSION_SECONDS : "30d" });
 
-const PASSWORD_MIN = 10;
-const PASSWORD_MAX = 128;
+const createUsersController = ({ UserModel = User, passwordResetService = createPasswordResetService({ User: UserModel }) } = {}) => {
 
 // @desc create users
 // @router /api/users/register
@@ -23,10 +23,12 @@ const createUser = async (req, res) => {
   if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
     return res.status(400).json({ error: `Password must be ${PASSWORD_MIN}-${PASSWORD_MAX} characters` });
   }
-  const user = new User({ name: name.trim(), email: email.trim().toLowerCase(), password });
-
   try {
-    await user.save();
+    const userData = { name: name.trim(), email: email.trim().toLowerCase(), password };
+    // Production uses the Mongoose constructor; the in-memory test model
+    // exposes the equivalent create API.
+    const user = typeof UserModel === "function" ? new UserModel(userData) : await UserModel.create(userData);
+    if (typeof user.save === "function") await user.save();
     const responseUser = user.toObject ? user.toObject() : { ...user };
     delete responseUser.password;
     return res.status(201).json(responseUser);
@@ -56,7 +58,7 @@ const loginUser = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    const user = await UserModel.findOne({ email: email.trim().toLowerCase() });
 
     // One message for unknown email and wrong password, so the login form
     // cannot be used to discover which accounts (including admins) exist.
@@ -78,9 +80,35 @@ const loginUser = async (req, res) => {
   } catch (error) {
     return res.status(400).json({ error: "Invalid email or password" });
   }
+  };
+
+  // Always return the same accepted response for registered and unregistered
+  // addresses, so this endpoint cannot reveal who has an account.
+  const forgotPassword = async (req, res) => {
+    try {
+      const result = await passwordResetService.requestReset(req.body || {});
+      return res.status(202).json(result);
+    } catch {
+      return res.status(202).json({ message: "If an account matches that email address, we have sent password reset instructions." });
+    }
+  };
+
+  const resetPassword = async (req, res) => {
+    try {
+      const result = await passwordResetService.resetPassword(req.body || {});
+      if (result.error) return res.status(400).json(result);
+      return res.status(200).json(result);
+    } catch {
+      return res.status(400).json({ error: "This password reset link is invalid or has expired." });
+    }
+  };
+
+  return { createUser, forgotPassword, loginUser, resetPassword };
 };
 
+const defaultController = createUsersController();
+
 module.exports = {
-  createUser,
-  loginUser,
+  ...defaultController,
+  createUsersController,
 };

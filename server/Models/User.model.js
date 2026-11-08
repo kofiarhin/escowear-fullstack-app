@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "password is required"],
     },
+    // Only a SHA-256 digest is retained, so a database read cannot be used to
+    // reset an account. These fields are hidden from normal queries.
+    passwordResetToken: { type: String, select: false },
+    passwordResetExpires: { type: Date, select: false },
     // Only the operator CLI (server/scripts/setUserRole.js) grants "admin";
     // registration never accepts this field.
     role: {

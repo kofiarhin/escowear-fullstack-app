@@ -10,6 +10,7 @@ const asLean = async (query) => (query && typeof query.lean === "function" ? que
 const toItem = (value) => (value?.toObject ? value.toObject() : value);
 const sameId = (left, right) => String(left) === String(right);
 const manual = (product) => product?.source?.provider === "manual";
+const IMAGE_FIELDS = new Set(["images", "managedImages"]);
 
 const adminError = (res, status, code, error, fields) => res.status(status).json({ error, code, ...(fields ? { fields } : {}) });
 const readVersion = (req) => {
@@ -56,7 +57,7 @@ const ownershipForGallery = async ({ product, user, values, ProductImageUpload }
     if (!upload || !sameId(upload.ownerId, user._id) || upload.productId) return { fields: { images: "One or more images are not available to this product" } };
     if (upload.secureUrl !== image.secureUrl) return { fields: { images: "One or more uploaded images are invalid" } };
   }
-  return { images: values.managedImages.map((image) => image.secureUrl), managedImages: values.managedImages.map((image) => ({ publicId: image.publicId, secureUrl: image.secureUrl })) };
+  return { images: values.images, managedImages: values.managedImages.map((image) => ({ publicId: image.publicId, secureUrl: image.secureUrl })) };
 };
 
 const createAdminProductsController = ({ Product, ProductImageUpload, imageStorage = createProductImageStorage(), logger = console }) => {
@@ -71,11 +72,19 @@ const createAdminProductsController = ({ Product, ProductImageUpload, imageStora
     if (Object.hasOwn(values, "colors")) values.color = values.colors[0] || "";
     else if (Object.hasOwn(values, "color")) values.colors = values.color ? [values.color] : [];
   };
-  const getManualProduct = async (id, res) => {
+  const getProductForEdit = async (id, res) => {
     if (!productIdIsValid(id)) { adminError(res, 400, "INVALID_PRODUCT_ID", "Invalid product id"); return null; }
     const product = await asLean(Product.findById(id));
     if (!product) { adminError(res, 404, "PRODUCT_NOT_FOUND", "Product not found"); return null; }
-    if (!manual(product)) { adminError(res, 409, "IMPORTED_PRODUCT_READ_ONLY", "Imported products cannot be changed here"); return null; }
+    return product;
+  };
+
+  const getManualProduct = async (id, res) => {
+    const product = await getProductForEdit(id, res);
+    if (product && !manual(product)) {
+      adminError(res, 409, "IMPORTED_PRODUCT_READ_ONLY", "Imported products cannot be published or unpublished here");
+      return null;
+    }
     return product;
   };
 
@@ -131,8 +140,11 @@ const createAdminProductsController = ({ Product, ProductImageUpload, imageStora
     const expected = readVersion(req);
     if (!expected) return adminError(res, 409, "VERSION_REQUIRED", "Refresh this product before saving changes");
     try {
-      const current = await getManualProduct(req.params.id, res);
+      const current = await getProductForEdit(req.params.id, res);
       if (!current) return undefined;
+      if (!manual(current) && Object.keys(checked.values).some((key) => !IMAGE_FIELDS.has(key))) {
+        return adminError(res, 409, "IMPORTED_PRODUCT_IMAGE_ONLY", "Only image gallery changes are allowed for imported products");
+      }
       const brandFields = await validateBrand(checked.values);
       if (brandFields) return adminError(res, 422, "BRAND_INVALID", "Please correct the highlighted fields", brandFields);
       syncColors(checked.values);
@@ -141,7 +153,7 @@ const createAdminProductsController = ({ Product, ProductImageUpload, imageStora
       const values = { ...checked.values, ...(gallery || {}) };
       if (gallery) values.image = gallery.images[0] || "";
       const merged = { ...current, ...values };
-      if (current.status === "active") {
+      if (manual(current) && current.status === "active") {
         const fields = validatePublishedProduct({ ...merged, inStock: true });
         if (fields) return adminError(res, 422, "VALIDATION_FAILED", "Please correct the highlighted fields", fields);
       }

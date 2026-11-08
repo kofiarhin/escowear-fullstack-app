@@ -22,6 +22,8 @@ import {
   TrackOrder,
   OrderDetails,
   Policies,
+  ForgotPassword,
+  ResetPassword,
 } from "./Pages";
 
 const ScrollToHash = () => {
@@ -59,6 +61,8 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/store" element={<Store />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />

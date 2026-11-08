@@ -14,5 +14,7 @@ import Policies from "./Policies/Policies.page";
 import AdminOrderDetail from "./AdminOrderDetail/AdminOrderDetail.page";
 import AdminHeroSlides from "./AdminHeroSlides/AdminHeroSlides.page";
 import AdminProducts, { AdminProductForm } from "./AdminProducts/AdminProducts.page";
+import ForgotPassword from "./PasswordRecovery/ForgotPassword.page";
+import ResetPassword from "./PasswordRecovery/ResetPassword.page";
 
-export { Register, Login, Cart, Store, Home, Details, DashBoard, Checkout, OrderConfirmation, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, TrackOrder, OrderDetails, Policies };
+export { Register, Login, Cart, Store, Home, Details, DashBoard, Checkout, OrderConfirmation, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, TrackOrder, OrderDetails, Policies, ForgotPassword, ResetPassword };

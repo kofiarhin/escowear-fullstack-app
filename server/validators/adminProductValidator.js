@@ -4,6 +4,16 @@ const { normalizeColors } = require("../services/productColors");
 const EDITABLE_FIELDS = new Set(["name", "price", "brand", "category", "gender", "color", "colors", "sizes", "inStock", "description", "images", "managedImages"]);
 const CONTROL = /[\u0000-\u001f\u007f]/;
 
+const imageUrl = (value) => {
+  if (typeof value !== "string" || value !== value.trim() || value.length > 2048 || CONTROL.test(value)) return false;
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === "https:" || parsed.protocol === "http:") && !parsed.username && !parsed.password;
+  } catch {
+    return false;
+  }
+};
+
 const text = (value, maximum, label, { required = false } = {}) => {
   if (typeof value !== "string" || value !== value.trim() || CONTROL.test(value) || /[<>]/.test(value)) return `${label} must be plain text`;
   if (required && !value) return `${label} is required`;
@@ -57,15 +67,15 @@ const validateProductInput = (body, { partial = false } = {}) => {
     else values.inStock = body.inStock;
   }
   if (Object.hasOwn(body, "images")) {
-    if (!Array.isArray(body.images) || body.images.length > 8 || body.images.some((item) => typeof item !== "string" || item.length > 2048 || CONTROL.test(item))) fields.images = "Use up to eight uploaded images";
+    if (!Array.isArray(body.images) || body.images.length > 8 || body.images.some((item) => !imageUrl(item)) || new Set(body.images).size !== body.images.length) fields.images = "Use up to eight unique valid image URLs";
     else values.images = body.images;
   }
   if (Object.hasOwn(body, "managedImages")) {
-    if (!Array.isArray(body.managedImages) || body.managedImages.length > 8 || body.managedImages.some((item) => !item || typeof item !== "object" || Array.isArray(item) || typeof item.publicId !== "string" || item.publicId.length > 300 || typeof item.secureUrl !== "string" || item.secureUrl.length > 2048)) fields.managedImages = "Use server-issued image references";
+    if (!Array.isArray(body.managedImages) || body.managedImages.length > 8 || body.managedImages.some((item) => !item || typeof item !== "object" || Array.isArray(item) || typeof item.publicId !== "string" || !item.publicId || item.publicId.length > 300 || !imageUrl(item.secureUrl)) || new Set(body.managedImages.map((item) => item.publicId)).size !== body.managedImages.length) fields.managedImages = "Use server-issued image references";
     else values.managedImages = body.managedImages;
   }
   if (Object.hasOwn(values, "images") !== Object.hasOwn(values, "managedImages")) fields.images = "Images and ownership references must be saved together";
-  if (values.images && values.managedImages && (values.images.length !== values.managedImages.length || values.images.some((url, index) => url !== values.managedImages[index].secureUrl))) fields.images = "Image order must match ownership references";
+  if (values.images && values.managedImages && values.managedImages.some((image) => !values.images.includes(image.secureUrl))) fields.images = "Uploaded image references must appear in the gallery";
   return Object.keys(fields).length ? { status: 422, code: "VALIDATION_FAILED", error: "Please correct the highlighted fields", fields } : { values };
 };
 
@@ -81,8 +91,8 @@ const validatePublishedProduct = (product) => {
   if (product.inStock !== true) fields.inStock = "Mark this product in stock before publishing";
   const sizes = normalizeSizes(product.sizes);
   if (!sizes || sizes.length === 0) fields.sizes = "Add at least one unique UK size";
-  if (!Array.isArray(product.images) || !product.images.length || !Array.isArray(product.managedImages) || product.images.length !== product.managedImages.length || product.image !== product.images[0]) fields.images = "Add at least one uploaded product image";
+  if (!Array.isArray(product.images) || !product.images.length || product.images.some((url) => !imageUrl(url)) || product.image !== product.images[0]) fields.images = "Add at least one valid product image";
   return Object.keys(fields).length ? fields : null;
 };
 
-module.exports = { EDITABLE_FIELDS, normalizeSizes, validateProductInput, validatePublishedProduct };
+module.exports = { EDITABLE_FIELDS, imageUrl, normalizeSizes, validateProductInput, validatePublishedProduct };

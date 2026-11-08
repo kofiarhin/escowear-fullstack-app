@@ -32,7 +32,7 @@ const createApp = (deps = {}) => {
   app.use("/api/hero-slides", createHeroSlidesRouter(deps.heroSlides || {}));
   app.use("/api/orders", createOrdersRouter(deps.orders));
   app.use("/images", imagesRoute);
-  app.use("/api/users", usersRoute);
+  app.use("/api/users", deps.users ? usersRoute.createUsersRouter(deps.users) : usersRoute);
   app.use("/api/admin", createAdminRouter(deps.admin));
 
   // Malformed JSON and oversized bodies get a JSON error rather than an HTML page.

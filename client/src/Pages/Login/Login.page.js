@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import "./login.styles.css";
 import { loginUser } from "../../redux/actions/user.action";
@@ -58,6 +58,8 @@ const Login = ({ setIsLoggedIn }) => {
             </div>
 
             <p className="error"> {error ? error : null} </p>
+
+            <p className="login-recovery-link"><Link to="/forgot-password">Forgot password?</Link></p>
 
             <button
               type="submit"

@@ -1,3 +1,13 @@
 .login {
     min-height: 70vh;
 }
+
+.login-recovery-link {
+    margin: -0.25rem 0 1.25rem;
+    text-align: right;
+    font-size: 0.9rem;
+}
+
+.login-recovery-link a {
+    border-bottom: 1px solid currentColor;
+}

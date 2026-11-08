@@ -102,3 +102,35 @@ test("brand selector shows loading and empty states from the API", async () => {
   resolveBrands({ ok: true, status: 200, json: async () => ({ items: [] }) });
   expect(await screen.findByText(/no brands are available yet/i)).toBeInTheDocument();
 });
+
+test("admin can add a validated external image URL to a mixed manual gallery", async () => {
+  let request;
+  global.fetch = jest.fn().mockImplementation((path, options = {}) => {
+    if (path === "/api/admin/products/brands") return Promise.resolve({ ok: true, status: 200, json: async () => ({ items: ["Nike"] }) });
+    if (path === "/api/admin/products" && options.method === "POST") { request = JSON.parse(options.body); return Promise.resolve({ ok: false, status: 422, json: async () => ({ error: "Please correct the highlighted fields", fields: {} }) }); }
+    return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+  });
+  renderAdmin("/admin/products/new");
+  await userEvent.type(screen.getByLabelText("Image URL"), "https://images.example.test/nike-p-6000.jpg");
+  await userEvent.click(screen.getByRole("button", { name: "Add Image URL" }));
+  expect(await screen.findByText("External image URL")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /save as draft/i }));
+  await waitFor(() => expect(request).toMatchObject({ images: ["https://images.example.test/nike-p-6000.jpg"], managedImages: [] }));
+});
+
+test("imported product images load, reorder, and save without changing imported details", async () => {
+  let request;
+  const product = { _id: "672b0e3a1a2b3c4d5e6f7002", title: "Nike Air Max 95", brand: "Nike", price: 174.99, status: "active", source: { provider: "banging-prices" }, image: "https://catalogue.example.test/cover.jpg", images: ["https://catalogue.example.test/cover.jpg", "https://catalogue.example.test/side.jpg"], updatedAt: "2026-11-07T12:00:00.000Z" };
+  global.fetch = jest.fn().mockImplementation((path, options = {}) => {
+    if (path === "/api/admin/products/brands") return Promise.resolve({ ok: true, status: 200, json: async () => ({ items: ["Nike"] }) });
+    if (path === "/api/admin/products/672b0e3a1a2b3c4d5e6f7002" && options.method === "PATCH") { request = JSON.parse(options.body); return Promise.resolve({ ok: true, status: 200, json: async () => ({ item: { ...product, image: request.images[0], images: request.images } }) }); }
+    if (path === "/api/admin/products/672b0e3a1a2b3c4d5e6f7002") return Promise.resolve({ ok: true, status: 200, json: async () => ({ item: product }) });
+    return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+  });
+  renderAdmin("/admin/products/672b0e3a1a2b3c4d5e6f7002/edit");
+  expect(await screen.findByAltText("Nike Air Max 95 1")).toHaveAttribute("src", product.images[0]);
+  expect(screen.getByLabelText("Product name")).toBeDisabled();
+  await userEvent.click(screen.getAllByRole("button", { name: "Make cover" })[1]);
+  await userEvent.click(screen.getByRole("button", { name: "Save image changes" }));
+  await waitFor(() => expect(request).toEqual({ images: [product.images[1], product.images[0]], managedImages: [] }));
+});
