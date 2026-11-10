@@ -3,7 +3,7 @@ export const loginUser = (email, password) => (dispatch) => {
     type: "LOGIN_PENDING",
   });
 
-  fetch("/api/users/login", {
+  return fetch("/api/users/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

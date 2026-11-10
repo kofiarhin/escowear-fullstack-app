@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const mongoose = require("mongoose");
 const { connectDB } = require("./db/db");
@@ -7,7 +9,6 @@ const { createOrdersRouter } = require("./routes/ordersRoute");
 const usersRoute = require("./routes/usersRoute");
 const { createAdminRouter } = require("./routes/adminRoute");
 const { createHeroSlidesRouter } = require("./routes/heroSlidesRoute");
-require("dotenv").config();
 const path = require("path");
 
 // `deps` lets tests inject in-memory models; production uses the defaults.

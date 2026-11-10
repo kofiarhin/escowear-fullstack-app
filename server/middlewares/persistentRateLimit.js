@@ -5,8 +5,10 @@ const createPersistentRateLimiter = ({ RateLimit, windowMs, max, keyFn = (req) =
 
   const consume = async (key) => {
     // A duplicate-key race can happen when a new window receives its first
-    // concurrent requests. Retrying the atomic increment never exceeds max.
-    for (let attempt = 0; attempt < 4; attempt += 1) {
+    // concurrent requests. Retry until an atomic operation either consumes a
+    // slot or the persisted counter proves the active window is full. A fixed
+    // retry budget would incorrectly reject an under-limit request under load.
+    for (;;) {
       const time = now();
       const expires = new Date(time.getTime() + windowMs);
       const incremented = await RateLimit.findOneAndUpdate(
@@ -34,10 +36,9 @@ const createPersistentRateLimiter = ({ RateLimit, windowMs, max, keyFn = (req) =
       if (current && new Date(current.resetAt) > time && current.count >= max) {
         return { allowed: false, retryAfterSeconds: retryAfterSeconds(current.resetAt, time) };
       }
+      // The record was created, renewed, or incremented by another request
+      // while this request raced it. Re-evaluate its real persisted state.
     }
-    // Failing closed avoids disabling a security control if Mongo remains
-    // contended beyond the short retry budget.
-    return { allowed: false, retryAfterSeconds: 1 };
   };
 
   const middleware = async (req, res, next) => {

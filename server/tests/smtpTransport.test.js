@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const net = require("node:net");
-const { createTransportFromEnv, isMailbox, readSmtpConfig } = require("../emails/transports");
+const { createTransportFromEnv, isMailbox, readSmtpConfig, safeSmtpFailureCode, safeSmtpFailureDiagnostic } = require("../emails/transports");
 const { processOutboxBatch } = require("../services/emailOutbox");
 const { describeFailure, run: emailCheck } = require("../scripts/emailCheck");
 const { createMemoryModel } = require("./helpers/memoryModel");
@@ -212,7 +212,11 @@ test("a rejected recipient is a failed send, not a silent success", async (t) =>
   t.after(smtp.close);
   const transport = createTransportFromEnv(envFor(smtp.port));
   t.after(() => transport.close());
-  await assert.rejects(transport.send({ to: "nobody@example.test", subject: "s", text: "t" }));
+  await assert.rejects(transport.send({ to: "nobody@example.test", subject: "s", text: "t" }), (error) => {
+    assert.equal(error.code, "EENVELOPE");
+    assert.equal(safeSmtpFailureDiagnostic(error), "stage=envelope code=EENVELOPE");
+    return true;
+  });
   await assert.rejects(transport.send({ to: "bad address\r\nBcc: x@y.z", subject: "s", text: "t" }), /Invalid recipient/);
 });
 
@@ -229,8 +233,12 @@ test("email:check logs in, optionally sends a test, and never prints the passwor
 });
 
 test("email:check shows safe codes and setting-name diagnostics, never other provider messages", () => {
-  assert.equal(describeFailure(Object.assign(new Error("535 bad creds for kofi@example.test"), { code: "EAUTH" })), "EAUTH");
+  assert.equal(describeFailure(Object.assign(new Error("535 bad creds for kofi@example.test"), { code: "EAUTH" })), "stage=authentication code=EAUTH");
+  assert.equal(safeSmtpFailureCode(Object.assign(new Error("recipient rejected"), { responseCode: 550 })), "SMTP_RESPONSE_550");
+  assert.equal(safeSmtpFailureDiagnostic(Object.assign(new Error("recipient rejected secret@example.test"), { command: "RCPT TO", responseCode: 550 })), "stage=envelope code=SMTP_RESPONSE_550");
+  assert.equal(safeSmtpFailureDiagnostic(Object.assign(new Error("TLS detail"), { command: "STARTTLS", code: "ETLS" })), "stage=starttls code=ETLS");
+  assert.equal(safeSmtpFailureCode(new Error("secret@example.test")), "SMTP_DELIVERY_FAILED");
   const invalid = new Error("Invalid SMTP configuration: SMTP_HOST is required");
   assert.equal(describeFailure(invalid), invalid.message);
-  assert.equal(describeFailure(new Error("550 rejected secret@example.test")), "check configuration and connection privately");
+  assert.equal(describeFailure(new Error("550 rejected secret@example.test")), "stage=delivery code=SMTP_DELIVERY_FAILED");
 });

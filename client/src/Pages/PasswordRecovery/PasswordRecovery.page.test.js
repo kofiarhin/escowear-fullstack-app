@@ -33,6 +33,18 @@ test("forgot password submits an email and always shows the generic confirmation
   expect(global.fetch).toHaveBeenCalledWith("/api/users/forgot-password", expect.objectContaining({ method: "POST", body: JSON.stringify({ email: "ama@example.test" }) }));
 });
 
+test("forgot password surfaces a proxied backend failure instead of a success message", async () => {
+  global.fetch.mockResolvedValue({ ok: false, json: async () => ({ error: "Too many password reset requests. Please wait and try again." }) });
+  renderPage("/forgot-password", <ForgotPassword />);
+
+  await userEvent.type(screen.getByLabelText("Email"), "ama@example.test");
+  await userEvent.click(screen.getByRole("button", { name: "Send reset link" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(/too many password reset requests/i);
+  expect(screen.queryByText(/check your email for password reset instructions/i)).not.toBeInTheDocument();
+  expect(global.fetch).toHaveBeenCalledWith("/api/users/forgot-password", expect.objectContaining({ method: "POST" }));
+});
+
 test("reset password validates matching 10-character passwords and submits the URL token", async () => {
   global.fetch.mockResolvedValue({ ok: true, json: async () => ({ message: "Your password has been reset. You can now sign in." }) });
   renderPage("/reset-password?token=test-token", <ResetPassword />);

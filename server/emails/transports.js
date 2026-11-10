@@ -7,6 +7,42 @@
 // A transport implements send({to, subject, text, idempotencyKey}) -> {providerMessageId}.
 const crypto = require("crypto");
 
+const SAFE_SMTP_FAILURE_CODES = new Set([
+  "EAUTH", "ETIMEDOUT", "ECONNECTION", "ECONNREFUSED", "ESOCKET", "ENOTFOUND", "EENVELOPE",
+  "ETLS", "EPROTOCOL", "EREQUIRETLS", "EDNS", "EMESSAGE",
+]);
+const SMTP_STAGE_BY_COMMAND = new Map([
+  ["CONN", "connection"],
+  ["EHLO", "greeting"],
+  ["STARTTLS", "starttls"],
+  ["AUTH PLAIN", "authentication"],
+  ["AUTH LOGIN", "authentication"],
+  ["MAIL FROM", "envelope"],
+  ["RCPT TO", "envelope"],
+  ["DATA", "submission"],
+]);
+
+// SMTP provider messages can contain addresses, credentials, or message data.
+// Keep only a small allow-list of transport codes for application logs.
+const safeSmtpFailureCode = (error) => {
+  if (SAFE_SMTP_FAILURE_CODES.has(error?.code)) return error.code;
+  const responseCode = Number(error?.responseCode);
+  if (Number.isInteger(responseCode) && responseCode >= 400 && responseCode <= 599) return `SMTP_RESPONSE_${responseCode}`;
+  return "SMTP_DELIVERY_FAILED";
+};
+
+const safeSmtpFailureStage = (error) => {
+  const command = String(error?.command || "").trim().toUpperCase();
+  if (SMTP_STAGE_BY_COMMAND.has(command)) return SMTP_STAGE_BY_COMMAND.get(command);
+  if (["EAUTH"].includes(error?.code)) return "authentication";
+  if (["ETLS", "EREQUIRETLS"].includes(error?.code)) return "starttls";
+  if (["ETIMEDOUT", "ECONNECTION", "ECONNREFUSED", "ESOCKET", "ENOTFOUND", "EDNS"].includes(error?.code)) return "connection";
+  if (error?.code === "EENVELOPE") return "envelope";
+  return "delivery";
+};
+
+const safeSmtpFailureDiagnostic = (error) => `stage=${safeSmtpFailureStage(error)} code=${safeSmtpFailureCode(error)}`;
+
 const createLogTransport = (logger = console) => ({
   name: "log",
   async send({ to, subject }) {
@@ -88,7 +124,11 @@ const createSmtpTransport = (config, { nodemailer = require("nodemailer") } = {}
         // Lets the provider or mailbox spot accidental resends of one logical email.
         headers: idempotencyKey ? { "X-EscoWear-Message-Key": idempotencyKey } : undefined,
       });
-      if (Array.isArray(info.rejected) && info.rejected.length) throw new Error("Recipient rejected by the mail server");
+      if (Array.isArray(info.rejected) && info.rejected.length) {
+        const error = new Error("Recipient rejected by the mail server");
+        error.code = "EENVELOPE";
+        throw error;
+      }
       return { providerMessageId: info.messageId };
     },
     // Checks the connection and login without sending anything.
@@ -108,4 +148,12 @@ const createTransportFromEnv = (env = process.env, logger = console, deps = {}) 
   throw new Error(`Unsupported EMAIL_TRANSPORT "${name}"`);
 };
 
-module.exports = { createLogTransport, createSmtpTransport, createTransportFromEnv, isMailbox, readSmtpConfig };
+module.exports = {
+  createLogTransport,
+  createSmtpTransport,
+  createTransportFromEnv,
+  isMailbox,
+  readSmtpConfig,
+  safeSmtpFailureCode,
+  safeSmtpFailureDiagnostic,
+};

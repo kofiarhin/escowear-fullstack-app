@@ -3,18 +3,19 @@ const assert = require("node:assert/strict");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { createModels, startTestApp, silentLogger } = require("./helpers/testApp");
+const { createPasswordResetService } = require("../services/passwordResetService");
 
 const GENERIC_MESSAGE = "If an account matches that email address, we have sent password reset instructions.";
 const hash = (value) => crypto.createHash("sha256").update(value).digest("hex");
 
-const startResetApp = async ({ send, now, models } = {}) => {
+const startResetApp = async ({ send, now, models, logger = silentLogger } = {}) => {
   const sent = [];
   const ctx = await startTestApp({
     models,
     deps: {
       users: {
         publicBaseUrl: "https://shop.example.test",
-        logger: silentLogger,
+        logger,
         now,
         transportFactory: () => ({
           send: async (message) => {
@@ -74,6 +75,51 @@ test("password reset emails use a hashed, 30-minute, single-use token and reset 
   assert.equal(reused.body.error, "This password reset link is invalid or has expired.");
 });
 
+test("password-reset links use the public URL available when the request is handled", async (t) => {
+  const models = createModels();
+  const sent = [];
+  const env = { NODE_ENV: "production" };
+  const service = createPasswordResetService({
+    User: models.User,
+    env,
+    transportFactory: () => ({
+      send: async (message) => {
+        sent.push(message);
+        return { providerMessageId: "test-message" };
+      },
+    }),
+  });
+  env.ESCOWEAR_PUBLIC_URL = "https://shop.example.test";
+  const user = await models.User.create({ name: "Ama", email: "ama@example.test", password: await bcrypt.hash("original-password", 10) });
+
+  await service.requestReset({ email: user.email });
+
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].text, /https:\/\/shop\.example\.test\/reset-password\?token=/);
+});
+
+test("password-reset links use localhost in development and the configured public origin in production", async () => {
+  const sendFor = async (env) => {
+    const models = createModels();
+    const sent = [];
+    const service = createPasswordResetService({
+      User: models.User,
+      env,
+      transportFactory: () => ({ send: async (message) => (sent.push(message), { providerMessageId: "test-message" }) }),
+    });
+    const user = await models.User.create({ name: "Ama", email: "ama@example.test", password: await bcrypt.hash("original-password", 10) });
+    await service.requestReset({ email: user.email });
+    return sent[0].text;
+  };
+
+  const development = await sendFor({ NODE_ENV: "development", ESCOWEAR_PUBLIC_URL: "https://escowear.com" });
+  const production = await sendFor({ NODE_ENV: "production", ESCOWEAR_PUBLIC_URL: "https://escowear.com" });
+
+  assert.match(development, /http:\/\/localhost:3000\/reset-password\?token=/);
+  assert.doesNotMatch(development, /escowear\.com/);
+  assert.match(production, /https:\/\/escowear\.com\/reset-password\?token=/);
+});
+
 test("unknown addresses receive the same response as registered addresses", async (t) => {
   const ctx = await startResetApp();
   t.after(ctx.close);
@@ -118,6 +164,28 @@ test("mail delivery failures do not leave a usable reset token", async (t) => {
   const stored = ctx.models.User.docs.find((entry) => String(entry._id) === String(user._id));
   assert.equal(stored.passwordResetToken, undefined);
   assert.equal(stored.passwordResetExpires, undefined);
+});
+
+test("password-reset delivery diagnostics keep SMTP failure codes but never secrets, addresses, or tokens", async (t) => {
+  const warnings = [];
+  const secret = "private-app-password";
+  const smtpFailure = () => {
+    const error = new Error(`Gmail rejected ${secret} for ama@example.test`);
+    error.code = "EAUTH";
+    return error;
+  };
+  const ctx = await startResetApp({
+    send: async () => { throw smtpFailure(); },
+    logger: { warn: (message) => warnings.push(message) },
+  });
+  t.after(ctx.close);
+  const user = await ctx.models.User.create({ name: "Ama", email: "ama@example.test", password: await bcrypt.hash("original-password", 10) });
+
+  const response = await ctx.request("POST", "/api/users/forgot-password", { body: { email: user.email } });
+
+  assert.equal(response.status, 202);
+  assert.deepEqual(warnings, ["Password reset email could not be sent (stage=authentication code=EAUTH)"]);
+  assert.ok(warnings.every((message) => !message.includes(secret) && !message.includes(user.email)));
 });
 
 test("shared rate limits cap concurrent abuse and expire cleanly", async (t) => {

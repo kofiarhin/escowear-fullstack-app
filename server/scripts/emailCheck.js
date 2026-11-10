@@ -4,7 +4,7 @@
 //   npm run email:check                       # login check only
 //   npm run email:check -- --send-to you@example.com
 require("dotenv").config();
-const { createSmtpTransport, readSmtpConfig } = require("../emails/transports");
+const { createSmtpTransport, readSmtpConfig, safeSmtpFailureDiagnostic } = require("../emails/transports");
 
 const run = async (argv = process.argv.slice(2), { env = process.env, log = console.log, deps } = {}) => {
   const index = argv.indexOf("--send-to");
@@ -29,12 +29,11 @@ const run = async (argv = process.argv.slice(2), { env = process.env, log = cons
 };
 
 // Provider error messages can echo recipients or authentication details, so only
-// safe error codes and readSmtpConfig's own messages (setting names, never values) are shown.
-const SAFE_CODES = new Set(["EAUTH", "ETIMEDOUT", "ECONNECTION", "ECONNREFUSED", "ESOCKET", "ENOTFOUND"]);
+// safe stage/code diagnostics and readSmtpConfig's own messages (setting names,
+// never values) are shown.
 const describeFailure = (error) => {
-  if (SAFE_CODES.has(error?.code)) return error.code;
   if (String(error?.message).startsWith("Invalid SMTP configuration: ")) return error.message;
-  return "check configuration and connection privately";
+  return safeSmtpFailureDiagnostic(error);
 };
 
 if (require.main === module) {
