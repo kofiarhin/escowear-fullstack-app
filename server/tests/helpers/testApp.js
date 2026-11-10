@@ -19,6 +19,7 @@ const createModels = () => ({
   Order: createMemoryModel({ uniques: ["orderNumber", "idempotencyKeyHash"] }),
   OrderEvent: createMemoryModel({ uniques: ["dedupeKey"] }),
   EmailOutbox: createMemoryModel({ uniques: ["dedupeKey"] }),
+  RateLimit: createMemoryModel({ uniques: ["key"] }),
   Product: createMemoryModel(),
   User: createMemoryModel({ uniques: ["email"] }),
   TrackingChallenge: createMemoryModel(),
@@ -69,13 +70,13 @@ const userToken = (userId) => jwt.sign({ id: String(userId) }, process.env.JWT_S
 const startTestApp = async ({ config: configOverrides = {}, deps = {}, models = createModels() } = {}) => {
   const proofDir = configOverrides.proofUploadDir || tempProofDir();
   const config = { ...getOrderConfig({}), checkoutOpen: true, publicBaseUrl: "https://shop.example.test", proofUploadDir: proofDir, ...configOverrides };
-  const userDeps = deps.users ? { User: models.User, logger: silentLogger, ...deps.users } : null;
+  const userDeps = { RateLimit: models.RateLimit, logger: silentLogger, ...(deps.users ? { User: models.User } : {}), ...(deps.users || {}) };
   const app = createApp({
     products: { Product: models.Product },
     heroSlides: { Product: models.Product, HeroSlide: models.HeroSlide },
     orders: { models, config, logger: silentLogger, ...deps.orders },
     admin: { models, config, logger: silentLogger, ...deps.admin },
-    ...(userDeps ? { users: userDeps } : {}),
+    users: userDeps,
   });
   const server = app.listen(0, "127.0.0.1");
   await new Promise((resolve) => server.once("listening", resolve));

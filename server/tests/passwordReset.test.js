@@ -2,18 +2,20 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const { startTestApp, silentLogger } = require("./helpers/testApp");
+const { createModels, startTestApp, silentLogger } = require("./helpers/testApp");
 
 const GENERIC_MESSAGE = "If an account matches that email address, we have sent password reset instructions.";
 const hash = (value) => crypto.createHash("sha256").update(value).digest("hex");
 
-const startResetApp = async ({ send } = {}) => {
+const startResetApp = async ({ send, now, models } = {}) => {
   const sent = [];
   const ctx = await startTestApp({
+    models,
     deps: {
       users: {
         publicBaseUrl: "https://shop.example.test",
         logger: silentLogger,
+        now,
         transportFactory: () => ({
           send: async (message) => {
             if (send) return send(message);
@@ -34,6 +36,7 @@ test("password reset emails use a hashed, 30-minute, single-use token and reset 
   t.after(ctx.close);
   const originalHash = await bcrypt.hash("original-password", 10);
   const user = await ctx.models.User.create({ name: "Ama", email: "ama@example.test", password: originalHash, role: "admin" });
+  const preResetSession = require("jsonwebtoken").sign({ id: String(user._id), sv: 0 }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
   const requested = await ctx.request("POST", "/api/users/forgot-password", { body: { email: user.email } });
   assert.equal(requested.status, 202);
@@ -54,9 +57,17 @@ test("password reset emails use a hashed, 30-minute, single-use token and reset 
   assert.equal(stored.passwordResetToken, undefined);
   assert.equal(stored.passwordResetExpires, undefined);
 
+  const revokedCustomerSession = await ctx.request("GET", "/api/orders", { token: preResetSession });
+  assert.equal(revokedCustomerSession.status, 401);
+  assert.equal(revokedCustomerSession.body.code, "SESSION_REVOKED");
+  const revokedAdminSession = await ctx.request("GET", "/api/admin/orders", { token: preResetSession });
+  assert.equal(revokedAdminSession.status, 401);
+  assert.equal(revokedAdminSession.body.code, "SESSION_REVOKED");
+
   const login = await ctx.request("POST", "/api/users/login", { body: { email: user.email, password: "a-new-secure-password" } });
   assert.equal(login.status, 200);
   assert.equal(login.body.role, "admin");
+  assert.equal((await ctx.request("GET", "/api/admin/orders", { token: login.body.token })).status, 200);
 
   const reused = await ctx.request("POST", "/api/users/reset-password", { body: { token, password: "another-secure-password" } });
   assert.equal(reused.status, 400);
@@ -109,14 +120,44 @@ test("mail delivery failures do not leave a usable reset token", async (t) => {
   assert.equal(stored.passwordResetExpires, undefined);
 });
 
-test("forgot-password and reset submissions are rate limited", async (t) => {
+test("shared rate limits cap concurrent abuse and expire cleanly", async (t) => {
+  let time = new Date("2026-11-08T12:00:00.000Z");
+  const models = createModels();
+  const first = await startResetApp({ now: () => time, models });
+  const second = await startResetApp({ now: () => time, models });
+  t.after(first.close);
+  t.after(second.close);
+  const requests = await Promise.all(
+    Array.from({ length: 12 }, (_, index) => (index % 2 ? first : second).request("POST", "/api/users/forgot-password", { body: { email: `unknown-${index}@example.test` } }))
+  );
+  assert.equal(requests.filter((response) => response.status === 202).length, 10);
+  const limited = requests.find((response) => response.status === 429);
+  assert.equal(limited.body.code, "RATE_LIMITED");
+  assert.ok(limited.headers.get("retry-after"));
+
+  time = new Date(time.getTime() + 16 * 60 * 1000);
+  const afterExpiry = await first.request("POST", "/api/users/forgot-password", { body: { email: "after-expiry@example.test" } });
+  assert.equal(afterExpiry.status, 202);
+});
+
+test("login, registration, and password-reset submission limits are enforced", async (t) => {
   const ctx = await startResetApp();
   t.after(ctx.close);
-  for (let index = 0; index < 10; index += 1) {
-    const response = await ctx.request("POST", "/api/users/forgot-password", { body: { email: `unknown-${index}@example.test` } });
-    assert.equal(response.status, 202);
+  for (let index = 0; index < 20; index += 1) {
+    assert.equal((await ctx.request("POST", "/api/users/login", { body: { email: `login-${index}@example.test`, password: "invalid-password" } })).status, 400);
   }
-  const limited = await ctx.request("POST", "/api/users/forgot-password", { body: { email: "one-more@example.test" } });
-  assert.equal(limited.status, 429);
-  assert.equal(limited.body.code, "RATE_LIMITED");
+  const loginLimited = await ctx.request("POST", "/api/users/login", { body: { email: "login-limited@example.test", password: "invalid-password" } });
+  assert.equal(loginLimited.status, 429);
+
+  for (let index = 0; index < 10; index += 1) {
+    assert.equal((await ctx.request("POST", "/api/users/register", { body: {} })).status, 400);
+  }
+  assert.equal((await ctx.request("POST", "/api/users/register", { body: {} })).status, 429);
+
+  for (let index = 0; index < 20; index += 1) {
+    assert.equal((await ctx.request("POST", "/api/users/reset-password", { body: { token: "a".repeat(64), password: "a-new-secure-password" } })).status, 400);
+  }
+  const resetLimited = await ctx.request("POST", "/api/users/reset-password", { body: { token: "a".repeat(64), password: "a-new-secure-password" } });
+  assert.equal(resetLimited.status, 429);
+  assert.equal(resetLimited.body.code, "RATE_LIMITED");
 });

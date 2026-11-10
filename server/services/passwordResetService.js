@@ -96,6 +96,7 @@ const createPasswordResetService = ({
       },
       {
         $set: { password: passwordHash },
+        $inc: { sessionVersion: 1 },
         $unset: { passwordResetToken: 1, passwordResetExpires: 1 },
       },
       { new: true }

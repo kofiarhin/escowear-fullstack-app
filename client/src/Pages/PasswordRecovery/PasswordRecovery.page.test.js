@@ -1,12 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import ForgotPassword from "./ForgotPassword.page";
 import ResetPassword from "./ResetPassword.page";
 
 const renderPage = (path, element) =>
   render(
     <MemoryRouter initialEntries={[path]}>
+      <LocationProbe />
       <Routes>
         <Route path="/forgot-password" element={element} />
         <Route path="/reset-password" element={element} />
@@ -14,6 +15,8 @@ const renderPage = (path, element) =>
       </Routes>
     </MemoryRouter>
   );
+
+const LocationProbe = () => <output data-testid="location-search">{useLocation().search}</output>;
 
 beforeEach(() => {
   global.fetch = jest.fn();
@@ -34,6 +37,8 @@ test("reset password validates matching 10-character passwords and submits the U
   global.fetch.mockResolvedValue({ ok: true, json: async () => ({ message: "Your password has been reset. You can now sign in." }) });
   renderPage("/reset-password?token=test-token", <ResetPassword />);
 
+  await waitFor(() => expect(screen.getByTestId("location-search")).toHaveTextContent(""));
+
   await userEvent.type(screen.getByLabelText("New password"), "short");
   await userEvent.type(screen.getByLabelText("Confirm new password"), "different");
   await userEvent.click(screen.getByRole("button", { name: "Reset password" }));
@@ -46,6 +51,9 @@ test("reset password validates matching 10-character passwords and submits the U
   await userEvent.type(screen.getByLabelText("Confirm new password"), "a-new-secure-password");
   await userEvent.click(screen.getByRole("button", { name: "Reset password" }));
   expect(await screen.findByText(/password has been reset/i)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Reset password" })).not.toBeInTheDocument();
+  expect(localStorage).toHaveLength(0);
+  expect(sessionStorage).toHaveLength(0);
   await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/users/reset-password", expect.objectContaining({ body: JSON.stringify({ token: "test-token", password: "a-new-secure-password" }) })));
 });
 

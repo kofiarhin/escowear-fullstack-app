@@ -28,6 +28,15 @@ const createApp = (deps = {}) => {
 
   // setup middlewares
   app.use(express.json({ limit: "32kb" }));
+  // Reset links contain a one-time credential until the client clears it.
+  // Prevent browser/proxy caching and cross-site referrer propagation.
+  app.use((req, res, next) => {
+    if (req.path === "/reset-password") {
+      res.set("Cache-Control", "no-store");
+      res.set("Referrer-Policy", "no-referrer");
+    }
+    next();
+  });
   app.use("/api/products", deps.products ? productsRoutes.createProductsRouter(deps.products.Product) : productsRoutes);
   app.use("/api/hero-slides", createHeroSlidesRouter(deps.heroSlides || {}));
   app.use("/api/orders", createOrdersRouter(deps.orders));

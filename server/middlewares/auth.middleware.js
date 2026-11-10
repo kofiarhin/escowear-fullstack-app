@@ -27,6 +27,14 @@ const createAuth = (UserModel = User) => {
     }
     const user = await UserModel.findOne({ _id: payload.id });
     if (!user) return { error: 404, message: "authorization - user not found" };
+    // Legacy tokens have no session version and map to version zero. A reset
+    // increments the stored version atomically with the new password, which
+    // revokes every earlier token without changing normal JWT expiry rules.
+    const tokenSessionVersion = payload.sv === undefined ? 0 : payload.sv;
+    const userSessionVersion = user.sessionVersion || 0;
+    if (!Number.isSafeInteger(tokenSessionVersion) || tokenSessionVersion < 0 || tokenSessionVersion !== userSessionVersion) {
+      return { error: 401, message: "Unauthorized - session expired", code: "SESSION_REVOKED" };
+    }
     return { user, issuedAt: typeof payload.iat === "number" ? payload.iat : 0 };
   };
 
@@ -35,7 +43,7 @@ const createAuth = (UserModel = User) => {
     if (!token) return res.status(401).json({ error: "Unauthorized - no token" });
     try {
       const result = await resolveUser(token);
-      if (result.error) return res.status(result.error).json({ error: result.message });
+      if (result.error) return res.status(result.error).json({ error: result.message, ...(result.code ? { code: result.code } : {}) });
       req.user = result.user;
       req.tokenIssuedAt = result.issuedAt;
       return next();

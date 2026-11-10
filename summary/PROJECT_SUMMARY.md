@@ -2,7 +2,7 @@
 
 ## Last Task
 
-Upgraded the admin product gallery to combine Cloudinary uploads with validated external image URLs and retain imported product galleries on edit.
+Hardened the password-recovery feature with persistent session revocation, MongoDB-backed authentication rate limits, and browser reset-token protection.
 
 ## Progress
 
@@ -15,6 +15,8 @@ Upgraded the admin product gallery to combine Cloudinary uploads with validated 
 - Colour selections now use the shared `client/src/constants/productColors.json` list, support removable custom values, preserve legacy `color`/`colors` records on edit, and store the first selected value in `color` for storefront compatibility.
 - Removed the MongoDB colour-options API and migration script; no product database migration is required for the multi-select redesign.
 - Admin galleries now support add, replace, remove, reorder, and cover selection for uploaded and external URLs. Imported product details remain protected while admins can update their image galleries; focused frontend/backend tests and the production build passed.
+- Password resets atomically increment `User.sessionVersion`, revoking prior customer and admin JWTs; reset URLs are history-replaced and protected with no-store/no-referrer controls.
+- Login, registration, and recovery limits now use MongoDB counters with a TTL index, so concurrent application instances share the same limits. The existing admin product/image-management work remains in the branch and was not modified by this hardening pass.
 
 ## Files
 
@@ -24,6 +26,9 @@ Upgraded the admin product gallery to combine Cloudinary uploads with validated 
 - `client/src/Pages/AdminHeroSlides/AdminHeroSlides.page.js`
 - `client/src/Pages/AdminHeroSlides/AdminHeroSlides.test.js`
 - `server/controllers/adminProductsController.js`
+- `server/services/passwordResetService.js`
+- `server/middlewares/persistentRateLimit.js`
+- `server/Models/RateLimit.model.js`
 - `server/services/productImageStorage.js`
 - `client/src/Pages/AdminProducts/AdminProducts.page.js`
 - `server/services/productBrands.js`

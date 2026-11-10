@@ -5,8 +5,8 @@ const { ADMIN_SESSION_SECONDS } = require("../middlewares/auth.middleware");
 const { createPasswordResetService, PASSWORD_MAX, PASSWORD_MIN } = require("../services/passwordResetService");
 
 // Admins get short sessions; customers keep the existing 30-day sign-in.
-const createToken = (id, role) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: role === "admin" ? ADMIN_SESSION_SECONDS : "30d" });
+const createToken = (id, role, sessionVersion = 0) =>
+  jwt.sign({ id, sv: sessionVersion }, process.env.JWT_SECRET, { expiresIn: role === "admin" ? ADMIN_SESSION_SECONDS : "30d" });
 
 const createUsersController = ({ UserModel = User, passwordResetService = createPasswordResetService({ User: UserModel }) } = {}) => {
 
@@ -72,7 +72,7 @@ const loginUser = async (req, res) => {
         // `role` only drives what the UI shows; every admin API re-checks it server-side.
         return res
           .status(200)
-          .json({ id: _id, email, name, role: user.role || "customer", token: createToken(_id, user.role) });
+          .json({ id: _id, email, name, role: user.role || "customer", token: createToken(_id, user.role, user.sessionVersion || 0) });
       } else {
         return res.status(400).json({ error: "Invalid email or password" });
       }

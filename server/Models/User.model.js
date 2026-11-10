@@ -21,6 +21,9 @@ const userSchema = new mongoose.Schema(
     // reset an account. These fields are hidden from normal queries.
     passwordResetToken: { type: String, select: false },
     passwordResetExpires: { type: Date, select: false },
+    // Every issued JWT carries this value. Incrementing it persistently makes
+    // all prior customer and admin sessions invalid after a password reset.
+    sessionVersion: { type: Number, default: 0, min: 0 },
     // Only the operator CLI (server/scripts/setUserRole.js) grants "admin";
     // registration never accepts this field.
     role: {
