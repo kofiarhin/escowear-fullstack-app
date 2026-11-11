@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "declaration-property-value-disallowed-list": {
+      "/^(align|justify|place)-(items|self|content)$/": [
+        "end"
+      ]
+    }
+  }
+}
