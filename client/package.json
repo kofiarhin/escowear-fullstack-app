@@ -19,9 +19,10 @@
     "start": "react-scripts start",
     "prebuild": "node scripts/check-policies.cjs",
     "build": "react-scripts build",
-    "lint": "eslint src --max-warnings=0",
+    "lint": "eslint src --max-warnings=0 && npm run lint:css",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint:css": "npm exec --yes --package=stylelint@17.16.0 -- stylelint \"src/**/*.css\" --max-warnings 0"
   },
   "proxy": "http://localhost:5000",
   "eslintConfig": {
