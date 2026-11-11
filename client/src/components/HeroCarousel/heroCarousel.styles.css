@@ -216,7 +216,7 @@
     background: linear-gradient(0deg, rgba(6,9,14,.98) 0%, rgba(7,10,15,.92) 27%, rgba(7,10,15,.69) 47%, rgba(7,10,15,.05) 78%);
   }
   .hero-carousel__copy {
-    align-self: end;
+    align-self: flex-end;
     width: calc(100% - 44px);
     margin: 0 22px max(89px, env(safe-area-inset-bottom));
   }
