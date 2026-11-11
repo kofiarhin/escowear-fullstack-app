@@ -82,8 +82,8 @@ test("uses a non-cropped catalogue image treatment and preserves the product des
   global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ items: [
     { ...slides[0], desktopImage: "/images/shoes/nike-run/1.jpg" },
   ] }) });
-  const { container } = renderCarousel();
+  renderCarousel();
   await screen.findByRole("heading", { name: "FIRST PAIR" });
-  expect(container.querySelector(".hero-carousel__media--catalogue img")).toHaveAttribute("src", "/images/shoes/nike-run/1.jpg");
+  expect(screen.getByRole("img", { hidden: true })).toHaveAttribute("src", "/images/shoes/nike-run/1.jpg");
   expect(screen.getByRole("link", { name: /shop now/i })).toHaveAttribute("href", "/details/product-1");
 });
