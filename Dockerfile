@@ -6,6 +6,7 @@ RUN npm ci --no-audit --no-fund
 
 FROM frontend-deps AS frontend-test
 COPY client/ ./
+RUN npm run lint
 ENV NODE_OPTIONS=--max-old-space-size=1536
 RUN CI=true npm test -- --watchAll=false --runInBand
 

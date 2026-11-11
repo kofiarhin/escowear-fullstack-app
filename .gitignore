@@ -38,3 +38,6 @@ Thumbs.db
 # Existing local-only paths
 /frontend/
 /playground.js
+
+# Local deployment state and rollback metadata
+/.deploy-state/
