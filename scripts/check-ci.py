@@ -62,7 +62,7 @@ def main():
     if not matching:
         fail(f"No master push CI workflow found for {sha[:12]}")
 
-    latest = max(matching, key=lambda run: (run.get("run_attempt", 0), run.get("created_at", ""), run.get("id", 0)))
+    latest = max(matching, key=lambda run: (run.get("created_at", ""), run.get("id", 0), run.get("run_attempt", 0)))
     if latest.get("status") != "completed" or latest.get("conclusion") != "success":
         fail(f"CI has not passed for {sha[:12]} (status={latest.get('status')}, conclusion={latest.get('conclusion')})")
 
