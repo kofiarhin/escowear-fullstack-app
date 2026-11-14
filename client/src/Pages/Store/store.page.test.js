@@ -49,10 +49,8 @@ test("submitting a trimmed search requests matching products on page one", async
   await userEvent.click(screen.getByRole("button", { name: "Search" }));
 
   expect(screen.getByTestId("location")).toHaveTextContent("search=nike&page=1");
-  await waitFor(() => {
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("search=nike"));
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("page=1"));
-  });
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("search=nike")));
+  expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("page=1"));
 });
 
 test("clearing search restores the full catalogue on page one", async () => {
