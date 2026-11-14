@@ -1,5 +1,7 @@
 # GitHub Actions CI and manual Beast deployment
 
+The deployment CI guard is implemented in Node.js (no Python required).
+
 GitHub Actions runs `CI / verify` on every pull request and push to `master`. It runs the same Docker frontend test/lint stage, production build and isolated backend tests required by the existing release flow. CI uses no production database, mail settings or secrets.
 
 ## Protect master

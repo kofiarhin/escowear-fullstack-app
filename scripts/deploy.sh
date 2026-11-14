@@ -49,8 +49,7 @@ if [[ "$mode" == deploy ]]; then
   [[ -z "$(git status --porcelain)" ]] || fail "Git tree changed unexpectedly"
   # Fail closed before image builds or service replacement unless CI passed
   # for exactly the SHA pulled from master. Token is never printed.
-  for cmd in python3; do command -v "$cmd" >/dev/null || fail "Missing $cmd for CI gate"; done
-  python3 "$ROOT/scripts/check-ci.py" "${DEPLOY_REMOTE#github.com/}" "$(git rev-parse HEAD)"
+  node "$ROOT/scripts/check-ci.cjs" "${DEPLOY_REMOTE#github.com/}" "$(git rev-parse HEAD)"
 fi
 
 container="$("${compose[@]}" ps -aq "$DEPLOY_SERVICE" | head -n 1)"
