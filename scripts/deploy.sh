@@ -179,5 +179,11 @@ for tag in "${tags[@]}"; do
   [[ "$tag" == "$DEPLOY_IMAGE:rollback-"* && "$tag" != "$rollback_ref" ]] || continue
   "${dk[@]}" image rm "$tag" >/dev/null 2>&1 || log "Skipped in-use rollback image $tag"
 done
-"${dk[@]}" image rm "$DEPLOY_IMAGE:test-${commit:0:12}" >/dev/null 2>&1 || true
+# Remove only this project's disposable test images, including leftovers from
+# interrupted deployments. Docker refuses to remove images still in use.
+mapfile -t test_tags < <("${dk[@]}" image ls --format '{{.Repository}}:{{.Tag}}' --filter "reference=$DEPLOY_IMAGE:test-*")
+for tag in "${test_tags[@]}"; do
+  [[ "$tag" == "$DEPLOY_IMAGE:test-"* ]] || continue
+  "${dk[@]}" image rm "$tag" >/dev/null 2>&1 || log "Skipped in-use test image $tag"
+done
 log "DEPLOYED $release (previous image retained: $rollback_ref)"
