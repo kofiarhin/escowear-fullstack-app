@@ -61,6 +61,7 @@ const Store = () => {
   };
 
   const handleFilter = (value) => {
+    setSearchInput(value);
     dispatch(setSearchField(value));
     setSearchParams(
       value
