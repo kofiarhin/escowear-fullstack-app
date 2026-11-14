@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import ProductList from "../../components/ProductList/ProductList.component";
@@ -19,6 +19,7 @@ const Store = () => {
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSearch = searchParams.get("search") || "";
+  const [searchInput, setSearchInput] = useState(requestedSearch);
   const requestedCategory = (searchParams.get("category") || "").toLowerCase() === "shoes"
     ? ""
     : searchParams.get("category") || "";
@@ -41,9 +42,23 @@ const Store = () => {
 
   useEffect(() => {
     dispatch(setSearchField(requestedSearch));
+    setSearchInput(requestedSearch);
   }, [dispatch, requestedSearch]);
 
   const normalizedSearch = searchField.trim().toLowerCase();
+
+  const handleSearch = (event) => {
+    event.preventDefault();
+    const query = searchInput.trim();
+    dispatch(setSearchField(query));
+    setSearchParams(query ? { search: query, page: "1" } : { page: "1" });
+  };
+
+  const clearSearch = () => {
+    setSearchInput("");
+    dispatch(setSearchField(""));
+    setSearchParams({ page: "1" });
+  };
 
   const handleFilter = (value) => {
     dispatch(setSearchField(value));
@@ -86,6 +101,23 @@ const Store = () => {
           </span>
         )}
       </div>
+
+      <form className="store-search container" role="search" onSubmit={handleSearch}>
+        <label htmlFor="store-search-input">Search sneakers</label>
+        <div className="store-search-controls">
+          <input
+            id="store-search-input"
+            type="search"
+            placeholder="Search by model or brand"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+          />
+          <button type="submit">Search</button>
+          {(requestedSearch || searchInput) && (
+            <button type="button" className="store-search-clear" onClick={clearSearch}>Clear</button>
+          )}
+        </div>
+      </form>
 
       <div className="categories" aria-label="Filter sneakers">
         {filters.map((filter) => (
