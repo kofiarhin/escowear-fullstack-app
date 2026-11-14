@@ -37,7 +37,7 @@ test('fails for a different commit, event, branch, or workflow', async () => {
     { head_sha: 'b'.repeat(40) }, { event: 'pull_request' },
     { head_branch: 'feature' }, { path: '.github/workflows/other.yml' },
   ]) {
-    await assert.rejects(verify([run(changes)], [job()]]), /No master push CI workflow/);
+    await assert.rejects(verify([run(changes)], [job()]), /No master push CI workflow/);
   }
 });
 test('fails for pending or failed CI', async () => {
