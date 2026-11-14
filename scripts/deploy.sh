@@ -47,6 +47,9 @@ if [[ "$mode" == deploy ]]; then
   git fetch --quiet origin "$DEPLOY_BRANCH"
   git merge --ff-only "refs/remotes/origin/$DEPLOY_BRANCH" || fail "Git fast-forward failed"
   [[ -z "$(git status --porcelain)" ]] || fail "Git tree changed unexpectedly"
+  # Fail closed before image builds or service replacement unless CI passed
+  # for exactly the SHA pulled from master. Token is never printed.
+  node "$ROOT/scripts/check-ci.cjs" "${DEPLOY_REMOTE#github.com/}" "$(git rev-parse HEAD)"
 fi
 
 container="$("${compose[@]}" ps -aq "$DEPLOY_SERVICE" | head -n 1)"

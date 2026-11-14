@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test CI deployment gate (Node.js, offline)
+        run: node --test scripts/tests/*.test.cjs
+      - name: Frontend lint and tests (production Docker stage)
+        run: docker build --target frontend-test -t escowear:ci-frontend-test .
+      - name: Production Docker build
+        run: docker build -t escowear:ci-production .
+      - name: Backend tests (isolated, no network)
+        run: docker run --rm --network none --entrypoint sh escowear:ci-production -c 'node --test server/tests/*.test.js'
