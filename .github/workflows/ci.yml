@@ -32,3 +32,5 @@ jobs:
         run: docker build -t escowear:ci-production .
       - name: Backend tests (isolated, no network)
         run: docker run --rm --network none --entrypoint sh escowear:ci-production -c 'node --test server/tests/*.test.js'
+      - name: Runtime files readable, not writable, by the app user
+        run: docker run --rm --network none --entrypoint sh escowear:ci-production -c 'test -z "$(find /app -path /app/data -prune -o \( ! -readable -o -writable \) -print)"'
