@@ -154,6 +154,9 @@ log "Building $release"
 "${compose[@]}" -f "$state/candidate.yaml" build "$DEPLOY_SERVICE"
 log "Running server tests without network access"
 "${dk[@]}" run --rm --network none --entrypoint sh "$release" -c "$DEPLOY_BACKEND_TEST_COMMAND"
+log "Checking runtime file permissions as the app user"
+"${dk[@]}" run --rm --network none --entrypoint sh "$release" -c "$DEPLOY_PERMISSION_CHECK_COMMAND" \
+  || fail "Runtime files are unreadable or writable by the app user; not deploying"
 
 checkout="$("${compose[@]}" config --format json | node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>console.log(JSON.parse(s).services[process.argv[1]].environment.ESCOWEAR_CHECKOUT_OPEN||"false"))' "$DEPLOY_SERVICE")"
 if [[ "$checkout" == true ]]; then
