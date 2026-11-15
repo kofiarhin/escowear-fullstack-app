@@ -32,7 +32,7 @@ test("public hero slides return only active, resolved products in stable order",
   assert.equal(response.body.items[0].desktopImage, "/images/hero/second.jpg");
   assert.equal(response.body.items[0].mobileImage, "/images/hero/second.jpg");
   assert.equal(response.body.items[0].productInStock, true);
-  assert.deepEqual(Object.keys(response.body.items[0]).sort(), ["description", "desktopImage", "headline", "id", "mobileImage", "order", "productId", "productInStock", "productName"].sort());
+  assert.deepEqual(Object.keys(response.body.items[0]).sort(), ["description", "desktopImage", "desktopVideo", "headline", "id", "mobileImage", "mobileVideo", "order", "posterImage", "productId", "productInStock", "productName"].sort());
 });
 
 test("admin hero CRUD validates fields, product references, images and duplicate products", async (t) => {
@@ -77,4 +77,125 @@ test("admin rejects a ninth active slide without partial writes, including concu
   assert.equal(results.filter((result) => result.status === 201).length, 1);
   assert.equal(results.filter((result) => result.status === 409).length, 2);
   assert.equal(ctx.models.HeroSlide.docs.filter((slide) => slide.isActive).length, 8);
+});
+
+test("video fields are accepted, persisted, returned and validated correctly", async (t) => {
+  const ctx = await startTestApp();
+  t.after(ctx.close);
+  const admin = await ctx.addUser({ role: "admin" });
+  const token = userToken(admin._id);
+  const product = await ctx.models.Product.create(sampleProduct());
+  const alternate = await ctx.models.Product.create(sampleProduct({ name: "Alternate pair" }));
+
+  // Create a video slide with all three new fields
+  const created = await ctx.request("POST", "/api/admin/hero-slides", {
+    token,
+    body: createSlide(product._id, {
+      order: 0,
+      desktopVideo: "https://res.cloudinary.com/dlsiabgiw/video/upload/hero-video-1_kcv6pl.mp4",
+      mobileVideo: "https://res.cloudinary.com/dlsiabgiw/video/upload/w_768/hero-video-1_kcv6pl.mp4",
+      posterImage: "https://res.cloudinary.com/dlsiabgiw/video/upload/so_0/hero-video-1_kcv6pl.jpg",
+      isActive: true,
+    }),
+  });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.item.desktopVideo, "https://res.cloudinary.com/dlsiabgiw/video/upload/hero-video-1_kcv6pl.mp4");
+  assert.equal(created.body.item.mobileVideo, "https://res.cloudinary.com/dlsiabgiw/video/upload/w_768/hero-video-1_kcv6pl.mp4");
+  assert.equal(created.body.item.posterImage, "https://res.cloudinary.com/dlsiabgiw/video/upload/so_0/hero-video-1_kcv6pl.jpg");
+  const id = created.body.item.id;
+
+  // Public endpoint returns video fields
+  const pub = await ctx.request("GET", "/api/hero-slides");
+  assert.equal(pub.body.items[0].desktopVideo, "https://res.cloudinary.com/dlsiabgiw/video/upload/hero-video-1_kcv6pl.mp4");
+  assert.equal(pub.body.items[0].mobileVideo, "https://res.cloudinary.com/dlsiabgiw/video/upload/w_768/hero-video-1_kcv6pl.mp4");
+  assert.equal(pub.body.items[0].posterImage, "https://res.cloudinary.com/dlsiabgiw/video/upload/so_0/hero-video-1_kcv6pl.jpg");
+
+  // Patch to remove video (revert to image slide)
+  const cleared = await ctx.request("PATCH", `/api/admin/hero-slides/${id}`, { token, body: { desktopVideo: "", mobileVideo: "", posterImage: "" } });
+  assert.equal(cleared.status, 200);
+  assert.equal(cleared.body.item.desktopVideo, "");
+
+  // Patch to add video back
+  const restored = await ctx.request("PATCH", `/api/admin/hero-slides/${id}`, { token, body: { desktopVideo: "https://res.cloudinary.com/dlsiabgiw/video/upload/hero-video-2_nr2029.mp4" } });
+  assert.equal(restored.status, 200);
+  assert.equal(restored.body.item.desktopVideo, "https://res.cloudinary.com/dlsiabgiw/video/upload/hero-video-2_nr2029.mp4");
+
+  // Image-only slides still work (default empty video fields)
+  const imageSlide = await ctx.request("POST", "/api/admin/hero-slides", {
+    token,
+    body: createSlide(alternate._id, { order: 1, isActive: true }),
+  });
+  assert.equal(imageSlide.status, 201);
+  assert.equal(imageSlide.body.item.desktopVideo, "");
+  assert.equal(imageSlide.body.item.mobileVideo, "");
+  assert.equal(imageSlide.body.item.posterImage, "");
+});
+
+test("video source validation rejects invalid schemes, embed URLs and unsupported formats", async (t) => {
+  const ctx = await startTestApp();
+  t.after(ctx.close);
+  const admin = await ctx.addUser({ role: "admin" });
+  const token = userToken(admin._id);
+  const product = await ctx.models.Product.create(sampleProduct());
+
+  const base = createSlide(product._id, { order: 0 });
+
+  // Reject player.cloudinary.com embed URL with actionable error
+  const embed = await ctx.request("POST", "/api/admin/hero-slides", {
+    token,
+    body: { ...base, desktopVideo: "https://player.cloudinary.com/embed/?cloud_name=dlsiabgiw&public_id=hero-video-1_kcv6pl" },
+  });
+  assert.equal(embed.status, 400);
+  assert.ok(embed.body.fields.desktopVideo.includes("delivery URL"));
+
+  // Reject javascript: scheme
+  const js = await ctx.request("POST", "/api/admin/hero-slides", {
+    token,
+    body: { ...base, desktopVideo: "javascript:alert(1)" },
+  });
+  assert.equal(js.status, 400);
+
+  // Reject http: (not https)
+  const http = await ctx.request("POST", "/api/admin/hero-slides", {
+    token,
+    body: { ...base, desktopVideo: "http://example.com/video.mp4" },
+  });
+  assert.equal(http.status, 400);
+
+  // Reject URL with credentials
+  const creds = await ctx.request("POST", "/api/admin/hero-slides", {
+    token,
+    body: { ...base, desktopVideo: "https://user:pass@cdn.example.com/video.mp4" },
+  });
+  assert.equal(creds.status, 400);
+
+  // Reject URL without video extension
+  const noExt = await ctx.request("POST", "/api/admin/hero-slides", {
+    token,
+    body: { ...base, desktopVideo: "https://cdn.example.com/video" },
+  });
+  assert.equal(noExt.status, 400);
+
+  // Reject HTML page URL
+  const html = await ctx.request("POST", "/api/admin/hero-slides", {
+    token,
+    body: { ...base, desktopVideo: "https://cdn.example.com/page.html" },
+  });
+  assert.equal(html.status, 400);
+
+  // Accept valid .webm URL
+  const webm = await ctx.request("POST", "/api/admin/hero-slides", {
+    token,
+    body: { ...base, desktopVideo: "https://res.cloudinary.com/dlsiabgiw/video/upload/hero-video-1_kcv6pl.webm" },
+  });
+  assert.equal(webm.status, 201);
+
+  // posterImage uses image validation rules
+  const product2 = await ctx.models.Product.create(sampleProduct({ name: "Pair two" }));
+  const badPoster = await ctx.request("POST", "/api/admin/hero-slides", {
+    token,
+    body: createSlide(product2._id, { order: 1, posterImage: "javascript:alert(1)" }),
+  });
+  assert.equal(badPoster.status, 400);
+  assert.ok(badPoster.body.fields.posterImage);
 });
