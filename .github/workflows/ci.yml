@@ -22,9 +22,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test CI deployment gate (Node.js, offline)
         run: node --test scripts/tests/*.test.cjs
+      # Beast builds from an owner-only checkout (files 600, directories 700). Build
+      # the same way so the image never depends on the host checkout's file modes.
+      - name: Use Beast's owner-only checkout permissions
+        run: chmod -R go-rwx .
       - name: Frontend lint and tests (production Docker stage)
         run: docker build --target frontend-test -t escowear:ci-frontend-test .
       - name: Production Docker build
         run: docker build -t escowear:ci-production .
       - name: Backend tests (isolated, no network)
         run: docker run --rm --network none --entrypoint sh escowear:ci-production -c 'node --test server/tests/*.test.js'
+      - name: Runtime files readable, not writable, by the app user
+        run: docker run --rm --network none --entrypoint sh escowear:ci-production -c 'test -z "$(find /app -path /app/data -prune -o \( ! -readable -o -writable \) -print)"'
