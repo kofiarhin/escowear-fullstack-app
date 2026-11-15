@@ -34,17 +34,19 @@ function sshEntry() {
 }
 
 const STUB_DEPLOY = `#!/usr/bin/env bash
-echo "[deploy] stub args=$* expected=\${DEPLOY_EXPECTED_SHA:-none} token=\${ESCOWEAR_GITHUB_TOKEN:+set}"
+echo "[deploy] stub args=$* expected=\${DEPLOY_EXPECTED_SHA:-none} token=\${ESCOWEAR_GITHUB_TOKEN:+leaked} file=\${ESCOWEAR_GITHUB_TOKEN_FILE:-none}"
 echo "noise that must stay in the private log"
 exit "\${STUB_EXIT:-0}"
 `;
 
 function fixture() {
   const root = tempDir();
+  const base = path.join(root, 'base');
+  fs.mkdirSync(base, { mode: 0o700 });
   const origin = path.join(root, 'origin.git');
-  const repo = path.join(root, 'repo');
-  const state = path.join(root, 'state');
-  const tokenFile = path.join(root, 'token');
+  const repo = path.join(base, 'escowear');
+  const state = path.join(base, 'automation');
+  const tokenFile = path.join(base, 'github-actions-read.token');
   execFileSync('git', ['init', '--quiet', '--bare', '--initial-branch=master', origin]);
   execFileSync('git', ['clone', '--quiet', origin, repo], { stdio: 'ignore' });
   git(repo, 'switch', '--quiet', '-c', 'master');
@@ -61,15 +63,13 @@ function fixture() {
   const wrapper = path.join(root, 'run');
   const user = os.userInfo().username;
   const source = fs.readFileSync(path.join(AUTOMATION, 'escowear-deploy-run'), 'utf8')
-    .replace(/^REPO=.*$/m, `REPO=${repo}`)
-    .replace(/^STATE=.*$/m, `STATE=${state}`)
-    .replace(/^TOKEN_FILE=.*$/m, `TOKEN_FILE=${tokenFile}`)
+    .replace(/^BASE=.*$/m, `BASE=${base}`)
     .replace(/^RUN_USER=.*$/m, `RUN_USER=${user}`);
   fs.writeFileSync(wrapper, source, { mode: 0o755 });
   const run = (args, env = {}) => spawnSync('bash', [wrapper, ...args], {
     encoding: 'utf8', env: { PATH: process.env.PATH, HOME: root, ...env },
   });
-  return { root, repo, state, tokenFile, first, tip, run };
+  return { root, base, repo, state, tokenFile, first, tip, run };
 }
 
 test('SSH entry allows only check and deploy <40 lowercase hex>', () => {
@@ -90,7 +90,7 @@ test('deploys the current origin/master tip, filtering output and passing the ex
   const f = fixture();
   const result = f.run(['deploy', f.tip]);
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, new RegExp(`stub args= expected=${f.tip} token=set`));
+  assert.match(result.stdout, new RegExp(`stub args= expected=${f.tip} token= file=${f.tokenFile}`));
   assert.doesNotMatch(result.stdout, /noise/);
   assert.doesNotMatch(result.stdout + result.stderr, new RegExp(TOKEN));
   const logs = fs.readdirSync(path.join(f.state, 'logs'));
@@ -112,7 +112,7 @@ test('check mode runs the read-only preflight without the token', () => {
   fs.rmSync(f.tokenFile);
   const result = f.run(['check']);
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /stub args=--check expected=none token= *$/m);
+  assert.match(result.stdout, /stub args=--check expected=none token= file=none$/m);
 });
 
 test('refuses dirty checkouts and local commits that GitHub does not have', () => {
@@ -167,6 +167,20 @@ test('refuses overlapping requests while another holds the lock', () => {
   });
   assert.equal(result.status, 75);
   assert.match(result.stderr, /another deployment request is running/);
+});
+
+test('refuses to run from a checkout others can enter or replace', () => {
+  const open = fixture();
+  fs.chmodSync(open.base, 0o750);
+  let result = open.run(['check']);
+  assert.equal(result.status, 66);
+  assert.match(result.stderr, /mode 700/);
+
+  const parent = fixture();
+  fs.chmodSync(parent.root, 0o777);
+  result = parent.run(['check']);
+  assert.equal(result.status, 66);
+  assert.doesNotMatch(result.stdout, /stub/);
 });
 
 test('rejects malformed wrapper arguments', () => {

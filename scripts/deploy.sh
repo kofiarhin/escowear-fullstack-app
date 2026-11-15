@@ -7,6 +7,10 @@ source "$ROOT/scripts/deploy.conf"
 
 log() { printf '[deploy] %s\n' "$*"; }
 fail() { printf '[deploy] ERROR: %s\n' "$*" >&2; exit 1; }
+# Only the CI check may see the GitHub token; keep it out of every Docker/Compose call.
+ci_token="${ESCOWEAR_GITHUB_TOKEN:-}"
+ci_token_file="${ESCOWEAR_GITHUB_TOKEN_FILE:-}"
+unset ESCOWEAR_GITHUB_TOKEN ESCOWEAR_GITHUB_TOKEN_FILE
 
 for cmd in git curl node flock; do command -v "$cmd" >/dev/null || fail "Missing $cmd"; done
 read -r -a dk <<< "$DEPLOY_DOCKER"
@@ -45,16 +49,23 @@ case "$mode" in deploy|--check|--rollback) ;; *) fail "Use --check or --rollback
 if [[ "$mode" == deploy ]]; then
   log "Fetching latest $DEPLOY_BRANCH"
   git fetch --quiet origin "$DEPLOY_BRANCH"
-  git merge --ff-only "refs/remotes/origin/$DEPLOY_BRANCH" || fail "Git fast-forward failed"
-  [[ -z "$(git status --porcelain)" ]] || fail "Git tree changed unexpectedly"
-  # Automated deploys name the exact commit they approved; refuse anything newer or older.
+  target="refs/remotes/origin/$DEPLOY_BRANCH"
+  # Automated deploys name the exact commit they approved: move only to that commit,
+  # and refuse when master has moved on, so the checkout never jumps to an unvetted one.
   if [[ -n "${DEPLOY_EXPECTED_SHA:-}" ]]; then
     [[ "$DEPLOY_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "Invalid expected commit"
-    [[ "$(git rev-parse HEAD)" == "$DEPLOY_EXPECTED_SHA" ]] || fail "origin/$DEPLOY_BRANCH is not the requested commit ${DEPLOY_EXPECTED_SHA:0:12}; outdated request refused"
+    [[ "$(git rev-parse "$target")" == "$DEPLOY_EXPECTED_SHA" ]] || fail "origin/$DEPLOY_BRANCH is not the requested commit ${DEPLOY_EXPECTED_SHA:0:12}; outdated request refused"
+    target="$DEPLOY_EXPECTED_SHA"
   fi
+  git merge --ff-only "$target" || fail "Git fast-forward failed"
+  [[ -z "$(git status --porcelain)" ]] || fail "Git tree changed unexpectedly"
   # Fail closed before image builds or service replacement unless CI and CSS lint passed
   # for exactly the SHA pulled from master. Token is never printed.
-  node "$ROOT/scripts/check-ci.cjs" "${DEPLOY_REMOTE#github.com/}" "$(git rev-parse HEAD)"
+  if [[ -z "$ci_token" && -n "$ci_token_file" ]]; then
+    ci_token="$(<"$ci_token_file")" || fail "Cannot read CI-gate token file"
+  fi
+  ESCOWEAR_GITHUB_TOKEN="$ci_token" node "$ROOT/scripts/check-ci.cjs" "${DEPLOY_REMOTE#github.com/}" "$(git rev-parse HEAD)"
+  unset ci_token
 fi
 
 container="$("${compose[@]}" ps -aq "$DEPLOY_SERVICE" | head -n 1)"

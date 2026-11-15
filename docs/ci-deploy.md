@@ -28,16 +28,17 @@ Beast
   sshd     Match block: key only, forced command, no TTY/forwarding
   escowear-deploy-ssh   accepts only "check" or "deploy <40-hex>"
   sudo     escowear-deploy → ubuntu, only /usr/local/sbin/escowear-deploy-run
-  escowear-deploy-run   clean master checkout, only GitHub commits,
-                        sha == origin/master, single-flight lock, token from file
-  scripts/deploy.sh     HEAD == requested SHA, CI gate, build, test, swap, health, rollback
+  escowear-deploy-run   private checkout only (/home/ubuntu/deploy), clean master,
+                        only GitHub commits, sha == origin/master, single-flight lock
+  scripts/deploy.sh     fast-forward to exactly the SHA, CI gate, build, test,
+                        swap, health, rollback
 ```
 
-**Overlap and stale commits.** Deploy jobs share one GitHub concurrency group: one runs at a time, and a newer queued request replaces an older queued one. The concurrency is set at the job level so skipped runs never cancel a queued deployment. On Beast, the wrapper's lock and `deploy.sh`'s lock refuse a second request while one is running, including a manual one. An outdated commit is refused in three places: by the GitHub gate (the commit is not the master tip), by the wrapper (`sha != origin/master`) and by `deploy.sh` (`HEAD` after the fast-forward is not the requested SHA). CI and CSS lint can both trigger a deploy for the same commit, so a release that is already live is a no-op (`ALREADY DEPLOYED`).
+**Overlap and stale commits.** Deploy jobs share one GitHub concurrency group: one runs at a time, and a newer queued request replaces an older queued one. The concurrency is set at the job level so skipped runs never cancel a queued deployment. On Beast, the wrapper's lock and `deploy.sh`'s lock refuse a second request while one is running, including a manual one. An outdated commit is refused in three places: by the GitHub gate (the commit is not the master tip), by the wrapper (`sha != origin/master`) and by `deploy.sh`, which fast-forwards only to the requested SHA and refuses when `origin/master` has moved on, so the checkout never jumps to an unvetted commit. CI and CSS lint can both trigger a deploy for the same commit, so a release that is already live is a no-op (`ALREADY DEPLOYED`).
 
 **Interrupted runs.** The wrapper runs `deploy.sh` in its own session. A dropped SSH connection or a cancelled or timed-out job cannot stop a release between replacing the container and the health/rollback steps.
 
-**Public logs.** This repository is public, so its Actions logs are public. Beast returns only `[deploy]` status lines. The full build and deploy log stays on Beast in `/home/ubuntu/.local/state/escowear/automation/logs/` (mode 600, last 30 kept).
+**Public logs.** This repository is public, so its Actions logs are public. Beast returns only `[deploy]` status lines. The full build and deploy log stays on Beast in `/home/ubuntu/deploy/automation/logs/` (mode 600, last 30 kept). The GitHub token reaches only the CI check, never Docker or Compose.
 
 ### Least privilege
 
@@ -45,28 +46,38 @@ Beast
 |---|---|---|
 | GitHub job | read Actions status (`GITHUB_TOKEN`: `contents: read`, `actions: read`); SSH as `escowear-deploy` | write the repository, choose the commands that run on Beast |
 | `escowear-deploy` | run `escowear-deploy-run check` or `deploy <sha>` as `ubuntu` | open a shell or TTY, forward ports, use Docker or other sudo, read `/home/ubuntu`, edit its own `authorized_keys` (root-owned) |
-| `ubuntu` (the wrapper) | the existing manual deploy path (`sudo docker` for the `escowear` Compose project only, via `deploy.sh`) | — unchanged |
+| `ubuntu` (the wrapper) | the existing deploy path (`sudo docker` for the `escowear` Compose project only, via `deploy.sh`) | — unchanged |
+| `beast-agent` | work in `/home/ubuntu/projects/escowear` as before | reach `/home/ubuntu/deploy`, so it cannot change what automation runs |
 
-No ACL on `/home/ubuntu` is needed and none is granted. The wrapper is root-owned in `/usr/local/sbin`, so neither the deploy account nor a repository change can alter what it runs. It skips repository-local Git hooks and fsmonitor, and it refuses a dirty checkout or local commits that are not on GitHub before it runs `deploy.sh` from the checkout.
+No ACL on `/home/ubuntu` is needed and none is granted. The wrapper is root-owned in `/usr/local/sbin`, so the deploy account cannot change it.
+
+**Why a separate checkout.** `/home/ubuntu/projects` and the development checkout are writable by the sandboxed `beast-agent` account, which can rename directories, rewrite scripts, or hide edits from `git status`. Running that tree as `ubuntu` (which has full sudo) from an unattended trigger would let `beast-agent` reach root. Automatic deploys therefore run only from `/home/ubuntu/deploy/escowear`. The wrapper refuses to start unless `/home/ubuntu/deploy` is owned by `ubuntu`, has mode 700 with no ACLs, and has no ancestor directory that anyone else can write to. As defence in depth, it also ignores system and global Git config, replace refs, repository hooks and fsmonitor, and it refuses a dirty checkout or local commits that are not on GitHub.
 
 ### One-time setup (each step needs Kofi's approval)
 
-1. **Install the restricted SSH path on Beast.** This changes sshd and sudo for `escowear-deploy` only. From a clean `master` checkout that contains this change:
+1. **Create the private production checkout** (as `ubuntu`; it copies `.env` and the release state without printing them, and touches no container):
+
+   ```bash
+   bash deploy/beast/automation/setup-private-checkout.sh
+   ```
+
+   It clones `master` from GitHub into `/home/ubuntu/deploy/escowear`, copies `.env` (mode 600) and `.deploy-state/{active.yaml,previous-image}`, then runs the read-only `deploy.sh --check` from there. From then on, run manual deploys and rollbacks from `/home/ubuntu/deploy/escowear`. Once a release is made from the new checkout, the old checkout's state goes stale, and `deploy.sh` there refuses with "Live release drift detected" instead of deploying.
+
+2. **Install the restricted SSH path on Beast.** This changes sshd and sudo for `escowear-deploy` only. From a clean `master` checkout that contains this change:
 
    ```bash
    sudo deploy/beast/automation/install.sh
    ```
 
-   It validates the sudoers file (`visudo`), confirms `sshd -t` passes and that `ForceCommand` applies to `escowear-deploy` but not to `ubuntu`, then reloads `ssh`. It also confirms that sudo allows `check` and `deploy <sha>` and refuses anything else. If any check fails, it removes what it added. It restricts the existing key (`restrict,command=...`), makes `authorized_keys` root-owned, and sets the account's shell to `/bin/sh`.
+   It validates the sudoers file (`visudo`), confirms `sshd -t` passes and that `ForceCommand` applies to `escowear-deploy` but not to `ubuntu`, then reloads `ssh`. It also confirms that sudo allows `check` and `deploy <sha>` and refuses wider commands (`--rollback`, shells, Docker, uppercase or injected SHAs). If any step fails, it reverts everything it changed: the sshd block (reloading `ssh` again if it already had), the sudoers rule, the wrappers, the original `.ssh` directory and the original shell. It restricts the existing key (`restrict,command=...`), makes `authorized_keys` root-owned, and sets the account's shell to `/bin/sh`.
 
-2. **CI-gate token on Beast.** Create a fine-grained GitHub token for **only** `kofiarhin/escowear-fullstack-app` with **Actions: read**, and save it without echoing it:
+3. **CI-gate token on Beast.** Create a fine-grained GitHub token for **only** `kofiarhin/escowear-fullstack-app` with **Actions: read**, and save it without echoing it:
 
    ```bash
-   install -d -m 700 ~/.config/escowear
-   ( umask 077; read -rs -p 'Token: ' t; printf '%s\n' "$t" > ~/.config/escowear/github-actions-read.token; unset t; echo )
+   ( umask 077; read -rs -p 'Token: ' t; printf '%s\n' "$t" > /home/ubuntu/deploy/github-actions-read.token; unset t; echo )
    ```
 
-3. **GitHub environment and secrets.** Create the environment `production` and limit its deployment branches to `master`. Then add these environment secrets (values are never printed):
+4. **GitHub environment and secrets.** Create the environment `production` and limit its deployment branches to `master`. Then add these environment secrets (values are never printed):
 
    ```bash
    R=kofiarhin/escowear-fullstack-app
@@ -79,18 +90,18 @@ No ACL on `/home/ubuntu` is needed and none is granted. The wrapper is root-owne
 
    After the upload, delete the private key from Beast: `shred -u ~/.ssh/escowear_deploy`. GitHub then holds the only copy. To rotate the key, generate a new key pair, replace the key in `authorized_keys`, rerun `install.sh` and reset `BEAST_SSH_PRIVATE_KEY`.
 
-4. **Read-only test.** Run **Actions → Deploy → Run workflow** on `master`. Manual runs only send `check`, which runs the read-only `deploy.sh --check` preflight on Beast and never deploys.
+5. **Read-only test.** Run **Actions → Deploy → Run workflow** on `master`. Manual runs only send `check`, which runs the read-only `deploy.sh --check` preflight on Beast and never deploys.
 
-5. **Activate.** Set the repository variable `ESCOWEAR_AUTO_DEPLOY` to `true`. Until then, every automatic Deploy run is skipped.
+6. **Activate.** Set the repository variable `ESCOWEAR_AUTO_DEPLOY` to `true`. Until then, every automatic Deploy run is skipped.
 
 ### Turn off or roll back
 
 - Pause automatic deploys immediately: set `ESCOWEAR_AUTO_DEPLOY` to anything other than `true`, or delete it.
 - Remove server access: `sudo deploy/beast/automation/install.sh --uninstall`. This removes the sshd block (and reloads `ssh`), the sudoers rule and both wrappers.
-- Roll back the application: `npm run deploy:rollback` as `ubuntu` (unchanged).
+- Roll back the application: `npm run deploy:rollback` as `ubuntu` in `/home/ubuntu/deploy/escowear` (the checkout holding the current release state).
 
 ## Manual deploy (Beast operator)
 
-The manual path still works. After approving the release, run `npm run deploy` as `ubuntu` in `/home/ubuntu/projects/escowear` with `ESCOWEAR_GITHUB_TOKEN` exported privately in the shell. It fast-forwards to `origin/master` and applies the same CI and CSS lint gate. The fast-forward happens **before** the check, so a refused release can still update the local Git checkout; the live container is not replaced. `npm run deploy:check` is the read-only VPS preflight and does not check GitHub CI.
+The manual path still works. After approving the release, run `npm run deploy` as `ubuntu` in the production checkout: `/home/ubuntu/deploy/escowear` once step 1 is done, `/home/ubuntu/projects/escowear` before that. Either export `ESCOWEAR_GITHUB_TOKEN` privately, or set `ESCOWEAR_GITHUB_TOKEN_FILE=/home/ubuntu/deploy/github-actions-read.token`. It fast-forwards to `origin/master` and applies the same CI and CSS lint gate. The fast-forward happens **before** the check, so a refused release can still update the local Git checkout; the live container is not replaced. `npm run deploy:check` is the read-only VPS preflight and does not check GitHub CI.
 
 **Limit:** The gate trusts GitHub Actions' reported results; it does not catch every possible production runtime problem. Branch protection must be enabled separately to enforce checks on PR merges.
