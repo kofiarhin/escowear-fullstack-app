@@ -82,12 +82,16 @@ log "Installing sudoers rule"
 install -o root -g root -m 0440 "$tmp/sudoers" "$SUDOERS"
 visudo -cq || fail "sudoers invalid after install"
 good="$(printf 'a%.0s' {1..40})"
-sudo -u "$DEPLOY_USER" sudo -n -l "$RUNNER" deploy "$good" >/dev/null || fail "sudo rule does not allow deploy <sha>"
-sudo -u "$DEPLOY_USER" sudo -n -l "$RUNNER" check >/dev/null || fail "sudo rule does not allow check"
-for wider in "$RUNNER deploy $good;id" "$RUNNER deploy ${good^^}" "$RUNNER --rollback" /bin/sh /usr/bin/docker; do
-  # shellcheck disable=SC2086 # split on purpose: command plus arguments
-  if sudo -u "$DEPLOY_USER" sudo -n -l $wider >/dev/null 2>&1; then fail "sudo rule allows: $wider"; fi
+# sudo -l checks run-as root unless -u is given; the rule grants run-as RUN_USER only.
+sudo -u "$DEPLOY_USER" sudo -n -l -u "$RUN_USER" "$RUNNER" deploy "$good" >/dev/null || fail "sudo rule does not allow deploy <sha>"
+sudo -u "$DEPLOY_USER" sudo -n -l -u "$RUN_USER" "$RUNNER" check >/dev/null || fail "sudo rule does not allow check"
+for target in "$RUN_USER" root; do
+  for wider in "$RUNNER deploy $good;id" "$RUNNER deploy ${good^^}" "$RUNNER --rollback" /bin/sh /usr/bin/docker; do
+    # shellcheck disable=SC2086 # split on purpose: command plus arguments
+    if sudo -u "$DEPLOY_USER" sudo -n -l -u "$target" $wider >/dev/null 2>&1; then fail "sudo rule allows as $target: $wider"; fi
+  done
 done
+if sudo -u "$DEPLOY_USER" sudo -n -l -u root "$RUNNER" check >/dev/null 2>&1; then fail "sudo rule allows the wrapper as root"; fi
 
 log "Installing sshd Match block"
 install -o root -g root -m 0644 "$SRC/sshd.escowear-deploy.conf" "$SSHD_SNIPPET"

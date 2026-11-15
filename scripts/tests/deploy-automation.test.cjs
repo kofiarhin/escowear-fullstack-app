@@ -185,7 +185,8 @@ test('refuses to run from a checkout others can enter or replace', () => {
 
 test('rejects malformed wrapper arguments', () => {
   const f = fixture();
-  for (const args of [[], ['deploy'], ['deploy', 'abc'], ['check', 'x'], ['--rollback'], ['deploy', f.tip, 'x']]) {
+  // sudo joins arguments before regex matching, so it lets "deploy <sha>" through as one argument.
+  for (const args of [[], ['deploy'], ['deploy', 'abc'], ['check', 'x'], ['--rollback'], ['deploy', f.tip, 'x'], [`deploy ${f.tip}`]]) {
     assert.equal(f.run(args).status, 64, `should refuse ${args.join(' ')}`);
   }
 });
