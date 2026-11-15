@@ -495,11 +495,6 @@
   gap: clamp(40px, 6vw, 110px);
 }
 
-.home-how__intro {
-  position: sticky;
-  top: 130px;
-}
-
 .home-how__intro h2 {
   margin: 16px 0 28px;
   font-family: var(--font-display);
@@ -638,10 +633,6 @@
 
   .home-classics__gallery {
     max-width: 720px;
-  }
-
-  .home-how__intro {
-    position: static;
   }
 }
 

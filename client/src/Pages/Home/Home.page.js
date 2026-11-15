@@ -19,9 +19,9 @@ const ArrowIcon = () => (
 const formatCount = (value) => new Intl.NumberFormat("en-GB").format(value);
 const padIndex = (index) => String(index + 1).padStart(2, "0");
 
-const ProductSkeletons = ({ label, className }) => (
-  <div className={className} aria-label={label}>
-    {[0, 1, 2, 3].map((item) => (
+const ProductSkeletons = ({ label, className, count }) => (
+  <div className={className} role="status" aria-label={label} aria-busy="true">
+    {Array.from({ length: count }, (_, item) => (
       <div className="home-skeleton" key={item} aria-hidden="true">
         <span></span><i></i><i></i>
       </div>
@@ -41,11 +41,15 @@ const Home = () => {
 
   const featuredSneakers = products.slice(0, FEATURED_COUNT);
   const latestSneakers = products.slice(FEATURED_COUNT);
-  const catalogueTotal = status === "success" ? pagination?.total || 0 : 0;
+  // Store and Home share products state; only trust a total fetched with the homepage query.
+  const catalogueTotal =
+    status === "success" && pagination?.limit === HOME_PRODUCT_QUERY.limit
+      ? pagination.total || 0
+      : 0;
 
-  const renderProducts = (items, { label, className, emptyCopy }) => {
+  const renderProducts = (items, { label, className, emptyCopy, skeletons }) => {
     if (status === "pending" || status === "idle") {
-      return <ProductSkeletons label={label} className={className} />;
+      return <ProductSkeletons label={label} className={className} count={skeletons} />;
     }
 
     if (status === "failed") {
@@ -121,6 +125,7 @@ const Home = () => {
         {renderProducts(featuredSneakers, {
           label: "Loading featured sneakers",
           className: "home-featured__grid",
+          skeletons: FEATURED_COUNT,
           emptyCopy: "No sneakers are available in this edit yet.",
         })}
       </section>
@@ -192,6 +197,7 @@ const Home = () => {
         {renderProducts(latestSneakers, {
           label: "Loading latest releases",
           className: "home-latest__grid",
+          skeletons: HOME_PRODUCT_QUERY.limit - FEATURED_COUNT,
           emptyCopy: "New releases are on the way.",
         })}
       </section>
