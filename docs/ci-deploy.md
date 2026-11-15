@@ -34,7 +34,7 @@ Beast
                         swap, health, rollback
 ```
 
-**Overlap and stale commits.** Deploy jobs share one GitHub concurrency group: one runs at a time, and a newer queued request replaces an older queued one. The concurrency is set at the job level so skipped runs never cancel a queued deployment. On Beast, the wrapper's lock and `deploy.sh`'s lock refuse a second request while one is running, including a manual one. An outdated commit is refused in three places: by the GitHub gate (the commit is not the master tip), by the wrapper (`sha != origin/master`) and by `deploy.sh`, which fast-forwards only to the requested SHA and refuses when `origin/master` has moved on, so the checkout never jumps to an unvetted commit. CI and CSS lint can both trigger a deploy for the same commit, so a release that is already live is a no-op (`ALREADY DEPLOYED`).
+**Overlap and stale commits.** Deploy jobs share one GitHub concurrency group: one runs at a time, and a newer queued request replaces an older queued one. The concurrency is set at the job level so skipped runs never cancel a queued deployment. On Beast, the wrapper's lock and `deploy.sh`'s lock refuse a second request while one is running, including a manual one. This holds because `deploy.sh` runs from only one checkout once the private checkout exists. An outdated commit is refused in three places: by the GitHub gate (the commit is not the master tip), by the wrapper (`sha != origin/master`) and by `deploy.sh`, which fast-forwards only to the requested SHA and refuses when `origin/master` has moved on, so the checkout never jumps to an unvetted commit. CI and CSS lint can both trigger a deploy for the same commit, so a release that is already live is a no-op (`ALREADY DEPLOYED`).
 
 **Interrupted runs.** The wrapper runs `deploy.sh` in its own session. A dropped SSH connection or a cancelled or timed-out job cannot stop a release between replacing the container and the health/rollback steps.
 
@@ -61,7 +61,7 @@ No ACL on `/home/ubuntu` is needed and none is granted. The wrapper is root-owne
    bash deploy/beast/automation/setup-private-checkout.sh
    ```
 
-   It clones `master` from GitHub into `/home/ubuntu/deploy/escowear`, copies `.env` (mode 600) and `.deploy-state/{active.yaml,previous-image}`, then runs the read-only `deploy.sh --check` from there. From then on, run manual deploys and rollbacks from `/home/ubuntu/deploy/escowear`. Once a release is made from the new checkout, the old checkout's state goes stale, and `deploy.sh` there refuses with "Live release drift detected" instead of deploying.
+   It clones `master` from GitHub into `/home/ubuntu/deploy/escowear`, copies `.env` (mode 600) and `.deploy-state/{active.yaml,previous-image}`, then runs the read-only `deploy.sh --check` from there. Before copying, it checks that the release state consists of ubuntu-owned, mode-600 files and that `active.yaml` names the image that is actually running. From then on, `deploy.sh` refuses to run from any other checkout (`DEPLOY_PRODUCTION_ROOT` in `scripts/deploy.conf`). Manual deploys and rollbacks therefore use `/home/ubuntu/deploy/escowear`, and there is one lock and one release state for every deploy.
 
 2. **Install the restricted SSH path on Beast.** This changes sshd and sudo for `escowear-deploy` only. From a clean `master` checkout that contains this change:
 

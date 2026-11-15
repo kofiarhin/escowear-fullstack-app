@@ -24,6 +24,9 @@ read -r -a dk <<< "$DEPLOY_DOCKER"
 [[ "$DEPLOY_HEALTH_DELAY" =~ ^[0-9]+$ ]] || fail "Invalid delay"
 [[ -f "$DEPLOY_COMPOSE" && "$DEPLOY_COMPOSE" != /* && ! -L "$DEPLOY_COMPOSE" ]] || fail "Invalid Compose file"
 [[ -f .env && ! -L .env && "$(stat -c '%a' .env)" == 600 ]] || fail ".env missing or not mode 600"
+if [[ -n "${DEPLOY_PRODUCTION_ROOT:-}" && -d "$DEPLOY_PRODUCTION_ROOT" && "$ROOT" != "$DEPLOY_PRODUCTION_ROOT" ]]; then
+  fail "Production checkout is $DEPLOY_PRODUCTION_ROOT; run deploys from there"
+fi
 [[ "$(git rev-parse --show-toplevel)" == "$ROOT" ]] || fail "Incorrect Git repository"
 [[ "$(git branch --show-current)" == "$DEPLOY_BRANCH" ]] || fail "Expected branch $DEPLOY_BRANCH"
 origin="$(git remote get-url origin)"

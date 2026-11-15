@@ -74,7 +74,9 @@ fi
 
 log="$STATE/logs/$(date -u +%Y%m%dT%H%M%SZ)-$mode${sha:+-${sha:0:12}}.log"
 say "Starting $mode${sha:+ for ${sha:0:12}} (full log on Beast: $log)"
-setsid -w bash "$REPO/scripts/deploy.sh" "${args[@]}" </dev/null >"$log" 2>&1 &
+# Create the log before tail opens it; otherwise tail can start first and miss it.
+: >"$log"
+setsid -w bash "$REPO/scripts/deploy.sh" "${args[@]}" </dev/null >>"$log" 2>&1 &
 pid=$!
 tail -n +1 --pid="$pid" -f "$log" | grep --line-buffered '^\[deploy\]' || true
 rc=0

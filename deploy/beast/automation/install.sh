@@ -53,6 +53,9 @@ cp -a "$home/.ssh" "$tmp/ssh.orig"
 shell_orig="$(getent passwd "$DEPLOY_USER" | cut -d: -f7)"
 reloaded=false
 revert() {
+  # Best effort, once: no ERR trap or errexit here, or a failing step would recurse.
+  trap - ERR INT TERM
+  set +e
   printf '[install] Reverting all changes\n' >&2
   rm -f "$SSHD_SNIPPET" "$SUDOERS"
   if $reloaded; then sshd -t && systemctl reload ssh || printf '[install] CRITICAL: check sshd now\n' >&2; fi
@@ -62,6 +65,7 @@ revert() {
 }
 fail() { printf '[install] ERROR: %s\n' "$*" >&2; revert; exit 1; }
 trap 'fail "unexpected error on line $LINENO"' ERR
+trap 'fail "interrupted"' INT TERM
 
 log "Installing wrappers"
 install -o root -g root -m 0755 "$SRC/escowear-deploy-ssh" "$SSH_ENTRY"
@@ -94,5 +98,5 @@ sshd -t || fail "sshd -t failed"
   || fail "Match block leaks to $RUN_USER"
 reloaded=true
 systemctl reload ssh
-trap - ERR
+trap - ERR INT TERM
 log "Installed and verified. Deploys also need the private checkout and token (docs/ci-deploy.md)."

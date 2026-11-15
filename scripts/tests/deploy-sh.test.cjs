@@ -22,7 +22,7 @@ function write(file, content, mode = 0o644) {
   fs.writeFileSync(file, content, { mode });
 }
 
-function fixture() {
+function fixture({ productionRoot = '' } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'escowear-deploysh-test-'));
   const origin = path.join(root, 'origin.git');
   const repo = path.join(root, 'repo');
@@ -45,7 +45,8 @@ exit 0
   git(repo, 'switch', '--quiet', '-c', 'master');
   write(path.join(repo, 'scripts/deploy.sh'), fs.readFileSync(path.join(ROOT, 'scripts/deploy.sh'), 'utf8'), 0o755);
   write(path.join(repo, 'scripts/deploy.conf'), fs.readFileSync(path.join(ROOT, 'scripts/deploy.conf'), 'utf8')
-    .replace(/^DEPLOY_DOCKER=.*$/m, `DEPLOY_DOCKER="${path.join(bin, 'docker')}"`));
+    .replace(/^DEPLOY_DOCKER=.*$/m, `DEPLOY_DOCKER="${path.join(bin, 'docker')}"`)
+    .replace(/^DEPLOY_PRODUCTION_ROOT=.*$/m, `DEPLOY_PRODUCTION_ROOT=${productionRoot}`));
   write(path.join(repo, 'scripts/check-ci.cjs'),
     "console.log(`[deploy] ci-stub token=${process.env.ESCOWEAR_GITHUB_TOKEN === 'test-token-never-printed' ? 'ok' : 'missing'} " +
     "file=${process.env.ESCOWEAR_GITHUB_TOKEN_FILE ? 'leaked' : 'none'} sha=${process.argv[3]}`);\n");
@@ -108,4 +109,13 @@ test('rejects a malformed expected commit', () => {
   const result = f.run({ DEPLOY_EXPECTED_SHA: 'HEAD~1' });
   assert.match(result.stderr, /Invalid expected commit/);
   assert.equal(git(f.repo, 'rev-parse', 'HEAD'), f.first);
+});
+
+test('refuses to deploy from any checkout other than the production one once it exists', () => {
+  const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'escowear-prod-root-'));
+  const f = fixture({ productionRoot: elsewhere });
+  const result = f.run({ ESCOWEAR_GITHUB_TOKEN: TOKEN });
+  assert.match(result.stderr, /Production checkout is .*; run deploys from there/);
+  assert.equal(git(f.repo, 'rev-parse', 'HEAD'), f.first);
+  assert.equal(fs.existsSync(path.join(f.repo, '.deploy-state')), false);
 });
