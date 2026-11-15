@@ -1,0 +1,90 @@
+#!/bin/bash
+# Root-owned sudo target (/usr/local/sbin) that escowear-deploy may run as ubuntu,
+# and only as "check" or "deploy <sha>" (see sudoers.escowear-deploy).
+# It deploys only from a private checkout (BASE is ubuntu-only, mode 700, no ACLs)
+# because /home/ubuntu/projects is writable by beast-agent: running code from there
+# as ubuntu would hand it root. It refuses outdated commits, then runs deploy.sh
+# detached so a dropped SSH session cannot interrupt a release halfway. The caller sees only "[deploy]" status lines, because GitHub
+# Actions logs for this public repository are public; the full log stays on Beast.
+set -Eeuo pipefail
+umask 077
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+BASE=/home/ubuntu/deploy
+REPO=$BASE/escowear
+STATE=$BASE/automation
+TOKEN_FILE=$BASE/github-actions-read.token
+RUN_USER=ubuntu
+KEEP_LOGS=30
+
+say() { printf '[deploy] %s\n' "$*"; }
+refuse() { local code="$1"; shift; printf '[deploy] REFUSED: %s\n' "$*" >&2; exit "$code"; }
+# Nobody but RUN_USER may enter BASE, and nobody else may replace it via an ancestor.
+# Root-owned sticky directories (such as /tmp) are safe ancestors.
+private_base() {
+  local dir="$BASE" mode owner
+  [[ -d "$BASE" && ! -L "$BASE" && "$(stat -c '%U %a' "$BASE")" == "$RUN_USER 700" ]] || return 1
+  [[ "$(ls -ld "$BASE" | cut -c11)" != + ]] || return 1
+  while [[ "$dir" != / ]]; do
+    dir="$(dirname "$dir")"
+    read -r owner mode < <(stat -c '%U %a' "$dir")
+    [[ "$owner" == root || "$owner" == "$RUN_USER" ]] || return 1
+    [[ "$owner" == root && ${#mode} -eq 4 && "${mode:0:1}" =~ [1357] ]] && continue
+    (( (8#$mode & 8#022) == 0 )) || return 1
+  done
+}
+
+[[ "$(id -un)" == "$RUN_USER" ]] || refuse 77 "must run as $RUN_USER"
+mode="${1:-}"
+sha=""
+case "$mode" in
+  check) [[ $# -eq 1 ]] || refuse 64 "usage: check | deploy <sha>" ;;
+  deploy) [[ $# -eq 2 && "$2" =~ ^[0-9a-f]{40}$ ]] || refuse 64 "usage: check | deploy <40-hex-sha>"; sha="$2" ;;
+  *) refuse 64 "usage: check | deploy <sha>" ;;
+esac
+
+private_base || refuse 66 "$BASE must be owned by $RUN_USER, mode 700, without ACLs or writable ancestors"
+mkdir -p -m 700 "$STATE/logs"
+[[ ! -L "$STATE" && ! -L "$STATE/logs" ]] || refuse 66 "unsafe state directory"
+# Held by the detached deployment too, so a second request is refused until it ends.
+exec 8>"$STATE/run.lock"
+flock -n 8 || refuse 75 "another deployment request is running"
+
+# Defence in depth: ignore system/global Git config, replace refs, hooks and fsmonitor.
+export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_NO_REPLACE_OBJECTS=1 GIT_TERMINAL_PROMPT=0 \
+  GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null \
+  GIT_CONFIG_KEY_1=core.fsmonitor GIT_CONFIG_VALUE_1=false
+cd "$REPO"
+[[ "$(git branch --show-current)" == master ]] || refuse 66 "checkout is not on master"
+[[ -z "$(git status --porcelain)" ]] || refuse 66 "checkout has uncommitted changes"
+git fetch --quiet origin master || refuse 69 "could not fetch origin/master"
+remote="$(git rev-parse refs/remotes/origin/master)"
+# deploy.sh is about to run from this checkout, so it must hold only GitHub commits.
+git merge-base --is-ancestor HEAD "$remote" || refuse 66 "local master has commits that are not on GitHub"
+
+args=(--check)
+if [[ "$mode" == deploy ]]; then
+  [[ "$sha" == "$remote" ]] || refuse 65 "${sha:0:12} is not the current origin/master (${remote:0:12}); outdated commit refused"
+  [[ -f "$TOKEN_FILE" && ! -L "$TOKEN_FILE" && -s "$TOKEN_FILE" && "$(stat -c '%U %a' "$TOKEN_FILE")" == "$RUN_USER 600" ]] \
+    || refuse 78 "CI-gate token file missing, empty or not mode 600"
+  # deploy.sh reads the file only for the CI check, so Docker never sees the token.
+  export ESCOWEAR_GITHUB_TOKEN_FILE="$TOKEN_FILE" DEPLOY_EXPECTED_SHA="$sha"
+  args=()
+fi
+
+log="$STATE/logs/$(date -u +%Y%m%dT%H%M%SZ)-$mode${sha:+-${sha:0:12}}.log"
+say "Starting $mode${sha:+ for ${sha:0:12}} (full log on Beast: $log)"
+# Create the log before tail opens it; otherwise tail can start first and miss it.
+: >"$log"
+setsid -w bash "$REPO/scripts/deploy.sh" "${args[@]}" </dev/null >>"$log" 2>&1 &
+pid=$!
+tail -n +1 --pid="$pid" -f "$log" | grep --line-buffered '^\[deploy\]' || true
+rc=0
+wait "$pid" || rc=$?
+
+find "$STATE/logs" -maxdepth 1 -type f -name '*.log' -printf '%T@ %p\n' \
+  | sort -rn | tail -n +"$((KEEP_LOGS + 1))" | cut -d' ' -f2- | xargs -r rm -f --
+if [[ $rc -ne 0 ]]; then
+  say "FAILED with exit $rc; see $log on Beast"
+fi
+exit "$rc"

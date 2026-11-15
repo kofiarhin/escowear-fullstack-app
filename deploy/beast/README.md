@@ -26,6 +26,7 @@ Namecheap DNS: @ -> 51.68.196.59, www -> escowear.com
 - `smoke.cjs`: read-only MongoDB / storefront smoke tests.
 - `auth-orders-smoke.cjs`: isolated in-memory authentication and order tests (guest-checkout contract, IDE-114), **not** a live checkout test.
 - `../../e2e/`: isolated browser smoke for the full manual-checkout journey (in-memory models, fake data); see `docs/release-readiness-manual-checkout.md`.
+- `automation/`: the restricted `escowear-deploy` SSH path used by GitHub Actions automatic deployment (forced command, sudo wrapper, sshd/sudoers files, installer, private production checkout setup). See `docs/ci-deploy.md`.
 - `REPORT.md`: original preparation evidence (2026-10-17); it deliberately preserves the state **before** launch.
 
 ## Verify the running site (read-only)

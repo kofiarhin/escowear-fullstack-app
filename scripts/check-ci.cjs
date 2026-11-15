@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 'use strict';
 
-// Fail closed unless the exact master commit has a successful GitHub Actions CI run.
+// Fail closed unless the exact master commit passed every required GitHub Actions check.
 // Read-only API requests; token and response bodies are never logged.
-const WORKFLOW = 'ci.yml';
-const JOB_NAME = 'verify';
+const REQUIRED_CHECKS = [
+  { workflow: 'ci.yml', job: 'verify', label: 'CI / verify' },
+  { workflow: 'css-lint.yml', job: 'css-lint', label: 'CSS lint / css-lint' },
+];
 
 async function apiGet(path, token) {
   let response;
@@ -25,7 +27,7 @@ async function apiGet(path, token) {
   }
 }
 
-async function verifyCi(repo, sha, token, request = apiGet) {
+function validateInputs(repo, sha, token) {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo) || repo.split('/').some(part => part === '.' || part === '..')) {
     throw new Error('Invalid GitHub repository name');
   }
@@ -35,16 +37,20 @@ async function verifyCi(repo, sha, token, request = apiGet) {
   if (!token || !token.trim()) {
     throw new Error('ESCOWEAR_GITHUB_TOKEN is required for the deployment CI gate');
   }
+}
 
-  const runsPath = `/repos/${repo}/actions/workflows/${WORKFLOW}/runs?head_sha=${sha}&event=push&branch=master&per_page=30`;
+// Returns { state, runId, message } where state is success | pending | failed | missing.
+async function checkStatus(repo, sha, token, check, request) {
+  const short = sha.slice(0, 12);
+  const runsPath = `/repos/${repo}/actions/workflows/${check.workflow}/runs?head_sha=${sha}&event=push&branch=master&per_page=30`;
   const runsResponse = await request(runsPath, token);
   const matching = (runsResponse.workflow_runs ?? []).filter(run =>
     run.head_sha === sha && run.event === 'push' &&
     run.head_branch === 'master' &&
-    typeof run.path === 'string' && run.path.endsWith(`/${WORKFLOW}`)
+    typeof run.path === 'string' && run.path.endsWith(`/${check.workflow}`)
   );
   if (matching.length === 0) {
-    throw new Error(`No master push CI workflow found for ${sha.slice(0, 12)}`);
+    return { state: 'missing', message: `No master push ${check.label} run found for ${short}` };
   }
 
   const latest = matching.sort((a, b) =>
@@ -52,19 +58,38 @@ async function verifyCi(repo, sha, token, request = apiGet) {
     (b.id ?? 0) - (a.id ?? 0) ||
     (b.run_attempt ?? 0) - (a.run_attempt ?? 0)
   )[0];
-  if (latest.status !== 'completed' || latest.conclusion !== 'success') {
-    throw new Error(`CI has not passed for ${sha.slice(0, 12)} (status=${latest.status}, conclusion=${latest.conclusion})`);
+  if (latest.status !== 'completed') {
+    return { state: 'pending', runId: latest.id, message: `${check.label} is still running for ${short} (status=${latest.status})` };
+  }
+  if (latest.conclusion !== 'success') {
+    return { state: 'failed', runId: latest.id, message: `${check.label} has not passed for ${short} (status=${latest.status}, conclusion=${latest.conclusion})` };
   }
 
-  // Workflow-level success is not enough: the verification job must have passed.
+  // Workflow-level success is not enough: the named job must have passed.
   const jobsResponse = await request(`/repos/${repo}/actions/runs/${latest.id}/jobs?per_page=100`, token);
   const passed = (jobsResponse.jobs ?? []).some(job =>
-    job.name === JOB_NAME && job.conclusion === 'success' && job.head_sha === sha
+    job.name === check.job && job.conclusion === 'success' && job.head_sha === sha
   );
   if (!passed) {
-    throw new Error(`CI verification job did not pass for ${sha.slice(0, 12)}`);
+    return { state: 'failed', runId: latest.id, message: `${check.label} job did not pass for ${short}` };
   }
-  return latest.id;
+  return { state: 'success', runId: latest.id, message: `${check.label} passed for ${short}` };
+}
+
+async function ciStatus(repo, sha, token, request = apiGet) {
+  validateInputs(repo, sha, token);
+  const results = [];
+  for (const check of REQUIRED_CHECKS) {
+    results.push({ ...check, ...(await checkStatus(repo, sha, token, check, request)) });
+  }
+  return results;
+}
+
+async function verifyCi(repo, sha, token, request = apiGet) {
+  const results = await ciStatus(repo, sha, token, request);
+  const blocking = results.find(result => result.state !== 'success');
+  if (blocking) throw new Error(blocking.message);
+  return results.map(result => result.runId);
 }
 
 async function main(argv = process.argv.slice(2), token = process.env.ESCOWEAR_GITHUB_TOKEN) {
@@ -72,8 +97,8 @@ async function main(argv = process.argv.slice(2), token = process.env.ESCOWEAR_G
     throw new Error('Usage: check-ci.cjs owner/repo commit-sha');
   }
   const [repo, sha] = argv;
-  const runId = await verifyCi(repo, sha, token);
-  console.log(`[deploy] Verified GitHub Actions CI for ${sha.slice(0, 12)} (run ${runId})`);
+  const runIds = await verifyCi(repo, sha, token);
+  console.log(`[deploy] Verified GitHub Actions CI and CSS lint for ${sha.slice(0, 12)} (runs ${runIds.join(', ')})`);
 }
 
 if (require.main === module) {
@@ -83,4 +108,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { apiGet, verifyCi, main };
+module.exports = { REQUIRED_CHECKS, apiGet, ciStatus, verifyCi, main };

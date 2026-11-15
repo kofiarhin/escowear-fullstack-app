@@ -7,6 +7,10 @@ source "$ROOT/scripts/deploy.conf"
 
 log() { printf '[deploy] %s\n' "$*"; }
 fail() { printf '[deploy] ERROR: %s\n' "$*" >&2; exit 1; }
+# Only the CI check may see the GitHub token; keep it out of every Docker/Compose call.
+ci_token="${ESCOWEAR_GITHUB_TOKEN:-}"
+ci_token_file="${ESCOWEAR_GITHUB_TOKEN_FILE:-}"
+unset ESCOWEAR_GITHUB_TOKEN ESCOWEAR_GITHUB_TOKEN_FILE
 
 for cmd in git curl node flock; do command -v "$cmd" >/dev/null || fail "Missing $cmd"; done
 read -r -a dk <<< "$DEPLOY_DOCKER"
@@ -20,6 +24,9 @@ read -r -a dk <<< "$DEPLOY_DOCKER"
 [[ "$DEPLOY_HEALTH_DELAY" =~ ^[0-9]+$ ]] || fail "Invalid delay"
 [[ -f "$DEPLOY_COMPOSE" && "$DEPLOY_COMPOSE" != /* && ! -L "$DEPLOY_COMPOSE" ]] || fail "Invalid Compose file"
 [[ -f .env && ! -L .env && "$(stat -c '%a' .env)" == 600 ]] || fail ".env missing or not mode 600"
+if [[ -n "${DEPLOY_PRODUCTION_ROOT:-}" && -d "$DEPLOY_PRODUCTION_ROOT" && "$ROOT" != "$DEPLOY_PRODUCTION_ROOT" ]]; then
+  fail "Production checkout is $DEPLOY_PRODUCTION_ROOT; run deploys from there"
+fi
 [[ "$(git rev-parse --show-toplevel)" == "$ROOT" ]] || fail "Incorrect Git repository"
 [[ "$(git branch --show-current)" == "$DEPLOY_BRANCH" ]] || fail "Expected branch $DEPLOY_BRANCH"
 origin="$(git remote get-url origin)"
@@ -45,11 +52,23 @@ case "$mode" in deploy|--check|--rollback) ;; *) fail "Use --check or --rollback
 if [[ "$mode" == deploy ]]; then
   log "Fetching latest $DEPLOY_BRANCH"
   git fetch --quiet origin "$DEPLOY_BRANCH"
-  git merge --ff-only "refs/remotes/origin/$DEPLOY_BRANCH" || fail "Git fast-forward failed"
+  target="refs/remotes/origin/$DEPLOY_BRANCH"
+  # Automated deploys name the exact commit they approved: move only to that commit,
+  # and refuse when master has moved on, so the checkout never jumps to an unvetted one.
+  if [[ -n "${DEPLOY_EXPECTED_SHA:-}" ]]; then
+    [[ "$DEPLOY_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "Invalid expected commit"
+    [[ "$(git rev-parse "$target")" == "$DEPLOY_EXPECTED_SHA" ]] || fail "origin/$DEPLOY_BRANCH is not the requested commit ${DEPLOY_EXPECTED_SHA:0:12}; outdated request refused"
+    target="$DEPLOY_EXPECTED_SHA"
+  fi
+  git merge --ff-only "$target" || fail "Git fast-forward failed"
   [[ -z "$(git status --porcelain)" ]] || fail "Git tree changed unexpectedly"
-  # Fail closed before image builds or service replacement unless CI passed
+  # Fail closed before image builds or service replacement unless CI and CSS lint passed
   # for exactly the SHA pulled from master. Token is never printed.
-  node "$ROOT/scripts/check-ci.cjs" "${DEPLOY_REMOTE#github.com/}" "$(git rev-parse HEAD)"
+  if [[ -z "$ci_token" && -n "$ci_token_file" ]]; then
+    ci_token="$(<"$ci_token_file")" || fail "Cannot read CI-gate token file"
+  fi
+  ESCOWEAR_GITHUB_TOKEN="$ci_token" node "$ROOT/scripts/check-ci.cjs" "${DEPLOY_REMOTE#github.com/}" "$(git rev-parse HEAD)"
+  unset ci_token
 fi
 
 container="$("${compose[@]}" ps -aq "$DEPLOY_SERVICE" | head -n 1)"
@@ -119,6 +138,11 @@ fi
 
 commit="$(git rev-parse HEAD)"
 release="$DEPLOY_IMAGE:release-${commit:0:12}"
+# CI and CSS lint can both trigger a deploy for one commit; the second is a no-op.
+if [[ "$("${dk[@]}" image inspect -f '{{.Id}}' "$release" 2>/dev/null || true)" == "$old_image" ]]; then
+  log "ALREADY DEPLOYED $release; nothing to do"
+  exit 0
+fi
 rollback_ref="$DEPLOY_IMAGE:rollback-$(date -u +%Y%m%d%H%M%S)-${old_image:7:12}"
 
 # No host npm dependencies needed; tests run in Docker's locked environments.
