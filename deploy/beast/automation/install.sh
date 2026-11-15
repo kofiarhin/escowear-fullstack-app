@@ -86,7 +86,8 @@ good="$(printf 'a%.0s' {1..40})"
 sudo -u "$DEPLOY_USER" sudo -n -l -u "$RUN_USER" "$RUNNER" deploy "$good" >/dev/null || fail "sudo rule does not allow deploy <sha>"
 sudo -u "$DEPLOY_USER" sudo -n -l -u "$RUN_USER" "$RUNNER" check >/dev/null || fail "sudo rule does not allow check"
 for target in "$RUN_USER" root; do
-  for wider in "$RUNNER deploy $good;id" "$RUNNER deploy ${good^^}" "$RUNNER --rollback" /bin/sh /usr/bin/docker; do
+  for wider in "$RUNNER" "$RUNNER check extra" "$RUNNER deploy ${good}a" "$RUNNER deploy ${good:1}" \
+    "$RUNNER deploy $good;id" "$RUNNER deploy ${good^^}" "$RUNNER --rollback" /bin/sh /usr/bin/docker; do
     # shellcheck disable=SC2086 # split on purpose: command plus arguments
     if sudo -u "$DEPLOY_USER" sudo -n -l -u "$target" $wider >/dev/null 2>&1; then fail "sudo rule allows as $target: $wider"; fi
   done
