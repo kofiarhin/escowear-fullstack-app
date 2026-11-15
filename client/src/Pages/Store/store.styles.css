@@ -195,6 +195,28 @@
   opacity: 0.45;
 }
 
+.store-back-to-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 36px;
+}
+
+.store-back-to-top button {
+  min-height: 44px;
+  padding: 10px 0;
+  border-bottom: 1px solid currentColor;
+  font-family: var(--font-condensed);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.store-back-to-top button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
 @media (max-width: 900px) {
   .store {
     padding-top: 52px;
