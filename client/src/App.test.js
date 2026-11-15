@@ -84,7 +84,7 @@ test("renders the sneaker homepage and products from the API", async () => {
   );
   await waitFor(() =>
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/products?limit=8&page=1"
+      "/api/products?limit=9&page=1"
     )
   );
   expect(global.fetch).toHaveBeenCalledWith(
