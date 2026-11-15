@@ -25,15 +25,17 @@ ENV NODE_ENV=production
 ARG REACT_APP_POLICIES_STATUS=hidden
 ENV ESCOWEAR_BUILD_POLICIES_STATUS=${REACT_APP_POLICIES_STATUS}
 WORKDIR /app
-# COPY keeps host file modes, and Beast builds from an owner-only checkout (600/700).
-# Normalise to root-owned, world-readable and not writable by the node user.
-COPY --chmod=u=rwX,go=rX package*.json ./
+COPY package*.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
-COPY --chmod=u=rwX,go=rX server/ ./server/
-COPY --chmod=u=rwX,go=rX client/scripts/check-policies.cjs ./client/scripts/check-policies.cjs
-COPY --chmod=u=rwX,go=rX client/src/policies/review.json ./client/src/policies/review.json
-COPY --chmod=u=rwX,go=rX client/src/constants/productColors.json ./client/src/constants/productColors.json
-COPY --chmod=u=rwX,go=rX --from=frontend /app/client/build ./client/build
+COPY server/ ./server/
+COPY client/scripts/check-policies.cjs ./client/scripts/check-policies.cjs
+COPY client/src/policies/review.json ./client/src/policies/review.json
+COPY client/src/constants/productColors.json ./client/src/constants/productColors.json
+COPY --from=frontend /app/client/build ./client/build
+# COPY keeps host file modes, and Beast builds from an owner-only checkout (600/700).
+# COPY --chmod proved unreliable for single files under BuildKit, so normalise in a
+# RUN: root-owned, world-readable, not writable by the node user.
+RUN chmod -R u=rwX,go=rX /app/package.json /app/package-lock.json /app/server /app/client
 # Private payment-proof store (mounted as a named volume); owned by the app user only.
 RUN mkdir -p /app/data/payment-proofs && chown -R node:node /app/data && chmod 700 /app/data /app/data/payment-proofs
 USER node
