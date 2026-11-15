@@ -1,0 +1,25 @@
+#!/bin/sh
+# SSH forced command for the escowear-deploy account (installed root-owned in
+# /usr/local/sbin). The GitHub key can only ask for a read-only preflight or a
+# deployment of one exact commit; everything else is refused before sudo runs.
+set -eu
+
+run() { exec sudo -n -u ubuntu /usr/local/sbin/escowear-deploy-run "$@"; }
+
+request="${SSH_ORIGINAL_COMMAND-}"
+case "$request" in
+  check)
+    run check
+    ;;
+  "deploy "*)
+    sha="${request#deploy }"
+    case "$sha" in
+      *[!0-9a-f]*) ;;
+      *) [ "${#sha}" -eq 40 ] && run deploy "$sha" ;;
+    esac
+    echo "escowear-deploy: invalid commit SHA" >&2
+    exit 64
+    ;;
+esac
+echo "escowear-deploy: command not allowed (use: check | deploy <40-hex-sha>)" >&2
+exit 64

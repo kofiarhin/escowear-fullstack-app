@@ -47,7 +47,12 @@ if [[ "$mode" == deploy ]]; then
   git fetch --quiet origin "$DEPLOY_BRANCH"
   git merge --ff-only "refs/remotes/origin/$DEPLOY_BRANCH" || fail "Git fast-forward failed"
   [[ -z "$(git status --porcelain)" ]] || fail "Git tree changed unexpectedly"
-  # Fail closed before image builds or service replacement unless CI passed
+  # Automated deploys name the exact commit they approved; refuse anything newer or older.
+  if [[ -n "${DEPLOY_EXPECTED_SHA:-}" ]]; then
+    [[ "$DEPLOY_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "Invalid expected commit"
+    [[ "$(git rev-parse HEAD)" == "$DEPLOY_EXPECTED_SHA" ]] || fail "origin/$DEPLOY_BRANCH is not the requested commit ${DEPLOY_EXPECTED_SHA:0:12}; outdated request refused"
+  fi
+  # Fail closed before image builds or service replacement unless CI and CSS lint passed
   # for exactly the SHA pulled from master. Token is never printed.
   node "$ROOT/scripts/check-ci.cjs" "${DEPLOY_REMOTE#github.com/}" "$(git rev-parse HEAD)"
 fi
@@ -119,6 +124,11 @@ fi
 
 commit="$(git rev-parse HEAD)"
 release="$DEPLOY_IMAGE:release-${commit:0:12}"
+# CI and CSS lint can both trigger a deploy for one commit; the second is a no-op.
+if [[ "$("${dk[@]}" image inspect -f '{{.Id}}' "$release" 2>/dev/null || true)" == "$old_image" ]]; then
+  log "ALREADY DEPLOYED $release; nothing to do"
+  exit 0
+fi
 rollback_ref="$DEPLOY_IMAGE:rollback-$(date -u +%Y%m%d%H%M%S)-${old_image:7:12}"
 
 # No host npm dependencies needed; tests run in Docker's locked environments.

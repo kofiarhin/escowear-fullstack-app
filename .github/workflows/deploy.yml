@@ -1,0 +1,71 @@
+name: Deploy
+
+# Deploys master to Beast after both CI and CSS lint pass for the same commit.
+# Inactive until the repository variable ESCOWEAR_AUTO_DEPLOY is set to "true".
+# Manual runs only perform the read-only Beast preflight; they never deploy.
+on:
+  workflow_run:
+    workflows: [CI, CSS lint]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    name: deploy
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+      (github.event_name == 'workflow_run' &&
+       vars.ESCOWEAR_AUTO_DEPLOY == 'true' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'master' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    # One deployment at a time; a newer queued request replaces an older queued one.
+    # Job-level, so skipped runs never cancel a queued deployment.
+    concurrency:
+      group: escowear-production-${{ github.event_name }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'workflow_run'
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Require master tip with passing CI and CSS lint
+        id: gate
+        if: github.event_name == 'workflow_run'
+        env:
+          ESCOWEAR_GITHUB_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: node scripts/deploy-gate.cjs "$GITHUB_REPOSITORY" "$SHA"
+
+      - name: Run on Beast
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.decision == 'deploy'
+        env:
+          SSH_KEY: ${{ secrets.BEAST_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.BEAST_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.BEAST_SSH_HOST }}
+          REQUEST: ${{ github.event_name == 'workflow_run' && format('deploy {0}', github.event.workflow_run.head_sha) || 'check' }}
+        run: |
+          [[ -n "$SSH_KEY" && -n "$KNOWN_HOSTS" && -n "$HOST" ]] || { echo "::error::Beast SSH secrets are not configured"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/escowear_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/beast_known_hosts
+          chmod 600 ~/.ssh/escowear_deploy ~/.ssh/beast_known_hosts
+          ssh -i ~/.ssh/escowear_deploy -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/beast_known_hosts \
+            -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            "escowear-deploy@$HOST" "$REQUEST"
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/escowear_deploy

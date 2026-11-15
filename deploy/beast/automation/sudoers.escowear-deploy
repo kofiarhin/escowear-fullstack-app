@@ -1,0 +1,4 @@
+# Installed as /etc/sudoers.d/escowear-deploy (root:root 0440).
+# escowear-deploy may run exactly one root-owned wrapper, as ubuntu, with exactly
+# "check" or "deploy <40-hex-sha>". No shell, no Docker, no other sudo.
+escowear-deploy ALL=(ubuntu) NOPASSWD: /usr/local/sbin/escowear-deploy-run check, /usr/local/sbin/escowear-deploy-run ^deploy [0-9a-f]{40}$
