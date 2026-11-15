@@ -141,7 +141,7 @@ test('deploy refuses before preserving or swapping when runtime files fail the p
   assert.match(result.stderr, /Runtime files are unreadable or writable by the app user/);
   const calls = f.dockerCalls();
   // Runs as the image's own (node) user: no --user override.
-  assert.match(calls, /run --rm --network none --entrypoint sh escowear:release-[0-9a-f]{12} -c test -z/);
+  assert.match(calls, /run --rm --network none --entrypoint sh escowear:release-[0-9a-f]{12} -c out="\$\(find \/app /);
   assert.doesNotMatch(calls, /--user/);
   assert.ok(calls.indexOf('node --test') < calls.indexOf('find /app'), 'permission check runs after server tests');
   assert.doesNotMatch(calls, /^tag |up -d/m);
@@ -155,4 +155,55 @@ test('deploy continues past the permission check when runtime files are correct'
   assert.match(result.stdout, /Preserving previous image/);
   assert.match(f.dockerCalls(), /^tag sha256:0123456789abcdef escowear:rollback-/m);
   assert.doesNotMatch(f.dockerCalls(), /up -d/);
+});
+
+// Runs the real DEPLOY_PERMISSION_CHECK_COMMAND from deploy.conf against throwaway trees,
+// with /app rewritten to the tree. Owner permissions apply to the test user, so every
+// failure mode is observable without root (root would bypass the checks).
+const PERMISSION_CHECK = execFileSync('bash', ['-c', 'source "$1"; printf %s "$DEPLOY_PERMISSION_CHECK_COMMAND"', '_',
+  path.join(ROOT, 'scripts/deploy.conf')], { encoding: 'utf8' });
+
+function runtimeTree() {
+  const app = fs.mkdtempSync(path.join(os.tmpdir(), 'escowear-perm-'));
+  write(path.join(app, 'server/server.js'), 'ok\n', 0o444);
+  write(path.join(app, 'client/src/policies/review.json'), '{}\n', 0o444);
+  write(path.join(app, 'data/payment-proofs/proof.png'), 'x', 0o600);
+  return app;
+}
+// Directories become read-only last, so files can still be created above.
+function lockDirs(app) {
+  for (const dir of ['server', 'client/src/policies', 'client/src', 'client', '.']) {
+    fs.chmodSync(path.join(app, dir), 0o555);
+  }
+}
+function check(app) {
+  const command = PERMISSION_CHECK.replaceAll('/app', app);
+  return spawnSync('sh', ['-c', command], { encoding: 'utf8' }).status;
+}
+function cleanup(app) {
+  execFileSync('chmod', ['-R', 'u+rwx', app]);
+  fs.rmSync(app, { recursive: true, force: true });
+}
+
+test('permission check passes a readable, traversable, read-only tree and ignores /app/data', { skip: process.getuid() === 0 }, t => {
+  const app = runtimeTree();
+  t.after(() => cleanup(app));
+  lockDirs(app);
+  assert.equal(check(app), 0);
+});
+
+test('permission check fails on unreadable files, untraversable directories and writable paths', { skip: process.getuid() === 0 }, t => {
+  const cases = {
+    'unreadable file (the 3a10cfe failure)': app => fs.chmodSync(path.join(app, 'client/src/policies/review.json'), 0o000),
+    'directory readable but not traversable': app => fs.chmodSync(path.join(app, 'client/src/policies'), 0o444),
+    'directory not listable': app => fs.chmodSync(path.join(app, 'client/src/policies'), 0o111),
+    'writable file': app => fs.chmodSync(path.join(app, 'server/server.js'), 0o644),
+  };
+  for (const [name, breakTree] of Object.entries(cases)) {
+    const app = runtimeTree();
+    t.after(() => cleanup(app));
+    lockDirs(app);
+    breakTree(app);
+    assert.notEqual(check(app), 0, `should fail: ${name}`);
+  }
 });
