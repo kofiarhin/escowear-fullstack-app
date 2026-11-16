@@ -16,6 +16,8 @@ const useFeaturedSneakers = () => {
     try {
       const response = await fetch("/api/featured-sneakers", { signal: controller.signal });
       const data = await response.json().catch(() => null);
+      // The body read can be aborted too; a superseded request must not write state.
+      if (controller.signal.aborted) return;
       if (!response.ok) throw new Error(data?.error || "Unable to load featured sneakers");
       const items = Array.isArray(data?.items) ? data.items.slice(0, FEATURED_LIMIT) : [];
       setState({ status: "success", items, error: null });
