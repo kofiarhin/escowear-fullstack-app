@@ -59,7 +59,7 @@ const HeroCarousel = () => {
   const [hasFocus, setHasFocus] = useState(false);
   const [isDocumentHidden, setIsDocumentHidden] = useState(() => document.hidden);
   const [reducedMotion, setReducedMotion] = useState(readReducedMotion);
-  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [blockedSlideId, setBlockedSlideId] = useState(null);
   const pointerStart = useRef(null);
   const heroRef = useRef(null);
   const videoRefs = useRef({});
@@ -111,32 +111,77 @@ const HeroCarousel = () => {
   // to preserve keyboard usability without freezing video playback.
   const active = slides[activeIndex] || slides[0];
   const activeIsVideo = isVideoSlide(active);
+  const autoplayBlocked = blockedSlideId === active?.id;
   const isStopped = manualPause || isDocumentHidden || reducedMotion;
   const isPaused = isStopped || (!activeIsVideo && hasFocus);
 
   const goTo = useCallback((nextIndex) => {
     if (!slides.length) return;
-    setAutoplayBlocked(false);
+    setBlockedSlideId(null);
     setActiveIndex((nextIndex + slides.length) % slides.length);
   }, [slides.length]);
 
-  // Video lifecycle: play/pause active video based on state
+  // Keep the active video playing. An interrupted play() request is not an
+  // autoplay-policy rejection and must never leave the carousel blocked.
   useEffect(() => {
-    if (!active || !isVideoSlide(active)) return;
+    if (!active || !isVideoSlide(active)) return undefined;
     const video = videoRefs.current[active.id];
-    if (!video) return;
+    if (!video) return undefined;
 
     if (isStopped) {
       video.pause();
-      return;
+      return undefined;
     }
+    if (autoplayBlocked) return undefined;
 
-    if (autoplayBlocked) return;
+    let cancelled = false;
+    let retryTimer = null;
+    let retryCount = 0;
+    let playInFlight = false;
 
-    const result = video.play();
-    if (result && typeof result.catch === "function") {
-      result.catch(() => { setAutoplayBlocked(true); });
-    }
+    const handlePlayError = (error) => {
+      playInFlight = false;
+      if (cancelled) return;
+      if (error?.name === "NotAllowedError") {
+        // Only a genuine browser permission refusal needs a user gesture.
+        setBlockedSlideId(active.id);
+      } else if (error?.name === "AbortError" && retryCount < 1) {
+        // Media loads and slide changes can harmlessly interrupt play().
+        retryCount += 1;
+        retryTimer = window.setTimeout(startPlayback, 350);
+      }
+    };
+
+    const startPlayback = () => {
+      if (cancelled || !video.paused || playInFlight) return;
+      playInFlight = true;
+      try {
+        Promise.resolve(video.play()).then(
+          () => { playInFlight = false; },
+          handlePlayError
+        );
+      } catch (error) {
+        handlePlayError(error);
+      }
+    };
+
+    const onUnexpectedPause = () => {
+      if (cancelled || video.ended) return;
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
+      retryTimer = window.setTimeout(startPlayback, 350);
+    };
+
+    // Resume after transient buffering or an unexpected browser pause.
+    video.addEventListener("canplay", startPlayback);
+    video.addEventListener("pause", onUnexpectedPause);
+    startPlayback();
+
+    return () => {
+      cancelled = true;
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
+      video.removeEventListener("canplay", startPlayback);
+      video.removeEventListener("pause", onUnexpectedPause);
+    };
   }, [active, isStopped, autoplayBlocked]);
 
   // Reset departed videos and warm next slide
@@ -173,6 +218,7 @@ const HeroCarousel = () => {
     const advanceOnce = () => {
       if (advanceGuard.current !== currentGuard) return;
       advanceGuard.current += 1;
+      setBlockedSlideId(null);
       setActiveIndex((index) => (index + 1) % slides.length);
     };
 
@@ -218,13 +264,19 @@ const HeroCarousel = () => {
     return () => window.clearTimeout(timer);
   }, [activeIndex, activeIsVideo, hasControls, isPaused, slides, active]);
 
-  // When autoplay is blocked and user manually plays, clear the block
+  // Keep the direct call in the click handler for browsers requiring a gesture.
   const handleManualPlay = () => {
-    setAutoplayBlocked(false);
+    setBlockedSlideId(null);
     const video = videoRefs.current[active?.id];
-    if (video) {
+    if (!video) return;
+    const onError = (error) => {
+      if (error?.name === "NotAllowedError") setBlockedSlideId(active.id);
+    };
+    try {
       const result = video.play();
-      if (result && typeof result.catch === "function") result.catch(() => {});
+      if (result && typeof result.catch === "function") result.catch(onError);
+    } catch (error) {
+      onError(error);
     }
   };
 
