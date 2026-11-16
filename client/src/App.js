@@ -26,24 +26,61 @@ import {
   ResetPassword,
 } from "./Pages";
 
+const SCROLL_STORAGE_KEY = "escowear-scroll-positions";
+
 const ScrollToHash = () => {
-  const { pathname, hash, key } = useLocation();
+  const { pathname, search, hash, key } = useLocation();
   const navigationType = useNavigationType();
 
   useEffect(() => {
-    // Let the browser restore scroll when going Back or Forward.
-    if (navigationType === "POP" && !hash) return undefined;
+    const previousRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    return () => {
+      window.history.scrollRestoration = previousRestoration;
+    };
+  }, []);
 
+  useEffect(() => {
+    const readPositions = () => {
+      try {
+        return JSON.parse(sessionStorage.getItem(SCROLL_STORAGE_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    };
+
+    const savePosition = () => {
+      try {
+        const positions = readPositions();
+        positions[key] = { x: window.scrollX, y: window.scrollY };
+        sessionStorage.setItem(SCROLL_STORAGE_KEY, JSON.stringify(positions));
+      } catch {
+        // Scroll navigation still works when session storage is unavailable.
+      }
+    };
+
+    const positions = readPositions();
+    const savedPosition = navigationType === "POP" ? positions[key] : null;
     const frame = window.requestAnimationFrame(() => {
-      if (hash) {
-        document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
+      if (savedPosition && Number.isFinite(savedPosition.x) && Number.isFinite(savedPosition.y)) {
+        window.scrollTo(savedPosition.x, savedPosition.y);
+      } else if (hash) {
+        document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: "start" });
       } else {
-        window.scrollTo({ top: 0, behavior: "instant" });
+        window.scrollTo(0, 0);
       }
     });
 
-    return () => window.cancelAnimationFrame(frame);
-  }, [pathname, hash, key, navigationType]);
+    window.addEventListener("scroll", savePosition, { passive: true });
+    window.addEventListener("pagehide", savePosition);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      savePosition();
+      window.removeEventListener("scroll", savePosition);
+      window.removeEventListener("pagehide", savePosition);
+    };
+  }, [pathname, search, hash, key, navigationType]);
 
   return null;
 };
