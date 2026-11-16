@@ -118,13 +118,12 @@ test("video slide renders a <video> element with muted and playsInline attribute
   expect(video.muted).toBe(true);
 });
 
-test("video slide shows poster image", async () => {
+test("video slide uses poster attribute on the video element", async () => {
   global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ items: [videoSlide] }) });
   renderCarousel();
   await screen.findByRole("heading", { name: "VIDEO SLIDE" });
-  const posterImg = screen.getByTestId("hero-poster-slide-v1");
-  expect(posterImg).toBeInTheDocument();
-  expect(posterImg).toHaveAttribute("src", videoSlide.posterImage);
+  const video = screen.getByTestId("hero-video-slide-v1");
+  expect(video).toHaveAttribute("poster", videoSlide.posterImage);
 });
 
 test("video slide with no desktopImage but valid poster is accepted", async () => {
@@ -238,7 +237,9 @@ test("autoplay rejection shows manual play button and preserves poster", async (
   await settle();
 
   expect(screen.getByRole("button", { name: /play video/i })).toBeInTheDocument();
-  expect(screen.getByTestId("hero-poster-slide-v1")).toBeInTheDocument();
+  // Poster is preserved via the video element's poster attribute
+  const video = screen.getByTestId("hero-video-slide-v1");
+  expect(video).toHaveAttribute("poster", videoSlide.posterImage);
 
   // Clicking manual play clears the blocked state
   mockPlay.mockResolvedValue(undefined);

@@ -256,7 +256,6 @@ const HeroCarousel = () => {
             const poster = resolvePoster(slide);
             return (
               <div className={`hero-carousel__media hero-carousel__media--video ${isActive ? "is-active" : ""}`} key={slide.id}>
-                {poster && <img className="hero-carousel__poster" data-testid={`hero-poster-${slide.id}`} src={poster} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />}
                 <video
                   ref={(el) => {
                     if (el) videoRefs.current[slide.id] = el;
@@ -267,7 +266,6 @@ const HeroCarousel = () => {
                   playsInline
                   preload={index === 0 ? "auto" : "none"}
                   poster={poster || undefined}
-                  onError={(event) => { event.currentTarget.style.display = "none"; }}
                 >
                   <source src={slide.desktopVideo} type="video/mp4" />
                 </video>
