@@ -5,6 +5,7 @@ const EmailOutbox = require("../Models/EmailOutbox.model");
 const User = require("../Models/User.model");
 const PaymentProof = require("../Models/PaymentProof.model");
 const HeroSlide = require("../Models/HeroSlide.model");
+const FeaturedSneakers = require("../Models/FeaturedSneakers.model");
 const Product = require("../Models/Product.model");
 const ProductImageUpload = require("../Models/ProductImageUpload.model");
 const { createAuth } = require("../middlewares/auth.middleware");
@@ -15,12 +16,13 @@ const { createProofStorage } = require("../services/proofStorage");
 const { createAdminOrdersController } = require("../controllers/adminOrdersController");
 const { getOrderConfig } = require("../config/orders");
 const { createHeroSlidesController } = require("../controllers/heroSlidesController");
+const { createFeaturedSneakersController } = require("../controllers/featuredSneakersController");
 const { createAdminProductsController } = require("../controllers/adminProductsController");
 const { createProductImageStorage } = require("../services/productImageStorage");
 
 // Every route here requires a logged-in user whose stored role is "admin".
 const createAdminRouter = (deps = {}) => {
-  const models = { Order, OrderEvent, EmailOutbox, User, PaymentProof, HeroSlide, Product, ProductImageUpload, ...deps.models };
+  const models = { Order, OrderEvent, EmailOutbox, User, PaymentProof, HeroSlide, FeaturedSneakers, Product, ProductImageUpload, ...deps.models };
   const config = deps.config || getOrderConfig();
   const { auth, requireAdmin } = createAuth(models.User);
   const storage = deps.proofStorage || createProofStorage({ rootDir: config.proofUploadDir });
@@ -29,6 +31,7 @@ const createAdminRouter = (deps = {}) => {
   const workflow = deps.workflow || createOrderWorkflow({ ...models, config, env: deps.env, now: deps.now, logger: deps.logger, proofs });
   const controller = createAdminOrdersController({ ...models, workflow, proofs, logger: deps.logger });
   const heroSlides = createHeroSlidesController({ HeroSlide: models.HeroSlide, Product: models.Product });
+  const featured = createFeaturedSneakersController({ FeaturedSneakers: models.FeaturedSneakers, Product: models.Product });
   const products = createAdminProductsController({ Product: models.Product, ProductImageUpload: models.ProductImageUpload, imageStorage: deps.imageStorage || createProductImageStorage({ env: deps.env }), logger: deps.logger });
   const limiter = createRateLimiter({ windowMs: 60 * 1000, max: 120, keyFn: (req) => String(req.user?._id || req.ip) });
   const uploadLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, keyFn: (req) => String(req.user?._id || req.ip), message: "Too many image uploads, please try again later" });
@@ -40,6 +43,8 @@ const createAdminRouter = (deps = {}) => {
   router.post("/hero-slides", heroSlides.createSlide);
   router.patch("/hero-slides/:id", heroSlides.updateSlide);
   router.delete("/hero-slides/:id", heroSlides.deleteSlide);
+  router.get("/featured-sneakers", featured.getAdminFeatured);
+  router.put("/featured-sneakers", featured.saveFeatured);
   router.get("/products", products.listProducts);
   router.get("/products/brands", products.listBrands);
   router.get("/products/:id", products.getProduct);
