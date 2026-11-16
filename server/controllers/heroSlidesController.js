@@ -3,8 +3,9 @@ const Product = require("../Models/Product.model");
 
 const OBJECT_ID = /^[a-f\d]{24}$/i;
 const MAX_ACTIVE_SLIDES = 8;
-const CREATE_FIELDS = new Set(["productId", "headline", "description", "desktopImage", "mobileImage", "order", "isActive"]);
+const CREATE_FIELDS = new Set(["productId", "headline", "description", "desktopImage", "mobileImage", "desktopVideo", "mobileVideo", "posterImage", "order", "isActive"]);
 const PATCH_FIELDS = CREATE_FIELDS;
+const VIDEO_EXTENSION = /\.(?:mp4|webm)(?:\?[^#]*)?(?:#.*)?$/i;
 
 const hasControlCharacters = (value) => /[\u0000-\u001f\u007f]/.test(value);
 const isObjectId = (value) => typeof value === "string" && OBJECT_ID.test(value);
@@ -22,6 +23,27 @@ const validImageSource = (value) => {
   } catch {
     return false;
   }
+};
+
+const validVideoSource = (value) => {
+  if (typeof value !== "string" || value.length > 2048 || hasControlCharacters(value) || value !== value.trim()) return false;
+  if (!value) return true;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || !url.hostname || url.username || url.password) return false;
+    if (url.hostname === "player.cloudinary.com") return false;
+    if (!VIDEO_EXTENSION.test(url.pathname)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const videoSourceError = (value) => {
+  if (typeof value === "string" && value.includes("player.cloudinary.com/embed")) {
+    return "Use a Cloudinary delivery URL (res.cloudinary.com/…/video/upload/….mp4), not a player embed URL";
+  }
+  return "Use an HTTPS video delivery URL ending in .mp4 or .webm";
 };
 
 const validText = (value, maximum, required = false) =>
@@ -82,6 +104,16 @@ const validatePayload = (body, mode) => {
       else fields[key] = body[key];
     } else if (required) fields[key] = "";
   }
+  for (const key of ["desktopVideo", "mobileVideo"]) {
+    if (Object.hasOwn(body, key)) {
+      if (!validVideoSource(body[key])) errors[key] = videoSourceError(body[key]);
+      else fields[key] = body[key];
+    } else if (required) fields[key] = "";
+  }
+  if (Object.hasOwn(body, "posterImage")) {
+    if (!validImageSource(body.posterImage)) errors.posterImage = "Use an HTTPS URL or a safe /images/ path";
+    else fields.posterImage = body.posterImage;
+  } else if (required) fields.posterImage = "";
   if (required || Object.hasOwn(body, "order")) {
     if (!Number.isInteger(body.order) || body.order < 0 || body.order > 999) errors.order = "Use a whole number from 0 to 999";
     else fields.order = body.order;
@@ -98,6 +130,9 @@ const serializeSlide = async (slide, ProductModel, { publicView = false } = {}) 
   if (!product || (publicView && product.status === "draft")) return null;
   const desktopImage = validImageSource(slide.desktopImage) && slide.desktopImage ? slide.desktopImage : resolveProductImage(product);
   const mobileImage = validImageSource(slide.mobileImage) && slide.mobileImage ? slide.mobileImage : desktopImage;
+  const desktopVideo = typeof slide.desktopVideo === "string" ? slide.desktopVideo : "";
+  const mobileVideo = typeof slide.mobileVideo === "string" ? slide.mobileVideo : "";
+  const posterImage = typeof slide.posterImage === "string" ? slide.posterImage : "";
   const base = {
     id: String(slide._id),
     productId: String(slide.productId),
@@ -105,6 +140,9 @@ const serializeSlide = async (slide, ProductModel, { publicView = false } = {}) 
     description: slide.description || "",
     desktopImage,
     mobileImage,
+    desktopVideo,
+    mobileVideo,
+    posterImage,
     order: slide.order,
     productName: productName(product),
     productInStock: product.inStock !== false,
@@ -145,6 +183,7 @@ const createHeroSlidesController = ({ HeroSlide: HeroSlideModel = HeroSlide, Pro
       const items = (await Promise.all(slides.map((slide) => serializeSlide(slide, ProductModel)))).map((item, index) => item || {
         id: String(slides[index]._id), productId: String(slides[index].productId), headline: slides[index].headline,
         description: slides[index].description || "", desktopImage: slides[index].desktopImage || "", mobileImage: slides[index].mobileImage || "",
+        desktopVideo: slides[index].desktopVideo || "", mobileVideo: slides[index].mobileVideo || "", posterImage: slides[index].posterImage || "",
         order: slides[index].order, isActive: Boolean(slides[index].isActive), productName: "Missing product", productInStock: false, product: null,
       });
       return send(res, 200, { items });
@@ -211,4 +250,4 @@ const createHeroSlidesController = ({ HeroSlide: HeroSlideModel = HeroSlide, Pro
   return { createSlide, deleteSlide, getPublicSlides, listAdminSlides, updateSlide };
 };
 
-module.exports = { MAX_ACTIVE_SLIDES, createHeroSlidesController, validImageSource, validatePayload };
+module.exports = { MAX_ACTIVE_SLIDES, createHeroSlidesController, validImageSource, validVideoSource, validatePayload };
