@@ -26,6 +26,8 @@ const mockPause = jest.fn();
 
 beforeEach(() => {
   jest.useFakeTimers();
+  mockPlay.mockReset().mockResolvedValue(undefined);
+  mockPause.mockClear();
   global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [videoSlide, videoSlide2] }) });
   Object.defineProperty(HTMLVideoElement.prototype, "play", { configurable: true, writable: true, value: mockPlay });
   Object.defineProperty(HTMLVideoElement.prototype, "pause", { configurable: true, writable: true, value: mockPause });
@@ -267,4 +269,74 @@ test("video error advances to next slide", async () => {
   const video = screen.getByTestId("hero-video-slide-v1");
   act(() => { video.dispatchEvent(new Event("error")); });
   expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
+});
+
+test("continues alternating videos without requiring the play button", async () => {
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  await settle();
+
+  act(() => { screen.getByTestId("hero-video-slide-v1").dispatchEvent(new Event("ended")); });
+  expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
+  act(() => { screen.getByTestId("hero-video-slide-v2").dispatchEvent(new Event("ended")); });
+  expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /play video/i })).not.toBeInTheDocument();
+  expect(mockPlay).toHaveBeenCalledTimes(3);
+});
+
+test("stale play rejection from a previous video cannot block the next slide", async () => {
+  let rejectOldPlay;
+  mockPlay.mockImplementationOnce(() => new Promise((resolve, reject) => { rejectOldPlay = reject; }));
+
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  fireEvent.click(screen.getByRole("button", { name: /next slide/i }));
+  expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
+
+  await act(async () => {
+    rejectOldPlay(new DOMException("Playback interrupted", "AbortError"));
+    await Promise.resolve();
+  });
+
+  expect(screen.queryByRole("button", { name: /play video/i })).not.toBeInTheDocument();
+  act(() => { screen.getByTestId("hero-video-slide-v2").dispatchEvent(new Event("ended")); });
+  expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
+});
+
+test("transient AbortError retries the active video automatically", async () => {
+  mockPlay.mockRejectedValueOnce(new DOMException("Playback interrupted", "AbortError"));
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  await settle();
+
+  expect(mockPlay).toHaveBeenCalledTimes(1);
+  act(() => { jest.advanceTimersByTime(350); });
+  await settle();
+  expect(mockPlay).toHaveBeenCalledTimes(2);
+  expect(screen.queryByRole("button", { name: /play video/i })).not.toBeInTheDocument();
+});
+
+test("unexpected pause automatically resumes an active video", async () => {
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  await settle();
+  mockPlay.mockClear();
+
+  act(() => { screen.getByTestId("hero-video-slide-v1").dispatchEvent(new Event("pause")); });
+  act(() => { jest.advanceTimersByTime(350); });
+  await settle();
+
+  expect(mockPlay).toHaveBeenCalled();
+});
+
+test("genuine autoplay policy rejection still provides manual playback", async () => {
+  mockPlay.mockRejectedValueOnce(new DOMException("Not allowed", "NotAllowedError"));
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  await settle();
+
+  expect(screen.getByRole("button", { name: /play video/i })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /next slide/i }));
+  expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /play video/i })).not.toBeInTheDocument();
 });
