@@ -146,8 +146,9 @@ fi
 rollback_ref="$DEPLOY_IMAGE:rollback-$(date -u +%Y%m%d%H%M%S)-${old_image:7:12}"
 
 # No host npm dependencies needed; tests run in Docker's locked environments.
-log "Running frontend tests and lint in Docker"
-"${dk[@]}" build --target frontend-test -t "$DEPLOY_IMAGE:test-${commit:0:12}" .
+# The exact commit already passed the frontend Docker test stage in GitHub CI.
+# check-ci.cjs above verifies those checks before any production build or swap.
+log "Frontend lint and tests already verified by GitHub CI for ${commit:0:12}"
 overlay "$state/candidate.yaml" "$release"
 "${compose[@]}" -f "$state/candidate.yaml" config --quiet
 log "Building $release"
