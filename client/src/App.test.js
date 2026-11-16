@@ -28,6 +28,8 @@ const productPage = {
   pagination: { total: 25, page: 1, limit: 8, pages: 4 },
 };
 
+const featuredPage = { items: products, version: 1 };
+
 const heroPage = {
   items: [{
     id: "slide-1",
@@ -48,7 +50,11 @@ beforeEach(() => {
   sessionStorage.clear();
   global.fetch = jest.fn().mockImplementation((path) => Promise.resolve({
     ok: true,
-    json: async () => path === "/api/hero-slides" ? heroPage : productPage,
+    json: async () => {
+      if (path === "/api/hero-slides") return heroPage;
+      if (path === "/api/featured-sneakers") return featuredPage;
+      return productPage;
+    },
   }));
 });
 
@@ -90,6 +96,10 @@ test("renders the sneaker homepage and products from the API", async () => {
   );
   expect(global.fetch).toHaveBeenCalledWith(
     "/api/hero-slides",
+    expect.objectContaining({ signal: expect.any(AbortSignal) })
+  );
+  expect(global.fetch).toHaveBeenCalledWith(
+    "/api/featured-sneakers",
     expect.objectContaining({ signal: expect.any(AbortSignal) })
   );
 });
