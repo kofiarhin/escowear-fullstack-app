@@ -68,12 +68,13 @@ const renderApp = () => {
 test("renders the sneaker homepage and products from the API", async () => {
   renderApp();
 
+  // Image-only hero API records are intentionally hidden by the video-only carousel.
   expect(
-    await screen.findByRole("heading", { name: /air max, all day/i })
+    await screen.findByRole("heading", { name: "STEP INTO STYLE" })
   ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Shop Now" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: /shop now/i })).toHaveAttribute(
     "href",
-    "/details/product-1"
+    "/store"
   );
 
   expect(await screen.findByText("Nike Air Max Dn8")).toBeInTheDocument();
