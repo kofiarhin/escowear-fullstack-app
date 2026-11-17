@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import "./header.styles.css";
 import Search from "../Search/Search.component";
@@ -34,13 +34,39 @@ const MenuIcon = () => (
   </svg>
 );
 
+// Publishes the sticky header's height as --site-header-h so full-viewport
+// sections (the mobile hero) fit exactly below it. The toggled search panel is
+// excluded so opening search does not resize the page underneath.
+const usePublishedHeaderHeight = (headerRef, searchPanelRef) => {
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return undefined;
+    const root = document.documentElement;
+    const publish = () => {
+      const height = header.getBoundingClientRect().height - (searchPanelRef.current?.getBoundingClientRect().height || 0);
+      if (height > 0) root.style.setProperty("--site-header-h", `${height}px`);
+    };
+    publish();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", publish);
+      return () => window.removeEventListener("resize", publish);
+    }
+    const observer = new ResizeObserver(publish);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [headerRef, searchPanelRef]);
+};
+
 const Header = ({ setShowSideNav }) => {
   const { user } = useSelector((state) => state.userReducer);
   const dispatch = useDispatch();
   const [showSearch, setShowSearch] = useState(false);
+  const headerRef = useRef(null);
+  const searchPanelRef = useRef(null);
+  usePublishedHeaderHeight(headerRef, searchPanelRef);
 
   return (
-    <header className="main-header">
+    <header className="main-header" ref={headerRef}>
       <div className="announcement">
         <span>Escowear / Premium sneaker store</span>
         <span className="announcement-edition">Icons / Releases / Rotation</span>
@@ -113,7 +139,7 @@ const Header = ({ setShowSideNav }) => {
         </div>
       </div>
 
-      <div className={`search-panel ${showSearch ? "is-open" : ""}`} hidden={!showSearch}>
+      <div className={`search-panel ${showSearch ? "is-open" : ""}`} hidden={!showSearch} ref={searchPanelRef}>
         <div className="container">
           <Search onSearchComplete={() => setShowSearch(false)} />
         </div>
