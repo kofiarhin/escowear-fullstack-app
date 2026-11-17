@@ -10,6 +10,7 @@ const seedOrder = (ctx, status, overrides = {}) => {
   return ctx.models.Order.create({
     orderNumber: `EW-STATS-${String(sequence).padStart(5, "0")}`,
     status,
+    createdAt: new Date(Date.UTC(2026, 10, 1, 0, sequence)),
     customer: { name: `Customer ${sequence}`, email: `c${sequence}@example.test`, emailNormalized: `c${sequence}@example.test`, phone: "+233241234567" },
     shippingAddress: { recipient: "Kojo", phone: "+233207654321", line1: "12 Ring Road", city: "Accra", region: "Greater Accra" },
     items: [{ productId: "p1", name: "Pair", size: "UK 9", quantity: 2 }],
@@ -76,7 +77,7 @@ test("admin stats count orders, catalogue and homepage content with safe order s
   assert.equal(body.orders.byStatus.completed, 2);
   assert.equal(body.orders.byStatus.refunded, 0);
   assert.deepEqual(body.orders.attentionStatuses, ATTENTION_STATUSES);
-  assert.deepEqual(body.products, { total: 3, published: 2, draft: 1 });
+  assert.deepEqual(body.products, { total: 3, published: 1, draft: 1 });
   assert.deepEqual(body.heroSlides, { total: 2, active: 1 });
   assert.deepEqual(body.featured, { count: 2, max: 4 });
 
@@ -104,4 +105,14 @@ test("admin stats cap list sizes and the featured count", async (t) => {
   assert.equal(body.attentionOrders.length, 5);
   assert.equal(body.recentOrders.length, 5);
   assert.equal(body.featured.count, 4);
+});
+
+test("admin stats return a safe error when a model read fails", async (t) => {
+  const ctx = await startTestApp();
+  t.after(ctx.close);
+  const admin = await ctx.addUser({ role: "admin" });
+  ctx.models.Product.countDocuments = async () => { throw new Error("private storage failure"); };
+  const response = await ctx.request("GET", "/api/admin/stats", { token: userToken(admin._id) });
+  assert.equal(response.status, 500);
+  assert.deepEqual(response.body, { error: "Dashboard figures could not be loaded", code: "SERVER_ERROR" });
 });

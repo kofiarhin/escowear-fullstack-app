@@ -15,10 +15,11 @@ const createAdminStatsController = ({ Order, Product, HeroSlide, FeaturedSneaker
     const orders = { orderNumber: { $type: "string" } };
     const statuses = Object.values(S);
     try {
-      const [total, statusCounts, productTotal, drafts, slideTotal, activeSlides, featured, recent, attention] = await Promise.all([
+      const [total, statusCounts, productTotal, published, drafts, slideTotal, activeSlides, featured, recent, attention] = await Promise.all([
         Order.countDocuments(orders),
         Promise.all(statuses.map((status) => Order.countDocuments({ ...orders, status }))),
         Product.countDocuments({}),
+        Product.countDocuments({ status: "active" }),
         Product.countDocuments({ status: "draft" }),
         HeroSlide.countDocuments({}),
         HeroSlide.countDocuments({ isActive: true }),
@@ -29,7 +30,7 @@ const createAdminStatsController = ({ Order, Product, HeroSlide, FeaturedSneaker
       res.set("Cache-Control", "no-store");
       return res.json({
         orders: { total, byStatus: Object.fromEntries(statuses.map((status, index) => [status, statusCounts[index]])), attentionStatuses: ATTENTION_STATUSES },
-        products: { total: productTotal, published: productTotal - drafts, draft: drafts },
+        products: { total: productTotal, published, draft: drafts },
         heroSlides: { total: slideTotal, active: activeSlides },
         featured: { count: Math.min(featured?.productIds?.length || 0, MAX_FEATURED), max: MAX_FEATURED },
         recentOrders: recent.map(adminSummary),
