@@ -134,6 +134,35 @@ test("links brand and classic discovery to live catalogue searches", async () =>
   expect(screen.getAllByRole("region", { name: /authentic uk sneakers/i }).map((region) => region.id)).toContain("about");
 });
 
+test("renders The Classics as a simple header and an even grid of silhouette links", async () => {
+  global.fetch = jest.fn(respond(catalogue));
+  renderHome();
+  await screen.findByText("Catalogue Runner 1");
+
+  const section = screen.getByRole("region", { name: /the classics/i });
+  expect(section).toHaveAttribute("id", "classics");
+  expect(within(section).getByRole("heading", { level: 2, name: /the classics/i })).toBeInTheDocument();
+  expect(within(section).getByText(/icons, always in rotation/i)).toBeInTheDocument();
+
+  // No collage: the section has no photos or floating caption tags.
+  expect(within(section).queryByRole("img")).not.toBeInTheDocument();
+  expect(within(section).queryByRole("figure")).not.toBeInTheDocument();
+
+  const nav = within(section).getByRole("navigation", { name: /shop classic silhouettes/i });
+  const links = within(nav).getAllByRole("link");
+  expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+    ["01Air Force 1", "/store?search=air%20force"],
+    ["02Dunk", "/store?search=dunk"],
+    ["03Air Max", "/store?search=air%20max"],
+    ["04Samba", "/store?search=samba"],
+    ["05Spezial", "/store?search=spezial"],
+    ["06Campus", "/store?search=campus"],
+  ]);
+  // Index numbers are decorative; each link's accessible name is the model alone.
+  expect(within(nav).getByRole("link", { name: "Air Max" })).toBeInTheDocument();
+  expect(within(section).getByRole("link", { name: /shop the classics/i })).toHaveAttribute("href", "/store?search=nike");
+});
+
 test("offers a retry when the catalogue request fails", async () => {
   global.fetch = jest.fn(respond({}, { ok: false }));
   renderHome();

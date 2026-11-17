@@ -140,56 +140,34 @@ const Home = () => {
         })}
       </section>
 
-      <section className="home-classics" aria-labelledby="classics-title">
+      <section className="home-classics" id="classics" aria-labelledby="classics-title">
         <div className="home-classics__inner container">
-          <p className="home-eyebrow">Icons, always in rotation</p>
-          <h2 id="classics-title" className="home-classics__title">The Classics</h2>
-
-          <div className="home-classics__layout">
-            <div className="home-classics__gallery">
-              <figure className="home-classics__frame home-classics__frame--main">
-                <img
-                  src="/images/shoes/NIKE DUNK HIGH SP 'MICHIGAN' 2020/1.jpg"
-                  alt="Nike Dunk High Michigan 2020"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <figcaption>Nike Dunk High / Michigan</figcaption>
-              </figure>
-              <figure className="home-classics__frame home-classics__frame--small">
-                <img
-                  src="/images/shoes/AIR JORDAN 1 MID PS BANNED/1.jpg"
-                  alt="Air Jordan 1 Mid PS Banned"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <figcaption>Air Jordan 1 / Banned</figcaption>
-              </figure>
-            </div>
-
-            <div className="home-classics__copy">
-              <p>
-                The pairs that set the pace. Defining basketball shapes, court
-                staples and terrace icons from Nike and adidas.
+          <header className="home-classics__header">
+            <div className="home-classics__intro">
+              <p className="home-eyebrow">Icons, always in rotation</p>
+              <h2 id="classics-title">The Classics</h2>
+              <p className="home-classics__lede">
+                Court staples and terrace icons from Nike and adidas.
               </p>
-              <nav aria-label="Shop classic silhouettes">
-                <ol className="home-classics__index">
-                  {classicLinks.map((classic, index) => (
-                    <li key={classic.name}>
-                      <Link to={classic.to}>
-                        <span aria-hidden="true">{padIndex(index)}</span>
-                        {classic.name}
-                        <ArrowIcon />
-                      </Link>
-                    </li>
-                  ))}
-                </ol>
-              </nav>
-              <Link to="/store?search=nike" className="home-button home-button--light">
-                Shop the classics <ArrowIcon />
-              </Link>
             </div>
-          </div>
+            <Link to="/store?search=nike" className="home-button home-button--light">
+              Shop the classics <ArrowIcon />
+            </Link>
+          </header>
+
+          <nav aria-label="Shop classic silhouettes">
+            <ol className="home-classics__grid">
+              {classicLinks.map((classic, index) => (
+                <li key={classic.name}>
+                  <Link to={classic.to} className="home-classics__card">
+                    <span className="home-classics__index" aria-hidden="true">{padIndex(index)}</span>
+                    <span className="home-classics__name">{classic.name}</span>
+                    <ArrowIcon />
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </nav>
         </div>
       </section>
 
