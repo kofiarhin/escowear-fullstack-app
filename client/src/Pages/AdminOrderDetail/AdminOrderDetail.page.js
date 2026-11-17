@@ -7,6 +7,8 @@ import { AdminGate } from "../AdminOrders/AdminOrders.page";
 import { apiRequest, authHeader } from "../../utils/api";
 import { formatGBP, formatGHS } from "../../utils/money";
 import { FULFILMENT_STEPS, formatDateTime, humanize, isAdmin, localDateTimeToIso, toLocalDateTimeInput, toMinorUnits } from "../../utils/admin";
+import AdminLayout from "../../components/AdminLayout/AdminLayout.component";
+import StatusBadge from "../../components/AdminLayout/StatusBadge.component";
 import "./admin.styles.css";
 
 const money = (name, label, required = true) => ({ name, label, type: "money", required });
@@ -291,7 +293,7 @@ const ActionForm = ({ action, order, user, onDone }) => {
       <div role={status.state === "error" ? "alert" : "status"} className={`admin-status is-${status.state}`}>
         {status.message}
       </div>
-      <button type="submit" className="admin-button admin-button-dark" disabled={status.state === "submitting" || blocked}>
+      <button type="submit" className={`admin-button ${action === "cancel" ? "admin-button-danger" : "admin-button-dark"}`} disabled={status.state === "submitting" || blocked}>
         {definition.submit}
       </button>
     </form>
@@ -364,204 +366,229 @@ const AdminOrderDetail = () => {
     load();
   };
 
+  const jumpToActions = () => {
+    const heading = document.getElementById("admin-actions-title");
+    heading?.scrollIntoView({ block: "start" });
+    heading?.focus({ preventScroll: true });
+  };
+
+  const ready = state === "ready" && order;
+
   const content = () => {
-    if (state === "loading") return <p role="status">Loading order…</p>;
-    if (state === "missing") return <p role="alert">Order not found.</p>;
-    if (state === "forbidden") return <p role="alert">Your account is not allowed to view orders.</p>;
+    if (state === "loading")
+      return (
+        <p className="admin-state" role="status">
+          Loading order…
+        </p>
+      );
+    if (state === "missing")
+      return (
+        <div className="admin-state is-empty" role="alert">
+          <p>Order not found.</p>
+          <Link to="/admin/orders" className="admin-button">
+            Back to orders
+          </Link>
+        </div>
+      );
+    if (state === "forbidden")
+      return (
+        <p className="admin-state is-error" role="alert">
+          Your account is not allowed to view orders.
+        </p>
+      );
     if (state === "error" || !order)
       return (
-        <p role="alert">
-          The order could not be loaded.{" "}
-          <button type="button" className="admin-link-button" onClick={load}>
+        <div className="admin-state is-error" role="alert">
+          <p>The order could not be loaded.</p>
+          <button type="button" className="admin-button" onClick={load}>
             Try again
           </button>
-        </p>
+        </div>
       );
     const quote = order.pricing?.finalGHS;
     const queuedKeys = new Set(order.emails.map((message) => message.dedupeKey));
     return (
       <>
-        <header className="admin-header">
-          <p className="admin-eyebrow">
-            <Link to="/admin/orders">← All orders</Link>
-          </p>
-          <h1 className="title">{order.orderNumber}</h1>
-          <p>
-            <span className={`admin-badge is-${order.status}`}>{humanize(order.status)}</span> · Payment {humanize(order.payment?.status)} · Placed{" "}
-            {formatDateTime(order.createdAt)}
-          </p>
-        </header>
         {notice && (
           <p role="status" className="admin-status is-done">
             {notice}
           </p>
         )}
+        <button type="button" className="admin-button admin-jump" onClick={jumpToActions}>
+          Go to actions
+        </button>
 
-        <div className="admin-detail-grid">
-          <section className="admin-panel" aria-labelledby="admin-customer">
-            <h2 id="admin-customer">Customer & delivery</h2>
-            <dl className="admin-dl">
-              <dt>Name</dt>
-              <dd>{order.customer?.name}</dd>
-              <dt>Email</dt>
-              <dd>{order.customer?.email}</dd>
-              <dt>Phone</dt>
-              <dd>{order.customer?.phone}</dd>
-              <dt>Recipient</dt>
-              <dd>
-                {order.shippingAddress?.recipient} ({order.shippingAddress?.phone})
-              </dd>
-              <dt>Address</dt>
-              <dd>
-                {[order.shippingAddress?.line1, order.shippingAddress?.line2, order.shippingAddress?.landmark && `Landmark: ${order.shippingAddress.landmark}`, order.shippingAddress?.city, order.shippingAddress?.region]
-                  .filter(Boolean)
-                  .join(", ")}
-              </dd>
-              <dt>Account</dt>
-              <dd>{order.user ? "Linked to a registered customer" : "Guest"}</dd>
-            </dl>
-          </section>
+        <div className="admin-order-layout">
+          <div className="admin-order-main">
+            <div className="admin-detail-grid">
+              <section className="admin-panel" aria-labelledby="admin-customer">
+                <h2 id="admin-customer">Customer & delivery</h2>
+                <dl className="admin-dl">
+                  <dt>Name</dt>
+                  <dd>{order.customer?.name}</dd>
+                  <dt>Email</dt>
+                  <dd>{order.customer?.email}</dd>
+                  <dt>Phone</dt>
+                  <dd>{order.customer?.phone}</dd>
+                  <dt>Recipient</dt>
+                  <dd>
+                    {order.shippingAddress?.recipient} ({order.shippingAddress?.phone})
+                  </dd>
+                  <dt>Address</dt>
+                  <dd>
+                    {[order.shippingAddress?.line1, order.shippingAddress?.line2, order.shippingAddress?.landmark && `Landmark: ${order.shippingAddress.landmark}`, order.shippingAddress?.city, order.shippingAddress?.region]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </dd>
+                  <dt>Account</dt>
+                  <dd>{order.user ? "Linked to a registered customer" : "Guest"}</dd>
+                </dl>
+              </section>
 
-          <section className="admin-panel" aria-labelledby="admin-items">
-            <h2 id="admin-items">Items</h2>
-            <ul className="admin-items">
-              {order.items.map((item) => (
-                <li key={`${item.productId}:${item.size}`}>
-                  <strong>{item.name}</strong> — {item.size} × {item.quantity} @ {formatGBP(item.unitPriceGBPMinor)} = {formatGBP(item.lineTotalGBPMinor)}
-                  {item.retailerSnapshot?.productUrl && (
-                    <>
-                      {" "}
-                      ·{" "}
-                      <a href={item.retailerSnapshot.productUrl} target="_blank" rel="noreferrer noopener">
-                        retailer page
-                      </a>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p>
-              Indicative subtotal: <strong>{formatGBP(order.pricing?.subtotalGBPMinor)}</strong> (GBP estimate)
-            </p>
-          </section>
-
-          <section className="admin-panel" aria-labelledby="admin-payment">
-            <h2 id="admin-payment">Quote & payment</h2>
-            {quote ? (
-              <dl className="admin-dl">
-                <dt>Quote v{quote.quoteVersion}</dt>
-                <dd>
-                  <strong>{formatGHS(quote.totalMinor)}</strong> (items {formatGHS(quote.subtotalMinor)}, fees {formatGHS(quote.feesMinor)}, shipping{" "}
-                  {formatGHS(quote.shippingMinor)}, duties {formatGHS(quote.dutiesMinor)})
-                </dd>
-                <dt>Valid until</dt>
-                <dd>
-                  {formatDateTime(quote.expiresAt)}
-                  {new Date(quote.expiresAt) < new Date() && <strong> — expired</strong>}
-                </dd>
-                {quote.rateSnapshot && (
-                  <>
-                    <dt>Rate note</dt>
-                    <dd>{quote.rateSnapshot}</dd>
-                  </>
-                )}
-              </dl>
-            ) : (
-              <p className="admin-muted">No GHS quote yet.</p>
-            )}
-            {order.payment?.status === "verified" && (
-              <dl className="admin-dl">
-                <dt>Received</dt>
-                <dd>
-                  {formatGHS(order.payment.amountReceivedGHSMinor)} · ref {order.payment.bankReference} · {formatDateTime(order.payment.receivedAt)}
-                </dd>
-                <dt>Verified</dt>
-                <dd>{formatDateTime(order.payment.verifiedAt)}</dd>
-              </dl>
-            )}
-            {order.fulfilment?.carrier && (
-              <p>
-                Shipped with {order.fulfilment.carrier} {order.fulfilment.trackingNumber && `(${order.fulfilment.trackingNumber})`}
-              </p>
-            )}
-            {order.fulfilment?.estimatedDeliveryAt && <p>Estimated delivery: {formatDateTime(order.fulfilment.estimatedDeliveryAt)}</p>}
-            {order.fulfilment?.issue && order.status === "delivery_issue" && (
-              <p className="admin-warning">Delivery issue: {order.fulfilment.issue}</p>
-            )}
-          </section>
-        </div>
-
-        <PaymentProofReview order={order} user={user} />
-
-        <section className="admin-actions" aria-labelledby="admin-actions-title">
-          <h2 id="admin-actions-title">Actions</h2>
-          {order.allowedActions.length === 0 && <p className="admin-muted">No further status changes are possible for this order.</p>}
-          <div className="admin-actions-grid">
-            {order.allowedActions.map((action) => (
-              <ActionForm key={`${action}:${order.status}:${order.updatedAt}`} action={action} order={order} user={user} onDone={refresh} />
-            ))}
-            <NoteForm order={order} user={user} onDone={refresh} />
-          </div>
-        </section>
-
-        <div className="admin-detail-grid">
-          <section className="admin-panel" aria-labelledby="admin-emails">
-            <h2 id="admin-emails">Emails</h2>
-            <ul className="admin-timeline">
-              {order.emails.map((message) => (
-                <li key={message.id}>
-                  <strong>{humanize(message.kind)}</strong> — {message.state} ({message.attempts} attempts)
-                  <br />
-                  <span className="admin-muted">{message.subject}</span>
-                  {message.lastError && <p className="admin-error">Last error: {message.lastError}</p>}
-                  {message.state === "failed" && (
-                    <button type="button" className="admin-link-button" onClick={() => post(`/api/admin/emails/${message.id}/retry`, "Retry email")}>
-                      Retry
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p className="admin-muted">"queued" means not sent yet. If no mail transport is configured, emails stay queued.</p>
-          </section>
-
-          <section className="admin-panel" aria-labelledby="admin-history">
-            <h2 id="admin-history">History</h2>
-            <ol className="admin-timeline">
-              {order.events.map((event) => (
-                <li key={event.id}>
-                  <strong>{humanize(event.type)}</strong>
-                  {event.toStatus && ` → ${humanize(event.toStatus)}`} · {event.actorType} · {formatDateTime(event.createdAt)}
-                  {event.details?.note && <p>{event.details.note}</p>}
-                  {event.details?.message && <p>To customer: {event.details.message}</p>}
-                  {event.details?.issue && <p>Issue: {event.details.issue}</p>}
-                  {event.details?.proofChannel === "website_upload" && <p>Website upload · transaction ID {event.details.referenceMasked}</p>}
-                  {event.details?.reason && <p>Reason: {event.details.reason}</p>}
-                  {event.details?.email && !queuedKeys.has(event.details.email.dedupeKey) && (
-                    <button
-                      type="button"
-                      className="admin-link-button"
-                      onClick={() => post(`/api/admin/orders/${order.id}/events/${event.id}/requeue-email`, "Requeue email")}
-                    >
-                      Requeue email
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ol>
-            {order.internalNotes?.length > 0 && (
-              <>
-                <h3>Internal notes</h3>
-                <ul className="admin-timeline">
-                  {order.internalNotes.map((note) => (
-                    <li key={note._id || note.createdAt}>
-                      {note.body} <span className="admin-muted">· {formatDateTime(note.createdAt)}</span>
+              <section className="admin-panel" aria-labelledby="admin-items">
+                <h2 id="admin-items">Items</h2>
+                <ul className="admin-items">
+                  {order.items.map((item) => (
+                    <li key={`${item.productId}:${item.size}`}>
+                      <strong>{item.name}</strong> — {item.size} × {item.quantity} @ {formatGBP(item.unitPriceGBPMinor)} = {formatGBP(item.lineTotalGBPMinor)}
+                      {item.retailerSnapshot?.productUrl && (
+                        <>
+                          {" "}
+                          ·{" "}
+                          <a href={item.retailerSnapshot.productUrl} target="_blank" rel="noreferrer noopener">
+                            retailer page
+                          </a>
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>
-              </>
-            )}
-          </section>
+                <p>
+                  Indicative subtotal: <strong>{formatGBP(order.pricing?.subtotalGBPMinor)}</strong> (GBP estimate)
+                </p>
+              </section>
+
+              <section className="admin-panel" aria-labelledby="admin-payment">
+                <h2 id="admin-payment">Quote & payment</h2>
+                {quote ? (
+                  <dl className="admin-dl">
+                    <dt>Quote v{quote.quoteVersion}</dt>
+                    <dd>
+                      <strong>{formatGHS(quote.totalMinor)}</strong> (items {formatGHS(quote.subtotalMinor)}, fees {formatGHS(quote.feesMinor)}, shipping{" "}
+                      {formatGHS(quote.shippingMinor)}, duties {formatGHS(quote.dutiesMinor)})
+                    </dd>
+                    <dt>Valid until</dt>
+                    <dd>
+                      {formatDateTime(quote.expiresAt)}
+                      {new Date(quote.expiresAt) < new Date() && <strong> — expired</strong>}
+                    </dd>
+                    {quote.rateSnapshot && (
+                      <>
+                        <dt>Rate note</dt>
+                        <dd>{quote.rateSnapshot}</dd>
+                      </>
+                    )}
+                  </dl>
+                ) : (
+                  <p className="admin-muted">No GHS quote yet.</p>
+                )}
+                {order.payment?.status === "verified" && (
+                  <dl className="admin-dl">
+                    <dt>Received</dt>
+                    <dd>
+                      {formatGHS(order.payment.amountReceivedGHSMinor)} · ref {order.payment.bankReference} · {formatDateTime(order.payment.receivedAt)}
+                    </dd>
+                    <dt>Verified</dt>
+                    <dd>{formatDateTime(order.payment.verifiedAt)}</dd>
+                  </dl>
+                )}
+                {order.fulfilment?.carrier && (
+                  <p>
+                    Shipped with {order.fulfilment.carrier} {order.fulfilment.trackingNumber && `(${order.fulfilment.trackingNumber})`}
+                  </p>
+                )}
+                {order.fulfilment?.estimatedDeliveryAt && <p>Estimated delivery: {formatDateTime(order.fulfilment.estimatedDeliveryAt)}</p>}
+                {order.fulfilment?.issue && order.status === "delivery_issue" && (
+                  <p className="admin-warning">Delivery issue: {order.fulfilment.issue}</p>
+                )}
+              </section>
+            </div>
+
+            <PaymentProofReview order={order} user={user} />
+
+              <section className="admin-panel" aria-labelledby="admin-emails">
+                <h2 id="admin-emails">Emails</h2>
+                <ul className="admin-timeline">
+                  {order.emails.map((message) => (
+                    <li key={message.id}>
+                      <strong>{humanize(message.kind)}</strong> — {message.state} ({message.attempts} attempts)
+                      <br />
+                      <span className="admin-muted">{message.subject}</span>
+                      {message.lastError && <p className="admin-error">Last error: {message.lastError}</p>}
+                      {message.state === "failed" && (
+                        <button type="button" className="admin-link-button" onClick={() => post(`/api/admin/emails/${message.id}/retry`, "Retry email")}>
+                          Retry
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <p className="admin-muted">"queued" means not sent yet. If no mail transport is configured, emails stay queued.</p>
+              </section>
+          </div>
+
+          <div className="admin-order-side">
+              <section className="admin-actions" aria-labelledby="admin-actions-title">
+                <h2 id="admin-actions-title" tabIndex={-1}>
+                  Actions
+                </h2>
+                {order.allowedActions.length === 0 && <p className="admin-muted">No further status changes are possible for this order.</p>}
+                <div className="admin-actions-grid">
+                  {order.allowedActions.map((action) => (
+                    <ActionForm key={`${action}:${order.status}:${order.updatedAt}`} action={action} order={order} user={user} onDone={refresh} />
+                  ))}
+                  <NoteForm order={order} user={user} onDone={refresh} />
+                </div>
+              </section>
+
+              <section className="admin-panel" aria-labelledby="admin-history">
+                <h2 id="admin-history">History</h2>
+                <ol className="admin-timeline">
+                  {order.events.map((event) => (
+                    <li key={event.id}>
+                      <strong>{humanize(event.type)}</strong>
+                      {event.toStatus && ` → ${humanize(event.toStatus)}`} · {event.actorType} · {formatDateTime(event.createdAt)}
+                      {event.details?.note && <p>{event.details.note}</p>}
+                      {event.details?.message && <p>To customer: {event.details.message}</p>}
+                      {event.details?.issue && <p>Issue: {event.details.issue}</p>}
+                      {event.details?.proofChannel === "website_upload" && <p>Website upload · transaction ID {event.details.referenceMasked}</p>}
+                      {event.details?.reason && <p>Reason: {event.details.reason}</p>}
+                      {event.details?.email && !queuedKeys.has(event.details.email.dedupeKey) && (
+                        <button
+                          type="button"
+                          className="admin-link-button"
+                          onClick={() => post(`/api/admin/orders/${order.id}/events/${event.id}/requeue-email`, "Requeue email")}
+                        >
+                          Requeue email
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+                {order.internalNotes?.length > 0 && (
+                  <>
+                    <h3>Internal notes</h3>
+                    <ul className="admin-timeline">
+                      {order.internalNotes.map((note) => (
+                        <li key={note._id || note.createdAt}>
+                          {note.body} <span className="admin-muted">· {formatDateTime(note.createdAt)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </section>
+          </div>
         </div>
       </>
     );
@@ -569,7 +596,21 @@ const AdminOrderDetail = () => {
 
   return (
     <AdminGate user={user}>
-      <main className="admin container">{content()}</main>
+      <AdminLayout
+        eyebrow={<Link to="/admin/orders">← All orders</Link>}
+        title={ready ? order.orderNumber : "Order"}
+        description={
+          ready && (
+            <p className="admin-order-meta">
+              <StatusBadge status={order.status} />
+              <span>Payment {humanize(order.payment?.status)}</span>
+              <span>Placed {formatDateTime(order.createdAt)}</span>
+            </p>
+          )
+        }
+      >
+        {content()}
+      </AdminLayout>
     </AdminGate>
   );
 };

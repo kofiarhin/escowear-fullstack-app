@@ -18,6 +18,7 @@ const { getOrderConfig } = require("../config/orders");
 const { createHeroSlidesController } = require("../controllers/heroSlidesController");
 const { createFeaturedSneakersController } = require("../controllers/featuredSneakersController");
 const { createAdminProductsController } = require("../controllers/adminProductsController");
+const { createAdminStatsController } = require("../controllers/adminStatsController");
 const { createProductImageStorage } = require("../services/productImageStorage");
 
 // Every route here requires a logged-in user whose stored role is "admin".
@@ -33,11 +34,13 @@ const createAdminRouter = (deps = {}) => {
   const heroSlides = createHeroSlidesController({ HeroSlide: models.HeroSlide, Product: models.Product });
   const featured = createFeaturedSneakersController({ FeaturedSneakers: models.FeaturedSneakers, Product: models.Product });
   const products = createAdminProductsController({ Product: models.Product, ProductImageUpload: models.ProductImageUpload, imageStorage: deps.imageStorage || createProductImageStorage({ env: deps.env }), logger: deps.logger });
+  const stats = createAdminStatsController({ Order: models.Order, Product: models.Product, HeroSlide: models.HeroSlide, FeaturedSneakers: models.FeaturedSneakers, logger: deps.logger });
   const limiter = createRateLimiter({ windowMs: 60 * 1000, max: 120, keyFn: (req) => String(req.user?._id || req.ip) });
   const uploadLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, keyFn: (req) => String(req.user?._id || req.ip), message: "Too many image uploads, please try again later" });
 
   const router = Router();
   router.use(auth, requireAdmin, limiter);
+  router.get("/stats", stats.getStats);
   router.get("/orders", controller.listOrders);
   router.get("/hero-slides", heroSlides.listAdminSlides);
   router.post("/hero-slides", heroSlides.createSlide);
