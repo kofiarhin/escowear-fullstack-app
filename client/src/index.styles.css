@@ -111,11 +111,14 @@
   --surface-header: rgba(22, 22, 22, 0.96);
   --input-bg: #161616;
 
-  /* Slightly lighter tiles; multiply would black out images on a dark tile */
-  --tile: #222222;
-  --tile-soft: #222222;
-  --tile-feature: #262626;
-  --image-blend: normal;
+  /* Product photos are white-background cut-outs, so dark mode keeps soft
+     light tiles (dimmed slightly) and the same multiply blend as light mode.
+     A dark tile would show white rectangles, and multiply on it would black
+     the image out. */
+  --tile: #e2e2e0;
+  --tile-soft: #e2e2e0;
+  --tile-feature: #e6e6e4;
+  --image-blend: multiply;
   --skeleton-base: #1f1f1f;
   --skeleton-highlight: #2a2a2a;
 
