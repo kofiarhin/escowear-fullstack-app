@@ -8,12 +8,34 @@
   padding: 22px clamp(20px, 5vw, 72px) 32px;
   background: var(--inverse-surface);
   color: var(--inverse-text);
-  animation: nav-enter 420ms var(--ease-out) both;
+  animation: nav-enter 320ms var(--ease-out) both;
+}
+
+/* Fade-and-scale overlay (not a sliding drawer). */
+.sideNav.is-closing {
+  pointer-events: none;
+  animation: nav-exit 180ms ease-in both;
 }
 
 @keyframes nav-enter {
   from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes nav-exit {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.98); }
+}
+
+@keyframes nav-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* The global focus ring is dark in the light theme; the overlay is always dark. */
+.sideNav :focus-visible {
+  outline: 2px solid var(--inverse-text);
+  outline-offset: 2px;
 }
 
 .sideNav-topline {
@@ -53,11 +75,41 @@
   stroke-width: 1.5;
 }
 
-.links-wrapper {
+.sideNav-body {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 28px;
   padding-block: 42px;
+}
+
+.links-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.sideNav-brands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sideNav-brands a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding-inline: 16px;
+  border: 1px solid var(--inverse-border-strong);
+  border-radius: 999px;
+  font-family: var(--font-condensed);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sideNav-brands a:hover {
+  border-color: var(--inverse-text);
 }
 
 .links-wrapper > a {
@@ -105,18 +157,18 @@
   text-transform: uppercase;
 }
 
-.sideNav-footer > a {
-  color: var(--inverse-text);
-}
-
 .sideNav-account {
   display: flex;
-  gap: 22px;
+  flex-wrap: wrap;
+  gap: 0 22px;
   color: var(--inverse-text);
 }
 
 .sideNav-account a,
 .sideNav-account button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   color: inherit;
   font: inherit;
   letter-spacing: inherit;
@@ -128,7 +180,8 @@
     padding: 17px 18px 22px;
   }
 
-  .links-wrapper {
+  .sideNav-body {
+    gap: 22px;
     padding-block: 30px;
   }
 
@@ -149,7 +202,7 @@
   }
 
   .sideNav-account {
-    margin-left: auto;
+    margin-left: 0;
   }
 }
 
@@ -170,13 +223,17 @@
   align-items: center;
 }
 
-.sideNav-admin a:focus-visible {
-  outline: 2px solid var(--inverse-text);
-  outline-offset: 2px;
-}
-
+/* Reduced motion: fade only, no scale or slide. */
 @media (prefers-reduced-motion: reduce) {
   .sideNav {
-    animation: none;
+    animation: nav-fade 120ms linear both;
+  }
+
+  .links-wrapper > a {
+    transition: color 220ms ease;
+  }
+
+  .links-wrapper > a:hover {
+    transform: none;
   }
 }
