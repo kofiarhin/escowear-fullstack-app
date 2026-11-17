@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./register.styles.css";
 import { registerUser, errorHandler } from "../../redux/actions/user.action";
 import { useDispatch, useSelector } from "react-redux";
+import { postLoginPath } from "../../utils/authRedirect";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -11,14 +12,19 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   let { user, isPending, error } = useSelector((state) => state.userReducer);
 
+  // New accounts are customers, so this is /account unless a safe return path
+  // was passed along.
+  const from = location.state?.from;
+  const { search } = location;
   useEffect(() => {
     if (user) {
-      navigate("/dashboard");
+      navigate(postLoginPath(user, { from, search }), { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, from, search, navigate]);
 
   // handleSubmit
   const handleSubmit = (e) => {

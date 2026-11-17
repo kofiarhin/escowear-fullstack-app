@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import "./login.styles.css";
 import { loginUser } from "../../redux/actions/user.action";
+import { postLoginPath } from "../../utils/authRedirect";
 
 // login component
 const Login = ({ setIsLoggedIn }) => {
@@ -10,16 +11,18 @@ const Login = ({ setIsLoggedIn }) => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-  // Only same-site paths are honoured as a return destination.
-  const from = typeof location.state?.from === "string" && /^\/(?!\/)/.test(location.state.from) ? location.state.from : "/dashboard";
   const dispatch = useDispatch();
   const { user, isPending, error } = useSelector((state) => state.userReducer);
 
+  // A safe return path (e.g. from checkout) wins; otherwise admins land on
+  // /admin and customers on /account.
+  const from = location.state?.from;
+  const { search } = location;
   useEffect(() => {
     if (user) {
-      navigate(from, { replace: true });
+      navigate(postLoginPath(user, { from, search }), { replace: true });
     }
-  }, [user, from, navigate]);
+  }, [user, from, search, navigate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

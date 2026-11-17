@@ -13,7 +13,7 @@ const renderRegister = () =>
       <MemoryRouter initialEntries={["/register"]}>
         <Routes>
           <Route path="/register" element={<Register />} />
-          <Route path="/dashboard" element={<p>Dashboard page</p>} />
+          <Route path="/account" element={<p>Account page</p>} />
         </Routes>
       </MemoryRouter>
     </Provider>
@@ -54,7 +54,7 @@ test("short passwords are refused before anything is sent; success signs in", as
   await userEvent.type(password, "a-much-longer-password");
   await userEvent.type(confirm, "a-much-longer-password");
   await userEvent.click(screen.getByRole("button"));
-  expect(await screen.findByText("Dashboard page")).toBeInTheDocument();
+  expect(await screen.findByText("Account page")).toBeInTheDocument();
   await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/users/login", expect.anything()));
   expect(JSON.parse(localStorage.getItem("user")).token).toBe("t");
 });
