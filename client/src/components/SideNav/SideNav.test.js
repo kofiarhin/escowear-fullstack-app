@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
-import { MemoryRouter, useNavigate } from "react-router-dom";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import reducers from "../../redux/reducers";
 import SideNav, { MENU_EXIT_MS } from "./SideNav.component";
 
@@ -57,6 +57,22 @@ test("menu closes when the location changes without a menu link (e.g. browser ba
 test("customers do not see admin destinations in the site menu", () => {
   renderMenu("customer");
   expect(screen.queryByRole("navigation", { name: "Admin navigation" })).not.toBeInTheDocument();
+});
+
+test("the signed-in account button opens /account", () => {
+  const store = createStore(reducers);
+  store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Test User", role: "customer", token: "test-token" } });
+  const Where = () => <p data-testid="path">{useLocation().pathname}</p>;
+  render(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={["/store"]}>
+        <SideNav setShowSideNav={jest.fn()} />
+        <Where />
+      </MemoryRouter>
+    </Provider>
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Test's account" }));
+  expect(screen.getByTestId("path")).toHaveTextContent("/account");
 });
 
 test("menu is a full-screen modal overlay, not a slide-in drawer", () => {

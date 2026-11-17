@@ -5,6 +5,7 @@ import Store from "./Store/store.page";
 import Home from "./Home/Home.page";
 import Details from "./Details/Details.page";
 import DashBoard from "./Dashboard/Dashboard.page";
+import Account from "./Account/Account.page";
 import Checkout from "./Checkout/Checkout.page";
 import OrderConfirmation from "./OrderConfirmation/OrderConfirmation.page";
 import AdminOverview from "./AdminOverview/AdminOverview.page";
@@ -19,4 +20,4 @@ import AdminFeaturedSneakers from "./AdminFeaturedSneakers/AdminFeaturedSneakers
 import ForgotPassword from "./PasswordRecovery/ForgotPassword.page";
 import ResetPassword from "./PasswordRecovery/ResetPassword.page";
 
-export { Register, Login, Cart, Store, Home, Details, DashBoard, Checkout, OrderConfirmation, AdminOverview, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, AdminFeaturedSneakers, TrackOrder, OrderDetails, Policies, ForgotPassword, ResetPassword };
+export { Register, Login, Cart, Store, Home, Details, DashBoard, Account, Checkout, OrderConfirmation, AdminOverview, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, AdminFeaturedSneakers, TrackOrder, OrderDetails, Policies, ForgotPassword, ResetPassword };
