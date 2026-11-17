@@ -1,3 +1,25 @@
+/* Shared admin design system. Colours come from the site theme tokens; the
+   status tones below are the only admin-specific colours and are defined for
+   both themes. */
+:root,
+[data-theme="light"] {
+  --admin-attention-bg: #fff4e0;
+  --admin-attention-text: #7a4100;
+  --admin-progress-bg: #e8eefb;
+  --admin-progress-text: #1f3d7a;
+  --admin-done-bg: #e7f3eb;
+  --admin-done-text: #1d5631;
+}
+
+[data-theme="dark"] {
+  --admin-attention-bg: #2b1f0c;
+  --admin-attention-text: #f5b85c;
+  --admin-progress-bg: #151f33;
+  --admin-progress-text: #a9c1f5;
+  --admin-done-bg: #12241a;
+  --admin-done-text: #7fc79a;
+}
+
 .admin {
   min-height: 70vh;
   padding-top: 40px;
@@ -29,12 +51,16 @@
   font-size: 0.92rem;
 }
 
+/* Filter / toolbar bar */
 .admin-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-end;
   margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
 }
 
 .admin-filters > div,
@@ -43,14 +69,29 @@
   gap: 6px;
 }
 
+.admin-filters > div {
+  min-width: 0;
+}
+
 .admin-filters label,
 .admin-field label {
   font-weight: 600;
 }
 
+.admin-filters label {
+  color: var(--text-muted);
+  font-family: var(--font-condensed);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .admin input:not([type="checkbox"]),
 .admin select,
 .admin textarea {
+  width: 100%;
+  min-width: 0;
   min-height: 44px;
   padding: 8px 12px;
   border: 1px solid var(--border-input);
@@ -60,12 +101,22 @@
   font: inherit;
 }
 
+.admin input::placeholder,
+.admin textarea::placeholder {
+  color: var(--text-placeholder);
+}
+
 .admin textarea {
   resize: vertical;
 }
 
+/* Buttons: secondary (default), primary (.admin-button-dark), danger */
 .admin-button {
+  display: inline-flex;
   min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 10px 18px;
   border: 1px solid var(--border-strong);
   background: var(--surface-raised);
@@ -74,13 +125,34 @@
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.1em;
+  line-height: 1.2;
+  text-align: center;
   text-transform: uppercase;
   cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.admin-button:hover:not(:disabled) {
+  background: var(--surface-hover);
 }
 
 .admin-button-dark {
   background: var(--accent);
   color: var(--accent-contrast);
+}
+
+.admin-button-dark:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.admin-button-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.admin-button-danger:hover:not(:disabled) {
+  background: var(--danger-surface);
+  color: var(--danger-on-surface);
 }
 
 .admin-button:disabled {
@@ -89,25 +161,68 @@
 }
 
 .admin-link-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   padding: 0;
   border: 0;
-  border-bottom: 1px solid currentColor;
   background: none;
   color: var(--text);
   font: inherit;
   font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   cursor: pointer;
 }
 
-.admin a {
+.admin-link-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.admin a:not([class]) {
   border-bottom: 1px solid currentColor;
 }
 
-.admin :focus-visible {
+.admin :focus-visible,
+.admin-layout :focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
+/* Cards / surfaces */
+.admin-card,
+.admin-panel,
+.admin-action {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.admin-panel h2,
+.admin-actions h2,
+.admin-card h2 {
+  font-family: var(--font-condensed);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.admin-action h3,
+.admin-panel h3 {
+  font-family: var(--font-condensed);
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/* Tables: clean table on wide screens, stacked cards at 760px and below. */
 .admin-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -129,79 +244,121 @@
   white-space: nowrap;
 }
 
+.admin-table td.is-wrap {
+  min-width: 160px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
 .admin-table th {
+  background: var(--surface-raised);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
+.admin-table td > a:not([class]) {
+  font-weight: 700;
+}
+
+.admin-table__link {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Status badges: always text, tone by status group. */
 .admin-badge {
   display: inline-block;
   padding: 3px 8px;
   border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--text);
   font-family: var(--font-condensed);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.06em;
+  line-height: 1.3;
   text-transform: uppercase;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
-.admin-badge.is-confirmed,
-.admin-badge.is-processing,
-.admin-badge.is-dispatched,
-.admin-badge.is-delivered,
-.admin-badge.is-completed {
-  background: var(--accent);
-  color: var(--accent-contrast);
+.admin-badge.is-tone-attention {
+  border-color: var(--admin-attention-text);
+  background: var(--admin-attention-bg);
+  color: var(--admin-attention-text);
+}
+
+.admin-badge.is-tone-progress {
+  border-color: var(--admin-progress-text);
+  background: var(--admin-progress-bg);
+  color: var(--admin-progress-text);
+}
+
+.admin-badge.is-tone-done,
+.admin-badge.is-published {
+  border-color: var(--admin-done-text);
+  background: var(--admin-done-bg);
+  color: var(--admin-done-text);
+}
+
+.admin-badge.is-tone-closed {
+  border-style: dashed;
+  border-color: var(--border-input);
+  background: transparent;
+  color: var(--text-muted);
 }
 
 .admin-badge.is-payment_issue,
+.admin-badge.is-delivery_issue,
 .admin-badge.is-sourcing_failed,
 .admin-badge.is-refund_pending {
   border-color: var(--danger);
-  color: var(--danger);
+  background: var(--danger-surface);
+  color: var(--danger-on-surface);
 }
 
+/* Orders list */
+.admin-orders__status {
+  flex: 0 1 240px;
+}
+
+.admin-orders__search {
+  flex: 1 1 280px;
+}
+
+/* Pagination */
 .admin-pagination {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   align-items: center;
+  justify-content: space-between;
   margin-top: 20px;
 }
 
+.admin-pagination > span {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+/* Detail pages */
 .admin-detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 20px;
   margin-bottom: 24px;
-}
-
-.admin-panel,
-.admin-action {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  padding: 20px;
-  border: 1px solid var(--border);
-  background: var(--surface-raised);
-}
-
-.admin-panel h2,
-.admin-actions h2 {
-  font-family: var(--font-condensed);
-  font-size: 1.2rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.admin-action h3,
-.admin-panel h3 {
-  font-family: var(--font-condensed);
-  font-size: 1.05rem;
-  font-weight: 800;
-  text-transform: uppercase;
 }
 
 .admin-dl {
@@ -224,6 +381,7 @@
   gap: 10px;
   padding-left: 1.1rem;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .admin-actions {
@@ -232,7 +390,7 @@
 
 .admin-actions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 20px;
   margin-top: 12px;
 }
@@ -282,6 +440,50 @@
   background: var(--surface-raised);
 }
 
+/* Loading, empty and error states */
+.admin-state {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.admin-state.is-empty {
+  border-style: dashed;
+}
+
+.admin-state.is-error {
+  border-color: var(--danger);
+  background: var(--danger-surface);
+  color: var(--danger-on-surface);
+}
+
+.admin-state.is-error .admin-button {
+  border-color: currentColor;
+}
+
+.admin-state strong {
+  font-family: var(--font-condensed);
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-skeleton {
+  display: block;
+  min-height: 1em;
+  background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-highlight) 50%, var(--skeleton-base) 75%);
+  background-size: 200% 100%;
+  animation: admin-skeleton 1.4s ease-in-out infinite;
+}
+
+@keyframes admin-skeleton {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -291,15 +493,43 @@
   white-space: nowrap;
 }
 
-@media (max-width: 600px) {
-  .admin-filters > div,
-  .admin-filters button {
-    width: 100%;
-  }
+/* Order detail: main column + actions/history column on wide screens. */
+.admin-order-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
 
-  .admin-dl {
-    grid-template-columns: 1fr;
-  }
+.admin-order-main,
+.admin-order-side {
+  display: grid;
+  min-width: 0;
+  gap: 24px;
+}
+
+.admin-order-layout .admin-order-main > *,
+.admin-order-layout .admin-order-side > * {
+  margin: 0;
+}
+
+.admin-order-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.admin-jump {
+  margin-bottom: 20px;
+}
+
+.admin-actions h2 {
+  scroll-margin-top: calc(var(--site-header-h, 0px) + 80px);
+}
+
+.admin-actions h2:focus {
+  outline: none;
 }
 
 .admin-proofs {
@@ -335,4 +565,187 @@
 
 .admin-proof-flag {
   color: var(--warning-text);
+}
+
+@media (min-width: 1200px) {
+  .admin-order-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  }
+
+  .admin-order-side .admin-actions-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-jump {
+    display: none;
+  }
+}
+
+/* The table can sit in normal flow (so its header can stick under the site
+   header) only once the content column is wide enough for every column. */
+@media (min-width: 1280px) {
+  .admin-table {
+    table-layout: fixed;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-table-wrap {
+    overflow: visible;
+  }
+
+  .admin-table thead th {
+    position: sticky;
+    z-index: 2;
+    top: var(--site-header-h, 0px);
+    box-shadow: inset 0 -1px 0 var(--border);
+  }
+}
+
+@media (max-width: 760px) {
+  .admin {
+    padding-top: 24px;
+    padding-bottom: 72px;
+  }
+
+  .admin-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .admin-filters > div,
+  .admin-filters button {
+    width: 100%;
+  }
+
+  .admin-dl {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dl dd + dt {
+    margin-top: 6px;
+  }
+
+  .admin-card,
+  .admin-panel,
+  .admin-action {
+    padding: 16px;
+  }
+
+  .admin-table-wrap {
+    overflow: visible;
+    border: 0;
+    background: none;
+  }
+
+  .admin-table,
+  .admin-table tbody,
+  .admin-table tr,
+  .admin-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .admin-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .admin-table tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+  }
+
+  .admin-table tbody tr:hover {
+    background: var(--surface-raised);
+  }
+
+  .admin-table td,
+  .admin-table td.is-wrap {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-table td[data-label]::before {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text-muted);
+    content: attr(data-label);
+    font-family: var(--font-condensed);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .admin-table td.is-primary,
+  .admin-table td.is-full {
+    grid-column: 1 / -1;
+  }
+
+  .admin-table td.is-primary {
+    font-size: 1.05rem;
+  }
+
+  /* The card's main link covers the whole card for an easy tap target. */
+  .admin-table .admin-card-link::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+  }
+
+  .admin-table .admin-card-link:focus-visible {
+    outline: none;
+  }
+
+  .admin-table .admin-card-link:focus-visible::after {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .admin-table td.is-empty {
+    grid-column: 1 / -1;
+  }
+
+  /* Order cards read: number, status + date, customer, then money. */
+  .admin-table .admin-orders__status-cell {
+    order: -1;
+  }
+
+  .admin-table td.is-primary {
+    order: -2;
+  }
+
+  .admin-pagination {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .admin-pagination > span {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    text-align: center;
+  }
 }

@@ -14,6 +14,7 @@ import {
   DashBoard,
   Checkout,
   OrderConfirmation,
+  AdminOverview,
   AdminOrders,
   AdminOrderDetail,
   AdminHeroSlides,
@@ -108,6 +109,7 @@ const App = () => {
           <Route path="/orders/:id" element={<OrderDetails />} />
           <Route path="/track-order" element={<TrackOrder />} />
           <Route path="/policies" element={<Policies />} />
+          <Route path="/admin" element={<AdminOverview />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/hero-slides" element={<AdminHeroSlides />} />
           <Route path="/admin/products" element={<AdminProducts />} />

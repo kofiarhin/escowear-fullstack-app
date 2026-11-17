@@ -154,3 +154,24 @@ test("edit pre-fills video fields from existing slide", async () => {
   expect(screen.getByLabelText(/mobile video url/i)).toHaveValue("https://res.cloudinary.com/dlsiabgiw/video/upload/test-m.mp4");
   expect(screen.getByLabelText(/poster image url/i)).toHaveValue("https://res.cloudinary.com/dlsiabgiw/video/upload/so_0/test.jpg");
 });
+
+test("product search distinguishes errors from an empty result and retries without losing the slide", async () => {
+  let searches = 0;
+  global.fetch.mockImplementation((path) => {
+    if (path === "/api/admin/hero-slides") return Promise.resolve({ ok: true, status: 200, json: async () => ({ items: [] }) });
+    searches += 1;
+    return Promise.resolve({ ok: searches > 1, status: searches > 1 ? 200 : 503, json: async () => ({ items: [] }) });
+  });
+  const store = createStore(reducers, applyMiddleware(thunkMiddleware));
+  store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Admin User", role: "admin", token: "test-token" } });
+  render(<Provider store={store}><App /></Provider>);
+  await screen.findByText(/no slides yet/i);
+  fireEvent.click(screen.getByRole("button", { name: "Add slide" }));
+  fireEvent.change(screen.getByLabelText("Headline"), { target: { value: "Keep this headline" } });
+  fireEvent.change(screen.getByLabelText(/search catalogue products/i), { target: { value: "nike" } });
+  expect(await screen.findByRole("alert")).toHaveTextContent("Products could not be found");
+  fireEvent.click(screen.getByRole("button", { name: "Retry search" }));
+  expect(await screen.findByText("No products match. Try another name or brand.")).toBeInTheDocument();
+  expect(screen.getByLabelText("Headline")).toHaveValue("Keep this headline");
+  expect(searches).toBe(2);
+});

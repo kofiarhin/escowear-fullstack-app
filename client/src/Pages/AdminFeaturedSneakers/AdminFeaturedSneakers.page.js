@@ -6,6 +6,7 @@ import { apiRequest, authHeader } from "../../utils/api";
 import { formatProductPrice, getProductImage, useFallbackProductImage } from "../../utils/product";
 import { isAdmin } from "../../utils/admin";
 import { AdminGate } from "../AdminOrders/AdminOrders.page";
+import AdminLayout from "../../components/AdminLayout/AdminLayout.component";
 import "../AdminOrderDetail/admin.styles.css";
 import "./adminFeaturedSneakers.styles.css";
 
@@ -145,19 +146,21 @@ const AdminFeaturedSneakers = () => {
 
   return (
     <AdminGate user={user}>
-      <main className="admin container featured-admin">
-        <header className="admin-header featured-admin__header">
-          <div>
-            <p className="admin-eyebrow">Admin / Catalogue</p>
-            <h1 className="title">Manage Featured Sneakers</h1>
-            <p>Choose up to four sneakers for the homepage. Changes go live only after you save.</p>
+      <AdminLayout
+        className="featured-admin"
+        eyebrow="Admin / Catalogue"
+        title="Manage Featured Sneakers"
+        description="Choose up to four sneakers for the homepage. Changes go live only after you save."
+        actions={<Link to="/admin/products" className="admin-button">Back to products</Link>}
+      >
+        {loadState === "loading" && <p className="admin-state" role="status">Loading featured sneakers…</p>}
+        {loadState === "error" && (
+          <div className="admin-state is-error" role="alert">
+            <p>Featured sneakers could not be loaded.</p>
+            <button type="button" className="admin-button" onClick={load}>Try again</button>
           </div>
-          <Link to="/admin/products" className="admin-button">Back to products</Link>
-        </header>
-
-        {loadState === "loading" && <p role="status">Loading featured sneakers…</p>}
-        {loadState === "error" && <p role="alert">Featured sneakers could not be loaded. <button type="button" className="admin-link-button" onClick={load}>Try again</button></p>}
-        {loadState === "forbidden" && <p role="alert">Your account is not allowed to manage featured sneakers.</p>}
+        )}
+        {loadState === "forbidden" && <p className="admin-state is-error" role="alert">Your account is not allowed to manage featured sneakers.</p>}
 
         {loadState === "ready" && (
           <div className="featured-admin__layout">
@@ -198,7 +201,7 @@ const AdminFeaturedSneakers = () => {
                 <button type="button" className="admin-button" onClick={discard} disabled={!dirty || saving}>Discard changes</button>
                 {conflict && <button type="button" className="admin-button" onClick={load}>Reload saved selection</button>}
               </div>
-              <p className={`admin-status ${status?.type === "error" ? "is-error" : status ? "is-done" : ""}`} role="status" aria-live="polite">{status?.text || ""}</p>
+              <p className={`admin-status ${status?.type === "error" ? "is-error" : status ? "is-done" : ""}`} role={status?.type === "error" ? "alert" : "status"} aria-live="polite">{status?.text || ""}</p>
             </section>
 
             <section className="admin-panel featured-admin__search" aria-labelledby="featured-search-title">
@@ -213,7 +216,7 @@ const AdminFeaturedSneakers = () => {
               {full && <p className="admin-muted">All four slots are full. Remove a sneaker to add another.</p>}
               {search.state === "invalid" && <p className="admin-error" role="alert">Enter a name or brand to search.</p>}
               {search.state === "loading" && <p role="status">Searching…</p>}
-              {search.state === "error" && <p role="alert">Search failed. Try again.</p>}
+              {search.state === "error" && <div role="alert"><p>Search failed.</p><button type="button" className="admin-button" onClick={runSearch}>Retry search</button></div>}
               {search.state === "ready" && search.results.length === 0 && <p>No published products match “{search.term}”.</p>}
               {search.state === "ready" && search.results.length > 0 && (
                 <ul className="featured-admin__results" aria-label="Search results">
@@ -248,7 +251,7 @@ const AdminFeaturedSneakers = () => {
             </section>
           </div>
         )}
-      </main>
+      </AdminLayout>
     </AdminGate>
   );
 };

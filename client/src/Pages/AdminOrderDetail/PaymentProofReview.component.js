@@ -48,8 +48,9 @@ const ProofImage = ({ order, proof, user }) => {
   return (
     <>
       <button type="button" className="admin-button" onClick={load} disabled={state.status === "loading"}>
-        {state.status === "loading" ? "Loading…" : "View screenshot"}
+        {state.status === "loading" ? "Loading…" : state.status === "error" ? "Retry screenshot" : "View screenshot"}
       </button>
+      {state.status === "loading" && <p role="status">Loading screenshot…</p>}
       {state.status === "error" && (
         <p role="alert" className="admin-error">
           {state.message}

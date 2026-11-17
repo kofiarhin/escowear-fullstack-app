@@ -12,8 +12,8 @@
 }
 
 @keyframes nav-enter {
-  from { opacity: 0; transform: translateY(-14px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .sideNav-topline {
@@ -150,5 +150,33 @@
 
   .sideNav-account {
     margin-left: auto;
+  }
+}
+
+.sideNav-admin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  padding-block: 12px;
+  border-top: 1px solid var(--nav-border);
+  font-family: var(--font-condensed);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sideNav-admin a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+
+.sideNav-admin a:focus-visible {
+  outline: 2px solid var(--inverse-text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sideNav {
+    animation: none;
   }
 }

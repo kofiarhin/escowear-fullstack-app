@@ -18,7 +18,19 @@ export const ORDER_STATUSES = [
   "cancelled",
 ];
 
-export const humanize = (value) => (value ? String(value).replace(/_/g, " ") : "—");
+// Status groups drive badge colour and the overview counts. "attention" mirrors
+// ATTENTION_STATUSES in server/controllers/adminStatsController.js.
+export const STATUS_GROUPS = {
+  attention: ["pending_contact", "awaiting_payment", "payment_review", "payment_issue", "delivery_issue", "sourcing_failed", "refund_pending"],
+  progress: ["confirmed", "processing", "dispatched", "delivered"],
+  waiting: ["awaiting_customer"],
+  done: ["completed", "refunded"],
+  closed: ["cancelled"],
+};
+
+export const statusTone = (status) => Object.keys(STATUS_GROUPS).find((group) => STATUS_GROUPS[group].includes(status)) || "waiting";
+
+export const humanize =(value) => (value ? String(value).replace(/_/g, " ") : "—");
 
 // Fulfilment steps the server allows from each status.
 export const FULFILMENT_STEPS = {

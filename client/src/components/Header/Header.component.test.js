@@ -45,3 +45,20 @@ test("header publishes its height, excluding the search panel, for full-height s
   jest.restoreAllMocks();
   document.documentElement.style.removeProperty("--site-header-h");
 });
+
+test("admins see one compact Admin link instead of individual admin sections", () => {
+  const store = createStore(reducers);
+  store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Admin User", role: "admin", token: "test-token" } });
+  render(<Provider store={store}><MemoryRouter><Header setShowSideNav={jest.fn()} /></MemoryRouter></Provider>);
+  expect(screen.getAllByRole("link", { name: "Admin" })).toHaveLength(1);
+  expect(screen.getByRole("link", { name: "Admin" })).toHaveAttribute("href", "/admin");
+  for (const name of ["Admin orders", "Manage products", "Manage hero slides"]) expect(screen.queryByRole("link", { name })).not.toBeInTheDocument();
+});
+
+test.each([null, "customer"])("%s visitors do not see admin links", (role) => {
+  const store = createStore(reducers);
+  store.dispatch(role ? { type: "LOGIN_SUCCESS", payload: { name: "Customer", role, token: "test-token" } } : { type: "LOGOUT_USER" });
+  render(<Provider store={store}><MemoryRouter><Header setShowSideNav={jest.fn()} /></MemoryRouter></Provider>);
+  expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: role ? "Your account" : "Account" })).toHaveAttribute("href", role ? "/dashboard" : "/login");
+});

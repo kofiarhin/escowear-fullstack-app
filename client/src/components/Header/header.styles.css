@@ -143,7 +143,7 @@
   }
 
   .header-shell {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .menu {
@@ -182,5 +182,26 @@
 
   .wordmark {
     font-size: 1.18rem;
+  }
+}
+
+/* Keep the admin entry readable while account actions remain in the menu. */
+.account-actions .admin-link {
+  flex-shrink: 0;
+}
+
+@media (max-width: 760px) {
+  .account-actions.is-admin .account-profile,
+  .account-actions.is-admin button {
+    display: none;
+  }
+
+  .account-actions.is-admin {
+    gap: 0;
+  }
+
+  .account-actions .admin-link {
+    width: 44px;
+    justify-content: center;
   }
 }

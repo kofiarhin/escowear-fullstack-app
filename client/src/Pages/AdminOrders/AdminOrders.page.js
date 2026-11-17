@@ -5,6 +5,8 @@ import { logoutUser } from "../../redux/actions/user.action";
 import { apiRequest, authHeader } from "../../utils/api";
 import { formatGBP, formatGHS } from "../../utils/money";
 import { ORDER_STATUSES, formatDateTime, humanize, isAdmin } from "../../utils/admin";
+import AdminLayout from "../../components/AdminLayout/AdminLayout.component";
+import StatusBadge from "../../components/AdminLayout/StatusBadge.component";
 import "../AdminOrderDetail/admin.styles.css";
 
 export const AdminGate = ({ user, children }) => {
@@ -66,28 +68,30 @@ const AdminOrders = () => {
     load();
   }, [load]);
 
+  // Keep the search box in step with the URL (overview links, back/forward).
+  useEffect(() => {
+    setQuery(q);
+  }, [q]);
+
   const updateParams = (next) => {
     const merged = { status, q, page: "1", ...next };
     setParams(Object.fromEntries(Object.entries(merged).filter(([, value]) => value)));
   };
 
+  const filtered = Boolean(status || q);
+
   return (
     <AdminGate user={user}>
-      <main className="admin container">
-        <header className="admin-header">
-          <p className="admin-eyebrow">Admin</p>
-          <h1 className="title">Orders</h1>
-        </header>
-
+      <AdminLayout title="Orders" description="Find an order, check what it is waiting on and open it to take the next step.">
         <form
-          className="admin-filters"
+          className="admin-filters admin-orders__filters"
           role="search"
           onSubmit={(event) => {
             event.preventDefault();
             updateParams({ q: query.trim() });
           }}
         >
-          <div>
+          <div className="admin-orders__status">
             <label htmlFor="admin-status">Status</label>
             <select id="admin-status" value={status} onChange={(event) => updateParams({ status: event.target.value })}>
               <option value="">All statuses</option>
@@ -98,29 +102,52 @@ const AdminOrders = () => {
               ))}
             </select>
           </div>
-          <div>
+          <div className="admin-orders__search">
             <label htmlFor="admin-search">Order number, name or email</label>
             <input id="admin-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
           </div>
-          <button type="submit" className="admin-button">
+          <button type="submit" className="admin-button admin-button-dark">
             Search
           </button>
         </form>
 
-        {state === "loading" && <p role="status">Loading orders…</p>}
-        {state === "error" && (
-          <p role="alert">
-            Orders could not be loaded.{" "}
-            <button type="button" className="admin-link-button" onClick={load}>
-              Try again
-            </button>
+        {state === "loading" && (
+          <p className="admin-state" role="status">
+            Loading orders…
           </p>
         )}
-        {state === "forbidden" && <p role="alert">Your account is not allowed to view orders.</p>}
+        {state === "error" && (
+          <div className="admin-state is-error" role="alert">
+            <p>Orders could not be loaded.</p>
+            <button type="button" className="admin-button" onClick={load}>
+              Try again
+            </button>
+          </div>
+        )}
+        {state === "forbidden" && (
+          <p className="admin-state is-error" role="alert">
+            Your account is not allowed to view orders.
+          </p>
+        )}
         {state === "ready" && data && (
           <>
             {data.items.length === 0 ? (
-              <p>No orders match.</p>
+              <div className="admin-state is-empty">
+                <strong>No orders match</strong>
+                <p className="admin-muted">{filtered ? "Try another status or search term." : "New orders appear here as soon as customers place them."}</p>
+                {filtered && (
+                  <button
+                    type="button"
+                    className="admin-button"
+                    onClick={() => {
+                      setQuery("");
+                      setParams({});
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="admin-table-wrap">
                 <table className="admin-table">
@@ -139,19 +166,21 @@ const AdminOrders = () => {
                   <tbody>
                     {data.items.map((order) => (
                       <tr key={order.id}>
-                        <td>
-                          <Link to={`/admin/orders/${order.id}`}>{order.orderNumber}</Link>
+                        <td className="is-primary">
+                          <Link to={`/admin/orders/${order.id}`} className="admin-table__link admin-card-link">
+                            {order.orderNumber}
+                          </Link>
                         </td>
-                        <td>{formatDateTime(order.createdAt)}</td>
-                        <td>
+                        <td data-label="Placed">{formatDateTime(order.createdAt)}</td>
+                        <td className="is-wrap is-full" data-label="Customer">
                           {order.customer?.name}
                           <br />
                           <span className="admin-muted">{order.customer?.email}</span>
                         </td>
-                        <td>
-                          <span className={`admin-badge is-${order.status}`}>{humanize(order.status)}</span>
+                        <td className="admin-orders__status-cell" data-label="Status">
+                          <StatusBadge status={order.status} />
                         </td>
-                        <td>
+                        <td className="is-wrap" data-label="Payment">
                           {humanize(order.paymentStatus)}
                           {order.proofAwaitingReview && (
                             <>
@@ -160,8 +189,8 @@ const AdminOrders = () => {
                             </>
                           )}
                         </td>
-                        <td>{formatGBP(order.subtotalGBPMinor)}</td>
-                        <td>{order.quoteTotalGHSMinor !== null ? formatGHS(order.quoteTotalGHSMinor) : "—"}</td>
+                        <td data-label="Estimate">{formatGBP(order.subtotalGBPMinor)}</td>
+                        <td data-label="Quote">{order.quoteTotalGHSMinor !== null ? formatGHS(order.quoteTotalGHSMinor) : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -181,7 +210,7 @@ const AdminOrders = () => {
             </nav>
           </>
         )}
-      </main>
+      </AdminLayout>
     </AdminGate>
   );
 };

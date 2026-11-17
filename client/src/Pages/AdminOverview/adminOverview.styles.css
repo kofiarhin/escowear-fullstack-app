@@ -1,0 +1,193 @@
+.admin-overview__section {
+  margin-bottom: 32px;
+}
+
+.admin-overview__heading {
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-condensed);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+
+/* Stat cards: the top rule carries the tone; the label always names it. */
+.admin-stat {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--border-strong);
+  background: var(--surface-raised);
+}
+
+.admin-stat.is-tone-attention {
+  border-top-color: var(--admin-attention-text);
+}
+
+.admin-stat.is-tone-progress {
+  border-top-color: var(--admin-progress-text);
+}
+
+.admin-stat.is-tone-done {
+  border-top-color: var(--admin-done-text);
+}
+
+.admin-stat__label {
+  font-family: var(--font-condensed);
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-stat__value {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.admin-stat__detail {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.admin-stat__breakdown {
+  display: grid;
+  margin-top: 4px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.admin-stat__breakdown a {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-soft);
+  font-family: var(--font-condensed);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-stat__breakdown a:hover span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-stat__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.admin-stat__link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-self: start;
+  font-family: var(--font-condensed);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-transform: uppercase;
+}
+
+.admin-overview__lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.admin-overview__card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Order rows: the order number link covers the row for an easy tap target. */
+.admin-order-list {
+  display: grid;
+}
+
+.admin-order-list__item {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 4px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.admin-order-list__item:hover {
+  background: var(--surface-hover);
+}
+
+.admin-order-list__main {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.admin-order-list__main .admin-muted {
+  overflow-wrap: anywhere;
+}
+
+.admin-order-list__link {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-order-list__link::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.admin-order-list__link:focus-visible {
+  outline: none;
+}
+
+.admin-order-list__link:focus-visible::after {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.admin-order-list__status {
+  display: grid;
+  justify-items: flex-start;
+  gap: 4px;
+}
+
+.admin-overview__quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+  gap: 10px;
+}
+
+.admin-overview__skeleton {
+  height: 168px;
+}
+
+.admin-overview__loading {
+  margin-bottom: 32px;
+}
