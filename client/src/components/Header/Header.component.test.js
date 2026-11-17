@@ -27,3 +27,21 @@ test("header renders the theme toggle and switches theme", () => {
   expect(screen.getByRole("button", { name: "Switch to light theme" })).toHaveAttribute("aria-pressed", "true");
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
 });
+
+test("header publishes its height, excluding the search panel, for full-height sections", () => {
+  jest.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function measure() {
+    if (this.classList.contains("main-header")) return { height: 95 };
+    return { height: this.classList.contains("search-panel") && !this.hidden ? 80 : 0 };
+  });
+  render(
+    <Provider store={createStore(reducers)}>
+      <MemoryRouter>
+        <Header setShowSideNav={jest.fn()} />
+      </MemoryRouter>
+    </Provider>
+  );
+
+  expect(document.documentElement.style.getPropertyValue("--site-header-h")).toBe("95px");
+  jest.restoreAllMocks();
+  document.documentElement.style.removeProperty("--site-header-h");
+});
