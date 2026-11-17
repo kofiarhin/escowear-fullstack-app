@@ -1,7 +1,7 @@
 .store {
   min-height: 70dvh;
   padding: 72px 0 130px;
-  background: var(--white);
+  background: var(--surface-raised);
 }
 
 .store-heading {
@@ -27,7 +27,7 @@
 .store-count {
   display: block;
   margin-top: 18px;
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.68rem;
   font-weight: 700;
@@ -60,17 +60,17 @@
   flex: 1;
   min-width: 0;
   padding: 12px 14px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   background: transparent;
-  color: var(--ink);
+  color: var(--text);
   font: inherit;
 }
 
 .store-search-controls button {
   min-height: 44px;
   padding: 0 22px;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-family: var(--font-condensed);
   font-size: 0.7rem;
   font-weight: 700;
@@ -79,9 +79,9 @@
 }
 
 .store-search-controls .store-search-clear {
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   background: transparent;
-  color: var(--ink);
+  color: var(--text);
 }
 
 .store-search-controls button:focus-visible,
@@ -106,14 +106,14 @@
   gap: 0;
   margin: 0 auto 64px;
   overflow-x: auto;
-  border-block: 1px solid var(--line);
+  border-block: 1px solid var(--border);
 }
 
 .store .categories button {
   flex: 0 0 auto;
   min-height: 52px;
   padding: 0 22px;
-  border-right: 1px solid var(--line);
+  border-right: 1px solid var(--border);
   font-family: var(--font-condensed);
   font-size: 0.7rem;
   font-weight: 700;
@@ -125,8 +125,8 @@
 .store .categories button:hover,
 .store .categories button:focus-visible,
 .store .categories button.is-active {
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .store-state {
@@ -136,7 +136,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border-block: 1px solid var(--line);
+  border-block: 1px solid var(--border);
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 4vw, 3.8rem);
   letter-spacing: -0.04em;
@@ -146,7 +146,7 @@
 }
 
 .store-state span {
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-sans);
   font-size: 0.82rem;
   letter-spacing: 0;
@@ -171,7 +171,7 @@
   gap: 24px;
   margin-top: 74px;
   padding-top: 24px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
   font-family: var(--font-condensed);
   font-size: 0.7rem;
   font-weight: 700;
@@ -190,7 +190,7 @@
 }
 
 .store-pagination button:disabled {
-  color: var(--muted);
+  color: var(--text-muted);
   cursor: not-allowed;
   opacity: 0.45;
 }

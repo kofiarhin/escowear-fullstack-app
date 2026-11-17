@@ -18,17 +18,17 @@
 .policies-draft {
   margin-bottom: 28px;
   padding: 14px 16px;
-  border: 2px solid #b42318;
-  background: #fef3f2;
-  color: #7a271a;
+  border: 2px solid var(--danger);
+  background: var(--danger-surface);
+  color: var(--danger-on-surface);
   line-height: 1.5;
 }
 
 .policies-toc {
   margin-bottom: 36px;
   padding: 18px 22px;
-  border: 1px solid var(--line);
-  background: var(--white);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
 }
 
 .policies-toc ul {
@@ -51,7 +51,7 @@
 .policies-section h2 {
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--border-strong);
   font-family: var(--font-condensed);
   font-size: 1.35rem;
   font-weight: 800;
@@ -69,11 +69,11 @@
 }
 
 .policies-version {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.88rem;
 }
 
 .policies a:focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }

@@ -6,7 +6,7 @@
 
 .checkout-eyebrow {
   margin-bottom: 12px;
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.72rem;
   font-weight: 700;
@@ -19,22 +19,22 @@
 }
 
 .checkout-account {
-  color: var(--muted);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
 .checkout-account a,
 .checkout-summary-edit {
   border-bottom: 1px solid currentColor;
-  color: var(--ink);
+  color: var(--text);
   font-weight: 600;
 }
 
 .checkout-notice {
   margin: 24px 0 40px;
   padding: 18px 22px;
-  border-left: 4px solid var(--ink);
-  background: var(--white);
+  border-left: 4px solid var(--border-strong);
+  background: var(--surface-raised);
   font-size: 1.05rem;
   line-height: 1.5;
 }
@@ -56,7 +56,7 @@
   width: 100%;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--border-strong);
   font-family: var(--font-condensed);
   font-size: 1.25rem;
   font-weight: 800;
@@ -76,7 +76,7 @@
 }
 
 .checkout-hint {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.88rem;
 }
 
@@ -85,10 +85,10 @@
   width: 100%;
   min-height: 48px;
   padding: 10px 14px;
-  border: 1px solid rgba(14, 14, 14, 0.45);
+  border: 1px solid var(--border-input);
   border-radius: 0;
-  background: var(--white);
-  color: var(--ink);
+  background: var(--input-bg);
+  color: var(--text);
   font: inherit;
   font-size: 1rem;
 }
@@ -98,18 +98,18 @@
 .checkout-consent input:focus-visible,
 .checkout-button:focus-visible,
 .checkout a:focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
 .checkout-field.has-error input,
 .checkout-field.has-error select {
-  border-color: #b42318;
+  border-color: var(--danger);
   border-width: 2px;
 }
 
 .checkout-error {
-  color: #b42318;
+  color: var(--danger);
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -139,7 +139,7 @@
   width: 22px;
   height: 22px;
   margin-top: 2px;
-  accent-color: var(--ink);
+  accent-color: var(--accent);
 }
 
 .checkout-consent .checkout-error {
@@ -155,9 +155,9 @@
 .checkout-status.is-error,
 .checkout-status.is-invalid {
   padding: 14px 16px;
-  border: 1px solid #b42318;
-  background: #fef3f2;
-  color: #7a271a;
+  border: 1px solid var(--danger);
+  background: var(--danger-surface);
+  color: var(--danger-on-surface);
   font-weight: 600;
 }
 
@@ -181,8 +181,8 @@
 }
 
 .checkout-button-dark {
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .checkout-button:disabled {
@@ -194,8 +194,8 @@
   position: sticky;
   top: 120px;
   padding: 28px;
-  background: var(--white);
-  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
 }
 
 .checkout-summary h2 {
@@ -216,34 +216,34 @@
   gap: 12px;
   align-items: center;
   padding-block: 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 
 .checkout-summary li.has-error {
-  border-left: 3px solid #b42318;
+  border-left: 3px solid var(--danger);
   padding-left: 8px;
 }
 
 .checkout-summary img {
   width: 56px;
   height: 56px;
-  background: #f0f0ee;
-  mix-blend-mode: multiply;
+  background: var(--tile);
+  mix-blend-mode: var(--image-blend);
   object-fit: contain;
 }
 
 .checkout-summary li p {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
 .checkout-summary .checkout-summary-name {
-  color: var(--ink);
+  color: var(--text);
   font-weight: 600;
 }
 
 .checkout-summary .checkout-summary-price {
-  color: var(--ink);
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -257,7 +257,7 @@
 
 .checkout-summary-note {
   margin: 12px 0 16px;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.88rem;
   line-height: 1.5;
 }

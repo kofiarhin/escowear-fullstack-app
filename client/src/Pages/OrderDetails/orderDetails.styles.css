@@ -15,7 +15,7 @@
 }
 
 .order-details-shipping dt {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .order-details-shipping dd {
@@ -26,7 +26,7 @@
   display: grid;
   gap: 0;
   list-style: none;
-  border-left: 2px solid var(--ink);
+  border-left: 2px solid var(--border-strong);
 }
 
 .order-details-history li {
@@ -36,7 +36,7 @@
 }
 
 .order-details-history span {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -44,8 +44,8 @@
   display: inline-block;
   margin: 8px 0;
   padding: 14px 22px;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-family: var(--font-condensed);
   font-size: 0.8rem;
   font-weight: 700;
@@ -54,7 +54,7 @@
 }
 
 .order-details-button:focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
