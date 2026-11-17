@@ -7,6 +7,7 @@ import Details from "./Details/Details.page";
 import DashBoard from "./Dashboard/Dashboard.page";
 import Checkout from "./Checkout/Checkout.page";
 import OrderConfirmation from "./OrderConfirmation/OrderConfirmation.page";
+import AdminOverview from "./AdminOverview/AdminOverview.page";
 import AdminOrders from "./AdminOrders/AdminOrders.page";
 import TrackOrder from "./TrackOrder/TrackOrder.page";
 import OrderDetails from "./OrderDetails/OrderDetails.page";
@@ -18,4 +19,4 @@ import AdminFeaturedSneakers from "./AdminFeaturedSneakers/AdminFeaturedSneakers
 import ForgotPassword from "./PasswordRecovery/ForgotPassword.page";
 import ResetPassword from "./PasswordRecovery/ResetPassword.page";
 
-export { Register, Login, Cart, Store, Home, Details, DashBoard, Checkout, OrderConfirmation, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, AdminFeaturedSneakers, TrackOrder, OrderDetails, Policies, ForgotPassword, ResetPassword };
+export { Register, Login, Cart, Store, Home, Details, DashBoard, Checkout, OrderConfirmation, AdminOverview, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, AdminFeaturedSneakers, TrackOrder, OrderDetails, Policies, ForgotPassword, ResetPassword };

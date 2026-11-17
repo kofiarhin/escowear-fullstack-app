@@ -201,7 +201,7 @@ const AdminFeaturedSneakers = () => {
                 <button type="button" className="admin-button" onClick={discard} disabled={!dirty || saving}>Discard changes</button>
                 {conflict && <button type="button" className="admin-button" onClick={load}>Reload saved selection</button>}
               </div>
-              <p className={`admin-status ${status?.type === "error" ? "is-error" : status ? "is-done" : ""}`} role="status" aria-live="polite">{status?.text || ""}</p>
+              <p className={`admin-status ${status?.type === "error" ? "is-error" : status ? "is-done" : ""}`} role={status?.type === "error" ? "alert" : "status"} aria-live="polite">{status?.text || ""}</p>
             </section>
 
             <section className="admin-panel featured-admin__search" aria-labelledby="featured-search-title">
@@ -216,7 +216,7 @@ const AdminFeaturedSneakers = () => {
               {full && <p className="admin-muted">All four slots are full. Remove a sneaker to add another.</p>}
               {search.state === "invalid" && <p className="admin-error" role="alert">Enter a name or brand to search.</p>}
               {search.state === "loading" && <p role="status">Searching…</p>}
-              {search.state === "error" && <p role="alert">Search failed. Try again.</p>}
+              {search.state === "error" && <div role="alert"><p>Search failed.</p><button type="button" className="admin-button" onClick={runSearch}>Retry search</button></div>}
               {search.state === "ready" && search.results.length === 0 && <p>No published products match “{search.term}”.</p>}
               {search.state === "ready" && search.results.length > 0 && (
                 <ul className="featured-admin__results" aria-label="Search results">

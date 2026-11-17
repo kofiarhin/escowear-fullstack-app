@@ -37,7 +37,7 @@ const Breakdown = ({ byStatus, statuses, label }) => (
 );
 
 const StatCard = ({ tone, label, value, detail, children }) => (
-  <article className={`admin-stat is-tone-${tone}`}>
+  <article className={`admin-stat is-tone-${tone}`} aria-label={label}>
     <h3 className="admin-stat__label">{label}</h3>
     <p className="admin-stat__value">{value}</p>
     {detail && <p className="admin-stat__detail">{detail}</p>}
@@ -116,7 +116,7 @@ const Stats = ({ stats }) => {
         </h2>
         <div className="admin-stat-grid">
           <StatCard tone="attention" label="Needs action" value={attention} detail={attention === 0 ? "Nothing is waiting on you." : "Orders waiting on an admin step."}>
-            {waitingOnAdmin.length > 0 && <Breakdown byStatus={byStatus} statuses={waitingOnAdmin} label="Orders needing action by status" />}
+            {waitingOnAdmin.length > 0 ? <Breakdown byStatus={byStatus} statuses={waitingOnAdmin} label="Orders needing action by status" /> : <Link to={ordersLink("payment_review")} className="admin-stat__link">View payment review queue</Link>}
           </StatCard>
           <StatCard tone="progress" label="In progress" value={progress} detail="Paid orders being sourced or delivered.">
             <Breakdown byStatus={byStatus} statuses={STATUS_GROUPS.progress} label="Orders in progress by status" />

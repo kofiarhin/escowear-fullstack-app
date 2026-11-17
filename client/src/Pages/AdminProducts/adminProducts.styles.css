@@ -78,3 +78,44 @@
     flex: 1 1 140px;
   }
 }
+
+.product-form,
+.product-form > *,
+.product-preview {
+  min-width: 0;
+}
+
+.product-preview {
+  overflow-wrap: anywhere;
+}
+
+.brand-select__options button,
+.colour-select__chips button {
+  min-height: 44px;
+}
+
+.product-images__upload:focus-within,
+.product-images__replace:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .product-form-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .product-preview {
+    position: static;
+  }
+}
+
+@media (min-width: 1280px) {
+  .products-admin__table th:first-child {
+    width: 26%;
+  }
+
+  .products-admin__product {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+}

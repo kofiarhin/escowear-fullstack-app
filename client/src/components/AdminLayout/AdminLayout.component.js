@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import "./adminLayout.styles.css";
 
 const Icon = ({ children }) => (
@@ -35,10 +35,10 @@ const AdminNav = ({ current, label, onNavigate }) => (
     <ul>
       {ADMIN_SECTIONS.map((section) => (
         <li key={section.id}>
-          <Link to={section.to} className="admin-nav__link" aria-current={current === section.id ? "page" : undefined} onClick={onNavigate}>
+          <NavLink end={section.id === "overview"} to={section.to} className="admin-nav__link" aria-current={current === section.id ? "page" : false} onClick={onNavigate}>
             {section.icon}
             <span>{section.label}</span>
-          </Link>
+          </NavLink>
         </li>
       ))}
     </ul>
@@ -72,8 +72,9 @@ const useAdminMenu = () => {
   }, [location.pathname, location.search]);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || !visible) return undefined;
     const button = buttonRef.current;
+    const panel = panelRef.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     panelRef.current?.querySelector(FOCUSABLE)?.focus();
@@ -102,9 +103,15 @@ const useAdminMenu = () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
       // Return focus to the trigger unless navigation already moved it elsewhere.
-      if (!document.activeElement || document.activeElement === document.body || panelRef.current?.contains(document.activeElement)) button?.focus();
+      if (!document.activeElement || document.activeElement === document.body || panel?.contains(document.activeElement)) button?.focus();
     };
-  }, [open]);
+  }, [open, visible]);
+
+  useEffect(() => {
+    const onResize = () => { if (window.innerWidth >= 1024) close(); };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [close]);
 
   return { open, visible, close, toggle: () => setOpen((value) => !value), buttonRef, panelRef };
 };
@@ -144,6 +151,8 @@ const AdminLayout = ({ eyebrow = "Admin", title, description, actions, children,
         aria-modal="true"
         aria-label="Admin menu"
         hidden={!menu.visible}
+        aria-hidden={!menu.open}
+        {...(!menu.open ? { inert: "" } : {})}
       >
         <div className="admin-menu__inner container">
           <div className="admin-menu__top">
