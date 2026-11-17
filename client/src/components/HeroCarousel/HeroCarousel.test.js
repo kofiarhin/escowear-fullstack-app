@@ -77,7 +77,7 @@ const wrapLoop = (video) => {
   });
 };
 
-// --- Video-only carousel tests ---
+// --- Carousel tests ---
 
 test("loads video slides from the API and renders the first one", async () => {
   renderCarousel();
@@ -102,23 +102,38 @@ test("supports manual navigation and pause between two video slides", async () =
   fireEvent.click(screen.getByRole("button", { name: /play carousel/i }));
 });
 
-test("filters out image-only slides and shows only video slides from the API", async () => {
-  global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ items: [imageSlides[0], videoSlide, imageSlides[1], videoSlide2] }) });
+test("mixed slides keep API order: videos play and image-only slides fall back to their image", async () => {
+  global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ items: [videoSlide, imageSlides[0]] }) });
   renderCarousel();
   await screen.findByRole("heading", { name: "VIDEO SLIDE" });
-  // Only video slides are shown — image slides are hidden
+  const video = screen.getByTestId("hero-video-slide-v1");
+  expect(video.muted).toBe(true);
+  expect(video.loop).toBe(true);
+  expect(video).toHaveAttribute("playsinline", "");
+  // The image slide renders as a picture, never as a video element.
+  expect(screen.queryByTestId("hero-video-slide-1")).not.toBeInTheDocument();
+  expect(screen.getByTestId("hero-image-slide-1")).toHaveAttribute("src", "/images/first.jpg");
+
   fireEvent.click(screen.getByRole("button", { name: /next slide/i }));
-  expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
-  // No further slides (only 2 video slides)
+  expect(screen.getByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /shop now/i })).toHaveAttribute("href", "/details/product-1");
   fireEvent.click(screen.getByRole("button", { name: /next slide/i }));
   expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
 });
 
-test("falls back to default video slides when API returns only image slides", async () => {
+test("image-only API slides (legacy live data) still render instead of the default videos", async () => {
   global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ items: imageSlides }) });
   renderCarousel();
-  expect(await screen.findByRole("heading", { name: "STEP INTO STYLE" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Shop Now" })).toHaveAttribute("href", "/store");
+  expect(await screen.findByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "STEP INTO STYLE" })).not.toBeInTheDocument();
+  expect(screen.getByTestId("hero-image-slide-1")).toHaveAttribute("src", "/images/first.jpg");
+  expect(screen.getByTestId("hero-image-slide-2")).toHaveAttribute("src", "/images/second.jpg");
+  expect(screen.queryByTestId(/^hero-video-/)).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /shop now/i })).toHaveAttribute("href", "/details/product-1");
+  expect(screen.getByRole("button", { name: /pause carousel/i })).toBeInTheDocument();
+  // Image slides keep the 10-second rotation.
+  act(() => { jest.advanceTimersByTime(10_000); });
+  expect(screen.getByRole("heading", { name: "SECOND PAIR" })).toBeInTheDocument();
 });
 
 test("falls back to default video slides when API returns empty response", async () => {
