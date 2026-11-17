@@ -11,3 +11,52 @@
   background: var(--admin-done-bg);
   color: var(--admin-done-text);
 }
+
+.hero-admin__thumb {
+  position: relative;
+  width: 100px;
+}
+
+.hero-admin__thumb img {
+  display: block;
+  width: 100px;
+  height: 78px;
+  object-fit: cover;
+  background: var(--inverse-surface);
+}
+
+.hero-admin__play {
+  position: absolute;
+  inset: auto auto 6px 6px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 70%);
+  color: #fff;
+  font-size: .7rem;
+}
+
+.hero-admin__legacy {
+  padding: 14px 18px;
+  border: 1px dashed var(--border);
+}
+
+.hero-admin__legacy summary {
+  cursor: pointer;
+  font-family: var(--font-condensed);
+  text-transform: uppercase;
+}
+
+.hero-admin__legacy[open] > * + * {
+  margin-top: 12px;
+}
+
+@media (max-width: 650px) {
+  .hero-admin__thumb,
+  .hero-admin__thumb img {
+    width: 100%;
+    height: 180px;
+  }
+}

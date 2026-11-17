@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { applyMiddleware, createStore } from "redux";
@@ -7,6 +7,18 @@ import App from "../../App";
 import reducers from "../../redux/reducers";
 
 const product = { _id: "672b0e3a1a2b3c4d5e6f7002", name: "Nike Air Max Dn8", image: "https://example.test/dn8.jpg", inStock: true };
+const VIDEO = "https://res.cloudinary.com/demo/video/upload/hero.mp4";
+const listSlide = (index, overrides = {}) => ({
+  id: `slide-${index}`, productId: `672b0e3a1a2b3c4d5e6f71${String(index).padStart(2, "0")}`, productName: `Pair ${index}`, headline: `HEADLINE ${index}`,
+  description: "", desktopImage: "", mobileImage: "", desktopVideo: VIDEO, mobileVideo: "", posterImage: "", order: index, isActive: false,
+  product: { id: `672b0e3a1a2b3c4d5e6f71${String(index).padStart(2, "0")}`, name: `Pair ${index}`, image: product.image, inStock: true },
+  ...overrides,
+});
+const renderAdmin = () => {
+  const store = createStore(reducers, applyMiddleware(thunkMiddleware));
+  store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Admin User", role: "admin", token: "test-token" } });
+  return render(<Provider store={store}><App /></Provider>);
+};
 
 beforeEach(() => {
   localStorage.setItem("user", JSON.stringify({ name: "Admin User", role: "admin", token: "test-token" }));
@@ -27,11 +39,12 @@ test("admin can select a catalogue product and keeps form inputs after a server 
   const store = createStore(reducers, applyMiddleware(thunkMiddleware));
   store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Admin User", role: "admin", token: "test-token" } });
   render(<Provider store={store}><App /></Provider>);
-  await screen.findByText(/no slides yet/i);
+  await screen.findByText(/no hero videos yet/i);
   await userEvent.click(screen.getByRole("button", { name: /add slide/i }));
   fireEvent.change(screen.getByLabelText(/search catalogue products/i), { target: { value: "nike" } });
   await userEvent.click(await screen.findByRole("button", { name: /nike air max dn8/i }));
   await userEvent.type(screen.getByLabelText("Headline"), "A headline that remains visible");
+  fireEvent.change(screen.getByLabelText(/desktop video url/i), { target: { value: VIDEO } });
   await userEvent.click(screen.getByRole("button", { name: /create slide/i }));
   expect(await screen.findByText(/use plain text between 1 and 90 characters/i)).toBeInTheDocument();
   expect(screen.getByLabelText("Headline")).toHaveValue("A headline that remains visible");
@@ -53,15 +66,16 @@ test("admin create sends the selected product id and can publish the slide", asy
   const store = createStore(reducers, applyMiddleware(thunkMiddleware));
   store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Admin User", role: "admin", token: "test-token" } });
   render(<Provider store={store}><App /></Provider>);
-  await screen.findByText(/no slides yet/i);
+  await screen.findByText(/no hero videos yet/i);
   await userEvent.click(screen.getByRole("button", { name: /add slide/i }));
   fireEvent.change(screen.getByLabelText(/search catalogue products/i), { target: { value: "nike" } });
   await userEvent.click(await screen.findByRole("button", { name: /nike air max dn8/i }));
   await userEvent.type(screen.getByLabelText("Headline"), "New season, ready to move");
+  fireEvent.change(screen.getByLabelText(/desktop video url/i), { target: { value: VIDEO } });
   await userEvent.click(screen.getByLabelText(/publish this slide/i));
   await userEvent.click(screen.getByRole("button", { name: /create slide/i }));
 
-  expect(submitted).toMatchObject({ productId: product._id, headline: "New season, ready to move", order: 0, isActive: true });
+  expect(submitted).toMatchObject({ productId: product._id, headline: "New season, ready to move", desktopVideo: VIDEO, order: 0, isActive: true });
   expect(screen.queryByRole("button", { name: /create slide/i })).not.toBeInTheDocument();
 });
 
@@ -80,7 +94,7 @@ test("form includes video and poster fields that submit correctly", async () => 
   const store = createStore(reducers, applyMiddleware(thunkMiddleware));
   store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Admin User", role: "admin", token: "test-token" } });
   render(<Provider store={store}><App /></Provider>);
-  await screen.findByText(/no slides yet/i);
+  await screen.findByText(/no hero videos yet/i);
   await userEvent.click(screen.getByRole("button", { name: /add slide/i }));
 
   // Verify video fields exist
@@ -165,7 +179,7 @@ test("product search distinguishes errors from an empty result and retries witho
   const store = createStore(reducers, applyMiddleware(thunkMiddleware));
   store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Admin User", role: "admin", token: "test-token" } });
   render(<Provider store={store}><App /></Provider>);
-  await screen.findByText(/no slides yet/i);
+  await screen.findByText(/no hero videos yet/i);
   fireEvent.click(screen.getByRole("button", { name: "Add slide" }));
   fireEvent.change(screen.getByLabelText("Headline"), { target: { value: "Keep this headline" } });
   fireEvent.change(screen.getByLabelText(/search catalogue products/i), { target: { value: "nike" } });
@@ -174,4 +188,121 @@ test("product search distinguishes errors from an empty result and retries witho
   expect(await screen.findByText("No products match. Try another name or brand.")).toBeInTheDocument();
   expect(screen.getByLabelText("Headline")).toHaveValue("Keep this headline");
   expect(searches).toBe(2);
+});
+
+const mockAdminApi = (items, onRequest = () => undefined) => {
+  global.fetch.mockImplementation((path, options = {}) => {
+    const handled = onRequest(path, options);
+    if (handled) return Promise.resolve(handled);
+    if (path === "/api/admin/hero-slides") return Promise.resolve({ ok: true, status: 200, json: async () => ({ items }) });
+    if (String(path).startsWith("/api/products?search=")) return Promise.resolve({ ok: true, status: 200, json: async () => ({ items: [product] }) });
+    return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+  });
+};
+
+test("page and navigation are labelled Hero videos with a total slide count", async () => {
+  mockAdminApi([listSlide(0, { isActive: true }), listSlide(1)]);
+  renderAdmin();
+  await screen.findByText("HEADLINE 1");
+  expect(screen.getByRole("heading", { level: 1, name: "Hero videos" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Hero videos" })).toHaveAttribute("href", "/admin/hero-slides");
+  expect(screen.getByText("2/8")).toBeInTheDocument();
+  expect(screen.getByText(/1 published/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Add slide" })).toBeEnabled();
+});
+
+test("Add slide is disabled at eight slides and the form cannot be opened", async () => {
+  mockAdminApi(Array.from({ length: 8 }, (_, index) => listSlide(index)));
+  renderAdmin();
+  await screen.findByText("HEADLINE 7");
+  expect(screen.getByText("8/8")).toBeInTheDocument();
+  const add = screen.getByRole("button", { name: "Add slide" });
+  expect(add).toBeDisabled();
+  expect(screen.getByText(/delete one to add another/i)).toBeInTheDocument();
+  fireEvent.click(add);
+  expect(screen.queryByRole("button", { name: /create slide/i })).not.toBeInTheDocument();
+});
+
+test("video-first form requires a desktop video and creates a slide with video, headline and product", async () => {
+  let submitted;
+  mockAdminApi([], (path, options) => {
+    if (path === "/api/admin/hero-slides" && options.method === "POST") {
+      submitted = JSON.parse(options.body);
+      return { ok: true, status: 201, json: async () => ({ item: { id: "slide-new" } }) };
+    }
+    return null;
+  });
+  renderAdmin();
+  await screen.findByText(/no hero videos yet/i);
+  await userEvent.click(screen.getByRole("button", { name: "Add slide" }));
+  expect(screen.getByText("Legacy image fallback (optional)")).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText(/search catalogue products/i), { target: { value: "nike" } });
+  await userEvent.click(await screen.findByRole("button", { name: /nike air max dn8/i }));
+  await userEvent.type(screen.getByLabelText("Headline"), "Video first");
+  await userEvent.click(screen.getByRole("button", { name: /create slide/i }));
+  expect(await screen.findByText("Add a desktop video URL to create a hero slide")).toBeInTheDocument();
+  expect(submitted).toBeUndefined();
+
+  fireEvent.change(screen.getByLabelText(/desktop video url/i), { target: { value: VIDEO } });
+  await userEvent.click(screen.getByRole("button", { name: /create slide/i }));
+  expect(submitted).toMatchObject({ productId: product._id, headline: "Video first", desktopVideo: VIDEO, desktopImage: "", mobileImage: "" });
+});
+
+test("editing a legacy image slide keeps its images and does not require a video while it stays published", async () => {
+  let patched;
+  const legacy = listSlide(0, { desktopVideo: "", desktopImage: "https://example.test/legacy.jpg", mobileImage: "https://example.test/legacy-m.jpg", isActive: true });
+  mockAdminApi([legacy], (path, options) => {
+    if (options.method === "PATCH") {
+      patched = JSON.parse(options.body);
+      return { ok: true, status: 200, json: async () => ({ item: legacy }) };
+    }
+    return null;
+  });
+  renderAdmin();
+  await screen.findByText("HEADLINE 0");
+  expect(screen.getByText("Image")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText(/desktop image url/i)).toHaveValue("https://example.test/legacy.jpg");
+  fireEvent.change(screen.getByLabelText("Headline"), { target: { value: "New copy" } });
+  await userEvent.click(screen.getByRole("button", { name: /save slide/i }));
+  await waitFor(() => expect(patched).toBeDefined());
+  expect(patched.headline).toBe("New copy");
+  expect(patched).not.toHaveProperty("desktopImage");
+  expect(patched).not.toHaveProperty("mobileImage");
+});
+
+test("publishing a draft image slide asks for a video first", async () => {
+  let patched;
+  mockAdminApi([listSlide(0, { desktopVideo: "", desktopImage: "https://example.test/legacy.jpg" })], (path, options) => {
+    if (options.method === "PATCH") { patched = JSON.parse(options.body); return { ok: true, status: 200, json: async () => ({}) }; }
+    return null;
+  });
+  renderAdmin();
+  await screen.findByText("HEADLINE 0");
+  await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+  await userEvent.click(screen.getByLabelText(/publish this slide/i));
+  await userEvent.click(screen.getByRole("button", { name: /save slide/i }));
+  expect(await screen.findByText("Add a desktop video URL before publishing")).toBeInTheDocument();
+  expect(patched).toBeUndefined();
+});
+
+test("Move down swaps two slides by patching their order", async () => {
+  const patches = [];
+  mockAdminApi([listSlide(0), listSlide(1), listSlide(2)], (path, options) => {
+    if (options.method === "PATCH") {
+      patches.push({ path, body: JSON.parse(options.body) });
+      return { ok: true, status: 200, json: async () => ({}) };
+    }
+    return null;
+  });
+  renderAdmin();
+  await screen.findByText("HEADLINE 0");
+  expect(screen.getByRole("button", { name: "Move Pair 0 up" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Move Pair 0 down" }));
+  await waitFor(() => expect(patches).toHaveLength(2));
+  expect(patches).toEqual([
+    { path: "/api/admin/hero-slides/slide-1", body: { order: 0 } },
+    { path: "/api/admin/hero-slides/slide-0", body: { order: 1 } },
+  ]);
 });

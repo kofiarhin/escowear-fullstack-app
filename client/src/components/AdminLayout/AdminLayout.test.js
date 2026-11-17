@@ -29,7 +29,7 @@ test.each([
   ["/admin/products/new", "Products"],
   ["/admin/products/123/edit", "Products"],
   ["/admin/products/featured", "Featured sneakers"],
-  ["/admin/hero-slides", "Hero slides"],
+  ["/admin/hero-slides", "Hero videos"],
 ])("layout marks only the current section at %s", (path, label) => {
   renderLayout(path);
   const nav = screen.getByRole("navigation", { name: "Admin sections" });
