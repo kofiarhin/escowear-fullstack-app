@@ -145,7 +145,7 @@ const SideNav = ({ setShowSideNav }) => {
           <Link to="/track-order" onClick={close}>Track order</Link>
           {user ? (
             <>
-              <button type="button" onClick={() => handleNav("/dashboard")}>
+              <button type="button" onClick={() => handleNav("/account")}>
                 {user.name.split(" ")[0]}'s account
               </button>
               <button

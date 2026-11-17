@@ -244,5 +244,12 @@ test.each([null, "customer"])("%s visitors do not see admin links", (role) => {
   store.dispatch(role ? { type: "LOGIN_SUCCESS", payload: { name: "Customer", role, token: "test-token" } } : { type: "LOGOUT_USER" });
   render(<Provider store={store}><MemoryRouter><Header setShowSideNav={jest.fn()} /></MemoryRouter></Provider>);
   expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: role ? "Your account" : "Account" })).toHaveAttribute("href", role ? "/dashboard" : "/login");
+  expect(screen.getByRole("link", { name: role ? "Your account" : "Account" })).toHaveAttribute("href", role ? "/account" : "/login");
+});
+
+test("the signed-in greeting links to the account page", () => {
+  const store = createStore(reducers);
+  store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Ama Mensah", role: "customer", token: "test-token" } });
+  render(<Provider store={store}><MemoryRouter><Header setShowSideNav={jest.fn()} /></MemoryRouter></Provider>);
+  expect(screen.getByRole("link", { name: "Hi, Ama" })).toHaveAttribute("href", "/account");
 });

@@ -12,6 +12,7 @@ import {
   Cart,
   Details,
   DashBoard,
+  Account,
   Checkout,
   OrderConfirmation,
   AdminOverview,
@@ -118,6 +119,7 @@ const App = () => {
           <Route path="/admin/products/:id/edit" element={<AdminProductForm />} />
           <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
           <Route path="/details/:id" element={<Details />} />
+          <Route path="/account" element={<Account />} />
           <Route path="/dashboard" element={<DashBoard />} />
           <Route path="/logout" element={<Logout />} />
         </Routes>

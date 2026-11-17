@@ -79,7 +79,7 @@ const Header = ({ showSideNav = false, setShowSideNav }) => {
             {policiesVisible() && <Link to="/policies">Shop policies</Link>}
             {user ? (
               <>
-                <Link to="/dashboard">Hi, {user.name.split(" ")[0]}</Link>
+                <Link to="/account">Hi, {user.name.split(" ")[0]}</Link>
                 <button type="button" onClick={() => dispatch(logoutUser())}>Logout</button>
               </>
             ) : (
@@ -114,7 +114,7 @@ const Header = ({ showSideNav = false, setShowSideNav }) => {
           {isAdmin && <Link to="/admin" className="icon-action admin-link">Admin</Link>}
 
           <Link
-            to={user ? "/dashboard" : "/login"}
+            to={user ? "/account" : "/login"}
             className="icon-action account-link"
             aria-label={user ? "Your account" : "Account"}
           >
