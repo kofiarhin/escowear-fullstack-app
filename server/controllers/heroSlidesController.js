@@ -3,6 +3,8 @@ const Product = require("../Models/Product.model");
 
 const OBJECT_ID = /^[a-f\d]{24}$/i;
 const MAX_ACTIVE_SLIDES = 8;
+// Drafts count too: the admin list is a curated set, not an archive.
+const MAX_TOTAL_SLIDES = 8;
 const CREATE_FIELDS = new Set(["productId", "headline", "description", "desktopImage", "mobileImage", "desktopVideo", "mobileVideo", "posterImage", "order", "isActive"]);
 const PATCH_FIELDS = CREATE_FIELDS;
 const VIDEO_EXTENSION = /\.(?:mp4|webm)(?:\?[^#]*)?(?:#.*)?$/i;
@@ -164,6 +166,7 @@ const createHeroSlidesController = ({ HeroSlide: HeroSlideModel = HeroSlide, Pro
     const filter = excludingId ? { isActive: true, _id: { $ne: excludingId } } : { isActive: true };
     return (await HeroSlideModel.countDocuments(filter)) < MAX_ACTIVE_SLIDES;
   };
+  const totalCountAllows = async () => (await HeroSlideModel.countDocuments({})) < MAX_TOTAL_SLIDES;
   const send = (res, status, payload) => res.status(status).json(payload);
   const fail = (res, outcome) => send(res, outcome.status, { error: outcome.error, code: outcome.code, ...(outcome.fields ? { fields: outcome.fields } : {}) });
 
@@ -199,6 +202,7 @@ const createHeroSlidesController = ({ HeroSlide: HeroSlideModel = HeroSlide, Pro
       return await serializeWrite(async () => {
         const product = await readProduct(ProductModel, validated.fields.productId);
         if (!product) return send(res, 404, { error: "Product not found", code: "PRODUCT_NOT_FOUND" });
+        if (!(await totalCountAllows())) return send(res, 409, { error: "Only eight hero slides are allowed", code: "SLIDE_LIMIT" });
         if (validated.fields.isActive && !(await activeCountAllows())) return send(res, 409, { error: "Only eight active hero slides are allowed", code: "ACTIVE_SLIDE_LIMIT" });
         let slide;
         try { slide = await HeroSlideModel.create(validated.fields); } catch (error) {
@@ -250,4 +254,4 @@ const createHeroSlidesController = ({ HeroSlide: HeroSlideModel = HeroSlide, Pro
   return { createSlide, deleteSlide, getPublicSlides, listAdminSlides, updateSlide };
 };
 
-module.exports = { MAX_ACTIVE_SLIDES, createHeroSlidesController, validImageSource, validVideoSource, validatePayload };
+module.exports = { MAX_ACTIVE_SLIDES, MAX_TOTAL_SLIDES, createHeroSlidesController, validImageSource, validVideoSource, validatePayload };
