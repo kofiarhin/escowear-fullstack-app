@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import HeroCarousel from "./HeroCarousel.component";
+import { heroVideoPosterUrl, optimiseHeroVideoUrl, resolveHeroVideo } from "./heroMedia";
 
 const imageSlides = [
   { id: "slide-1", productId: "product-1", productName: "First pair", productInStock: true, headline: "FIRST PAIR", description: "First description", desktopImage: "/images/first.jpg", mobileImage: "/images/first-mobile.jpg", desktopVideo: "", mobileVideo: "", posterImage: "", order: 0 },
@@ -40,11 +41,41 @@ afterEach(() => {
   mockPause.mockClear();
   delete HTMLVideoElement.prototype.play;
   delete HTMLVideoElement.prototype.pause;
+  delete window.matchMedia;
   Object.defineProperty(document, "hidden", { configurable: true, value: false });
 });
 
 const renderCarousel = () => render(<MemoryRouter><HeroCarousel /></MemoryRouter>);
 const settle = async () => { await act(async () => { await Promise.resolve(); await Promise.resolve(); }); };
+
+const mockMatchMedia = (matchingQueries) => {
+  window.matchMedia = jest.fn((query) => ({
+    matches: matchingQueries.includes(query), media: query,
+    addEventListener: jest.fn(), removeEventListener: jest.fn(),
+  }));
+};
+
+// Simulates playback with timeupdate events from `from` up to just before the
+// clip wraps (the loop boundary where the carousel may advance).
+const playToLoopBoundary = (video, { duration = 10, from = 0 } = {}) => {
+  let time = from;
+  Object.defineProperty(video, "duration", { configurable: true, value: duration });
+  Object.defineProperty(video, "currentTime", { configurable: true, get: () => time, set: (value) => { time = value; } });
+  act(() => {
+    for (let step = from; step < duration - 0.5; step += 1) {
+      time = step;
+      video.dispatchEvent(new Event("timeupdate"));
+    }
+    time = duration - 0.5;
+    video.dispatchEvent(new Event("timeupdate"));
+  });
+};
+const wrapLoop = (video) => {
+  act(() => {
+    video.currentTime = 0.2;
+    video.dispatchEvent(new Event("timeupdate"));
+  });
+};
 
 // --- Video-only carousel tests ---
 
@@ -65,7 +96,7 @@ test("supports manual navigation and pause between two video slides", async () =
   expect(screen.getByRole("link", { name: /shop now/i })).toHaveAttribute("href", "/details/product-v2");
   fireEvent.click(screen.getByRole("button", { name: /pause carousel/i }));
   const video2 = screen.getByTestId("hero-video-slide-v2");
-  act(() => { video2.dispatchEvent(new Event("ended")); });
+  playToLoopBoundary(video2);
   // Paused: should not advance
   expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /play carousel/i }));
@@ -147,16 +178,44 @@ test("navigates correctly between two video slides", async () => {
   expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
 });
 
-test("video slide advances on ended event exactly once", async () => {
+test("video slide advances at the loop boundary exactly once", async () => {
   renderCarousel();
   await screen.findByRole("heading", { name: "VIDEO SLIDE" });
 
   const video = screen.getByTestId("hero-video-slide-v1");
-  act(() => { video.dispatchEvent(new Event("ended")); });
+  playToLoopBoundary(video);
   expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
 
-  // Second ended on the same video should not double-advance
-  act(() => { video.dispatchEvent(new Event("ended")); });
+  // A further loop on the departed video should not double-advance
+  wrapLoop(video);
+  expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
+});
+
+test("video slide does not advance mid-clip, even after a long healthy playback", async () => {
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+
+  // 12s into a 20s clip: past the minimum, but not at a loop boundary.
+  const video = screen.getByTestId("hero-video-slide-v1");
+  let time = 0;
+  Object.defineProperty(video, "duration", { configurable: true, value: 20 });
+  Object.defineProperty(video, "currentTime", { configurable: true, get: () => time, set: (value) => { time = value; } });
+  act(() => {
+    for (time = 0; time <= 12; time += 1) video.dispatchEvent(new Event("timeupdate"));
+  });
+  expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
+});
+
+test("short clips loop until the minimum display time before advancing", async () => {
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+
+  const video = screen.getByTestId("hero-video-slide-v1");
+  playToLoopBoundary(video, { duration: 5 });
+  // One 5s pass is shorter than the minimum: the clip loops instead.
+  expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
+  wrapLoop(video);
+  playToLoopBoundary(video, { duration: 5, from: 1 });
   expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
 });
 
@@ -208,7 +267,7 @@ test("hover does not pause video or slide progression", async () => {
   fireEvent.mouseEnter(section);
 
   const video = screen.getByTestId("hero-video-slide-v1");
-  act(() => { video.dispatchEvent(new Event("ended")); });
+  playToLoopBoundary(video);
   expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
 });
 
@@ -276,9 +335,9 @@ test("continues alternating videos without requiring the play button", async () 
   await screen.findByRole("heading", { name: "VIDEO SLIDE" });
   await settle();
 
-  act(() => { screen.getByTestId("hero-video-slide-v1").dispatchEvent(new Event("ended")); });
+  playToLoopBoundary(screen.getByTestId("hero-video-slide-v1"));
   expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
-  act(() => { screen.getByTestId("hero-video-slide-v2").dispatchEvent(new Event("ended")); });
+  playToLoopBoundary(screen.getByTestId("hero-video-slide-v2"));
   expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /play video/i })).not.toBeInTheDocument();
   expect(mockPlay).toHaveBeenCalledTimes(3);
@@ -299,7 +358,7 @@ test("stale play rejection from a previous video cannot block the next slide", a
   });
 
   expect(screen.queryByRole("button", { name: /play video/i })).not.toBeInTheDocument();
-  act(() => { screen.getByTestId("hero-video-slide-v2").dispatchEvent(new Event("ended")); });
+  playToLoopBoundary(screen.getByTestId("hero-video-slide-v2"));
   expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
 });
 
@@ -339,4 +398,142 @@ test("genuine autoplay policy rejection still provides manual playback", async (
   fireEvent.click(screen.getByRole("button", { name: /next slide/i }));
   expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /play video/i })).not.toBeInTheDocument();
+});
+
+// --- Smooth start, loop, transition and mobile renditions ---
+
+const CLOUDINARY_BASE = "https://res.cloudinary.com/dlsiabgiw/video/upload";
+
+describe("Cloudinary hero renditions", () => {
+  test("inserts the desktop and mobile video transformations", () => {
+    expect(optimiseHeroVideoUrl(`${CLOUDINARY_BASE}/hero-video-1_kcv6pl.mp4`)).toBe(`${CLOUDINARY_BASE}/q_auto,w_1280,vc_h264/hero-video-1_kcv6pl.mp4`);
+    expect(optimiseHeroVideoUrl(`${CLOUDINARY_BASE}/hero-video-1_kcv6pl.mp4`, "mobile")).toBe(`${CLOUDINARY_BASE}/q_auto,w_720,vc_h264/hero-video-1_kcv6pl.mp4`);
+    expect(optimiseHeroVideoUrl(`${CLOUDINARY_BASE}/v1712/folder/clip.mp4`)).toBe(`${CLOUDINARY_BASE}/q_auto,w_1280,vc_h264/v1712/folder/clip.mp4`);
+  });
+
+  test("derives a matching-width first-frame poster", () => {
+    expect(heroVideoPosterUrl(`${CLOUDINARY_BASE}/hero-video-2_nr2029.mp4`)).toBe(`${CLOUDINARY_BASE}/so_0,w_1280,q_auto,f_auto/hero-video-2_nr2029.jpg`);
+    expect(heroVideoPosterUrl(`${CLOUDINARY_BASE}/hero-video-2_nr2029.mp4`, "mobile")).toBe(`${CLOUDINARY_BASE}/so_0,w_720,q_auto,f_auto/hero-video-2_nr2029.jpg`);
+  });
+
+  test("leaves non-Cloudinary URLs untouched", () => {
+    expect(optimiseHeroVideoUrl("https://cdn.example.com/video/upload/clip.mp4", "mobile")).toBe("https://cdn.example.com/video/upload/clip.mp4");
+    expect(optimiseHeroVideoUrl("/videos/clip.mp4")).toBe("/videos/clip.mp4");
+    expect(optimiseHeroVideoUrl("https://res.cloudinary.com/demo/image/upload/shoe.jpg")).toBe("https://res.cloudinary.com/demo/image/upload/shoe.jpg");
+    expect(heroVideoPosterUrl("https://cdn.example.com/clip.mp4")).toBe("");
+  });
+
+  test("admin-provided poster and mobile video win over derived renditions", () => {
+    const slide = { ...videoSlide2, posterImage: "https://example.com/poster.jpg", mobileVideo: "https://example.com/mobile.mp4" };
+    expect(resolveHeroVideo(slide, true)).toEqual({ src: "https://example.com/mobile.mp4", poster: "https://example.com/poster.jpg" });
+    expect(resolveHeroVideo(slide, false)).toEqual({ src: `${CLOUDINARY_BASE}/q_auto,w_1280,vc_h264/hero-video-2_nr2029.mp4`, poster: "https://example.com/poster.jpg" });
+    expect(resolveHeroVideo(videoSlide2, true)).toEqual({ src: `${CLOUDINARY_BASE}/q_auto,w_720,vc_h264/hero-video-2_nr2029.mp4`, poster: `${CLOUDINARY_BASE}/so_0,w_720,q_auto,f_auto/hero-video-2_nr2029.jpg` });
+  });
+});
+
+test("video is looping, muted, inline and serves the optimised rendition with a poster", async () => {
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  const video = screen.getByTestId("hero-video-slide-v2");
+  expect(video).toHaveAttribute("loop");
+  expect(video.muted).toBe(true);
+  expect(video).toHaveAttribute("playsinline", "");
+  expect(video).toHaveAttribute("src", `${CLOUDINARY_BASE}/q_auto,w_1280,vc_h264/hero-video-2_nr2029.mp4`);
+  expect(video).toHaveAttribute("poster", `${CLOUDINARY_BASE}/so_0,w_1280,q_auto,f_auto/hero-video-2_nr2029.jpg`);
+  expect(screen.getByTestId("hero-poster-slide-v2")).toHaveAttribute("src", video.getAttribute("poster"));
+  expect(screen.getByTestId("hero-video-slide-v1")).toHaveAttribute("preload", "auto");
+  expect(video).toHaveAttribute("preload", "metadata");
+});
+
+test("mobile viewports get the 720px rendition and poster", async () => {
+  mockMatchMedia(["(max-width: 760px)"]);
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  const video = screen.getByTestId("hero-video-slide-v2");
+  expect(video).toHaveAttribute("src", `${CLOUDINARY_BASE}/q_auto,w_720,vc_h264/hero-video-2_nr2029.mp4`);
+  expect(video).toHaveAttribute("poster", `${CLOUDINARY_BASE}/so_0,w_720,q_auto,f_auto/hero-video-2_nr2029.jpg`);
+});
+
+test("video fades in only after it is actually playing", async () => {
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  await settle();
+  const video = screen.getByTestId("hero-video-slide-v1");
+  expect(screen.getByTestId("hero-poster-slide-v1")).toBeInTheDocument();
+  expect(video).not.toHaveClass("is-playing");
+
+  act(() => { video.dispatchEvent(new Event("playing")); });
+  expect(video).toHaveClass("is-playing");
+});
+
+test("autoplay rejection keeps the poster visible and the video hidden", async () => {
+  mockPlay.mockRejectedValue(new DOMException("Low power mode", "NotAllowedError"));
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  await settle();
+  expect(screen.getByTestId("hero-poster-slide-v1")).toHaveAttribute("src", videoSlide.posterImage);
+  expect(screen.getByTestId("hero-video-slide-v1")).not.toHaveClass("is-playing");
+  expect(screen.getByRole("button", { name: /play video/i })).toBeInTheDocument();
+});
+
+test("pause stops both the video and auto-advance; play resumes both", async () => {
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  await settle();
+  const video = screen.getByTestId("hero-video-slide-v1");
+
+  mockPause.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: /pause carousel/i }));
+  expect(mockPause).toHaveBeenCalled();
+  playToLoopBoundary(video);
+  act(() => jest.advanceTimersByTime(60_000));
+  expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
+
+  mockPlay.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: /play carousel/i }));
+  await settle();
+  expect(mockPlay).toHaveBeenCalled();
+  playToLoopBoundary(video);
+  expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
+});
+
+test("slide change runs the cinematic transition and settles afterwards", async () => {
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  const section = screen.getByTestId("hero-carousel");
+  expect(section).not.toHaveClass("hero-carousel--animated");
+
+  fireEvent.click(screen.getByRole("button", { name: /next slide/i }));
+  expect(section).toHaveClass("hero-carousel--animated");
+  expect(section).not.toHaveClass("hero-carousel--backward");
+  expect(screen.getByTestId("hero-media-slide-v2")).toHaveClass("is-active");
+  expect(screen.getByTestId("hero-media-slide-v1")).toHaveClass("is-leaving");
+
+  act(() => jest.advanceTimersByTime(950));
+  expect(screen.getByTestId("hero-media-slide-v1")).not.toHaveClass("is-leaving");
+
+  fireEvent.click(screen.getByRole("button", { name: /previous slide/i }));
+  expect(section).toHaveClass("hero-carousel--backward");
+});
+
+test("reduced motion uses a plain crossfade without Ken Burns or wipe", async () => {
+  mockMatchMedia(["(prefers-reduced-motion: reduce)"]);
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  const section = screen.getByTestId("hero-carousel");
+  expect(section).toHaveClass("hero-carousel--reduced");
+
+  fireEvent.click(screen.getByRole("button", { name: /next slide/i }));
+  expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
+  expect(section).not.toHaveClass("hero-carousel--animated");
+});
+
+test("arrow keys move between slides", async () => {
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+  const next = screen.getByRole("button", { name: /next slide/i });
+  fireEvent.keyDown(next, { key: "ArrowRight" });
+  expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
+  fireEvent.keyDown(next, { key: "ArrowLeft" });
+  expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
 });

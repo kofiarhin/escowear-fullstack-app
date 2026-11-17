@@ -22,20 +22,17 @@
   width: 71%;
   height: 85%;
   display: block;
+  overflow: hidden;
   opacity: 0;
-  transition: opacity 850ms ease;
 }
-.hero-carousel__media.is-active { opacity: 1; }
+.hero-carousel__media.is-active { z-index: 1; opacity: 1; }
 .hero-carousel__media img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
   object-position: center;
-  transform: scale(.97);
-  transition: transform 6.8s var(--ease-out);
 }
-.hero-carousel__media.is-active img { transform: scale(1); }
 /* Multiply removes the white rectangle around ordinary catalogue cut-outs
    while preserving the entire shoe and the underlying studio backdrop. */
 .hero-carousel__media--catalogue { mix-blend-mode: multiply; }
@@ -51,12 +48,63 @@
   width: 100%;
   height: 100%;
 }
+/* The poster frame (so_0) sits under the video and stays visible until the
+   video reports real playback, so the start never flashes black or jumps. */
+.hero-carousel__media--video .hero-carousel__poster,
 .hero-carousel__media--video video {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
+}
+.hero-carousel__media--video video {
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+.hero-carousel__media--video video.is-playing { opacity: 1; }
+
+/* Cinematic slide change (950ms, transform/opacity/clip-path only): the
+   incoming slide wipes in over the outgoing one with a Ken Burns settle,
+   while the outgoing slide drifts forward and fades. Keep the duration in
+   sync with TRANSITION_MS in HeroCarousel.component.js. */
+.hero-carousel__media.is-leaving { z-index: 0; opacity: 0; }
+.hero-carousel--animated .hero-carousel__media.is-active {
+  animation: hero-media-in 950ms cubic-bezier(.77, 0, .18, 1) both;
+}
+.hero-carousel--animated.hero-carousel--backward .hero-carousel__media.is-active { animation-name: hero-media-in-backward; }
+.hero-carousel--animated .hero-carousel__media.is-active :is(img, video) {
+  animation: hero-ken-burns 1600ms var(--ease-out) both;
+}
+.hero-carousel--animated .hero-carousel__media.is-leaving {
+  animation: hero-media-out 950ms ease both;
+}
+.hero-carousel--animated .hero-carousel__media.is-leaving :is(img, video) {
+  animation: hero-media-drift 950ms ease-in both;
+}
+@keyframes hero-media-in {
+  from { opacity: 0; clip-path: inset(0 0 0 100%); }
+  55% { opacity: 1; }
+  to { opacity: 1; clip-path: inset(0); }
+}
+@keyframes hero-media-in-backward {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); }
+  55% { opacity: 1; }
+  to { opacity: 1; clip-path: inset(0); }
+}
+@keyframes hero-ken-burns {
+  from { transform: scale(1.12); }
+  to { transform: scale(1); }
+}
+@keyframes hero-media-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes hero-media-drift {
+  from { transform: scale(1); }
+  to { transform: scale(1.06); }
 }
 /* Video-active: subtle scrim for text readability only */
 .hero-carousel--video-active .hero-carousel__overlay {
@@ -97,11 +145,18 @@
   width: min(44%, 670px);
   margin: 0 0 35px clamp(60px, 7.3vw, 148px);
 }
-.hero-carousel__copy > * { animation: hero-copy-in 760ms var(--ease-out) both; }
+/* Copy is keyed by slide id, so this staggered mask reveal replays on every
+   slide change. Backwards fill only: no clip-path lingers afterwards to cut
+   off focus outlines. */
+.hero-carousel__copy > * { animation: hero-copy-in 820ms var(--ease-out) backwards; }
 .hero-carousel__copy > :nth-child(1) { animation-delay: 80ms; }
 .hero-carousel__copy > :nth-child(2) { animation-delay: 170ms; }
 .hero-carousel__copy > :nth-child(3) { animation-delay: 300ms; }
 .hero-carousel__copy > :nth-child(4) { animation-delay: 430ms; }
+.hero-carousel--animated .hero-carousel__copy > :nth-child(1) { animation-delay: 260ms; }
+.hero-carousel--animated .hero-carousel__copy > :nth-child(2) { animation-delay: 360ms; }
+.hero-carousel--animated .hero-carousel__copy > :nth-child(3) { animation-delay: 480ms; }
+.hero-carousel--animated .hero-carousel__copy > :nth-child(4) { animation-delay: 600ms; }
 .hero-carousel__eyebrow {
   margin-bottom: 22px;
   font-family: var(--font-condensed);
@@ -228,8 +283,8 @@
 }
 .hero-carousel__copy--fallback > * { animation: none; }
 @keyframes hero-copy-in {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; clip-path: inset(-.2em -.2em 100% -.2em); transform: translateY(.6em); }
+  to { opacity: 1; clip-path: inset(-.2em); transform: translateY(0); }
 }
 @keyframes hero-shimmer { to { background-position: -200% 0; } }
 @media (max-width: 900px) and (min-width: 761px) {
@@ -238,21 +293,27 @@
   .hero-carousel__media { right: -5%; width: 72%; }
 }
 @media (max-width: 760px) {
+  /* Fill the visible screen below the sticky header. Header publishes its
+     measured height as --site-header-h; 95px is its mobile height. Every
+     browser with dvh also has svh, so the stable svh value wins and the hero
+     does not resize as the browser toolbar collapses. */
   .hero-carousel {
-    min-height: max(550px, calc(75dvh - 94px));
+    height: calc(100vh - var(--site-header-h, 95px));
+    min-height: 480px;
     background: #0d1117;
   }
-  .hero-carousel__media {
-    top: 0;
-    left: 2%;
-    right: 2%;
-    width: 96%;
-    height: 56%;
+  @supports (height: 100dvh) {
+    .hero-carousel { height: calc(100dvh - var(--site-header-h, 95px)); }
   }
-  .hero-carousel__media img { object-fit: contain; object-position: center 32%; }
-  .hero-carousel__media--custom { inset: 0; width: 100%; height: 100%; }
-  .hero-carousel__media--custom img { object-fit: cover; object-position: center 24%; }
+  @supports (height: 100svh) {
+    .hero-carousel { height: calc(100svh - var(--site-header-h, 95px)); }
+  }
+  .hero-carousel__media,
+  .hero-carousel__media--custom,
   .hero-carousel__media--video { inset: 0; width: 100%; height: 100%; }
+  .hero-carousel__media img { object-fit: contain; object-position: center 32%; }
+  .hero-carousel__media--custom img { object-fit: cover; object-position: center 24%; }
+  .hero-carousel__media--video .hero-carousel__poster,
   .hero-carousel__media--video video { object-position: center 30%; }
   .hero-carousel--video-active .hero-carousel__overlay {
     background: linear-gradient(0deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.25) 45%, transparent 75%);
@@ -281,13 +342,14 @@
   .hero-carousel__cta { min-height: 46px; padding: 12px 17px; font-size: .73rem; }
   .hero-carousel__arrows { inset: 28% 11px auto; }
   .hero-carousel__arrows button { width: 44px; height: 44px; background: rgba(8,12,18,.3); }
-  .hero-carousel__dots { bottom: 9px; }
-  .hero-carousel__pause { right: 10px; bottom: 8px; font-size: .68rem; }
+  .hero-carousel__dots { bottom: calc(9px + env(safe-area-inset-bottom)); }
+  .hero-carousel__pause { right: 10px; bottom: calc(8px + env(safe-area-inset-bottom)); font-size: .68rem; }
 }
+/* Reduced motion: a plain 300ms crossfade (REDUCED_TRANSITION_MS), no wipe,
+   zoom or text motion. The class mirrors the media query from JS. */
+.hero-carousel--reduced .hero-carousel__media { transition: opacity 300ms ease; }
+.hero-carousel--reduced .hero-carousel__media--video video { transition-duration: 200ms; }
+.hero-carousel--reduced .hero-carousel__copy > * { animation: none; }
 @media (prefers-reduced-motion: reduce) {
-  .hero-carousel__media,
-  .hero-carousel__media img,
-  .hero-carousel__media video,
-  .hero-carousel__copy > * { animation: none; transition: none; transform: none; }
   .hero-carousel__manual-play { transition: none; }
 }
