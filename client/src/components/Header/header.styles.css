@@ -1,131 +1,275 @@
+/* Every colour here is a theme token, so text, icons and focus rings keep
+   AA contrast against the bar in both light and dark themes. */
 .main-header {
   position: sticky;
   top: 0;
   z-index: 40;
   border-bottom: 1px solid var(--border);
   background: var(--surface-header);
+  color: var(--text);
   backdrop-filter: blur(14px);
 }
 
-.announcement {
-  display: flex;
-  min-height: 28px;
-  align-items: center;
-  justify-content: space-between;
-  padding-inline: 22px;
-  background: var(--inverse-surface);
-  color: var(--inverse-text);
-  font-family: var(--font-condensed);
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+.main-header :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
+/* Utility bar */
+.utility-bar {
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface-subtle);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.utility-bar-inner {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.utility-note {
+  color: var(--text-muted);
+}
+
+.utility-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.utility-links a,
+.utility-links button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  padding-inline: 8px;
+  color: var(--text);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.utility-links a:hover,
+.utility-links button:hover {
+  text-decoration: underline;
+}
+
+/* Main bar */
 .header-shell {
   display: grid;
-  min-height: 78px;
-  grid-template-columns: 0.7fr auto 0.7fr;
-  align-items: center;
-  gap: 28px;
+  min-height: 72px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 24px;
 }
 
 .wordmark {
   width: max-content;
+  align-self: center;
+  color: var(--text);
   font-family: var(--font-display);
-  font-size: clamp(1.2rem, 1.8vw, 1.7rem);
+  font-size: clamp(1.25rem, 1.8vw, 1.7rem);
   font-weight: 900;
   letter-spacing: -0.065em;
   line-height: 1;
   transform: skewX(-7deg);
 }
 
-.desktop-nav {
+.desktop-nav,
+.desktop-nav-list,
+.desktop-nav-item {
   display: flex;
   align-items: center;
-  gap: clamp(20px, 2.4vw, 42px);
+}
+
+.desktop-nav-list {
+  align-self: stretch;
+  gap: clamp(2px, 0.8vw, 10px);
+}
+
+/* Items fill the bar's height so the pointer stays inside an item while
+   travelling from a trigger down into its panel. */
+.desktop-nav-item {
+  align-self: stretch;
+}
+
+.desktop-nav-link {
+  position: relative;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 4px;
+  padding-inline: 12px;
+  color: var(--text);
   font-family: var(--font-condensed);
-  font-size: 0.72rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.desktop-nav a,
-.account-link,
-.account-actions a,
-.account-actions button {
-  position: relative;
-  padding-block: 8px;
-}
-
-.desktop-nav a::after,
-.account-actions button::after {
+.desktop-nav-link::after {
   position: absolute;
-  right: 0;
-  bottom: 2px;
-  left: 0;
-  height: 1px;
+  right: 12px;
+  bottom: 6px;
+  left: 12px;
+  height: 2px;
   background: currentColor;
   content: "";
   transform: scaleX(0);
-  transform-origin: right;
-  transition: transform 260ms var(--ease-out);
-}
-
-.desktop-nav a:hover::after,
-.account-actions button:hover::after {
-  transform: scaleX(1);
   transform-origin: left;
+  transition: transform 200ms var(--ease-out);
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 18px;
+.desktop-nav-link:hover::after,
+.desktop-nav-link[aria-expanded="true"]::after {
+  transform: scaleX(1);
+}
+
+.desktop-nav-link svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  transition: transform 200ms var(--ease-out);
+}
+
+.desktop-nav-link[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+/* Mega-menu: positioned against the sticky header so it spans the viewport. */
+.mega-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-raised);
+  box-shadow: 0 24px 32px -28px rgba(0, 0, 0, 0.45);
+  animation: mega-enter 180ms var(--ease-out) both;
+}
+
+.mega-panel[hidden] {
+  display: none;
+}
+
+@keyframes mega-enter {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mega-panel-inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 220px));
+  justify-content: center;
+  gap: 24px 72px;
+  padding-block: 32px 40px;
+}
+
+.mega-group-title {
+  margin-bottom: 10px;
+  color: var(--text);
   font-family: var(--font-condensed);
-  font-size: 0.68rem;
+  font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.icon-action {
+.mega-group a {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 34px;
   align-items: center;
-  gap: 7px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 500;
 }
 
-.icon-action svg,
-.menu svg {
-  width: 20px;
-  height: 20px;
+.mega-group a:hover,
+.mega-group a:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.icon-action {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--text);
+  transition: background-color 160ms ease;
+}
+
+.icon-action:hover {
+  background: var(--surface-sunken);
+}
+
+.icon-action svg {
+  width: 24px;
+  height: 24px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: square;
   stroke-linejoin: miter;
-  stroke-width: 1.5;
+  stroke-width: 1.8;
 }
 
-.account-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* ThemeToggle ships its own 40px minimums; the header sizes it like its siblings. */
+.header-actions .header-theme-toggle {
+  min-width: 0;
+  min-height: 0;
+}
+
+.header-actions .header-theme-toggle svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.8;
+}
+
+.search-toggle {
+  width: auto;
+  gap: 8px;
+  margin-right: 6px;
+  padding-inline: 12px 18px;
+  border: 1px solid var(--border-input);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.admin-link {
+  width: auto;
+  padding-inline: 14px;
+  border: 1px solid var(--border-strong);
+  font-family: var(--font-condensed);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .menu {
   display: none;
-  width: 44px;
-  height: 44px;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.menu svg {
-  width: 25px;
-  height: 25px;
 }
 
 .search-panel {
@@ -135,6 +279,21 @@
 
 .search-panel .container {
   padding-block: 20px;
+}
+
+/* Just above the mobile breakpoint the centred nav and an admin's extra
+   Admin link leave no room for the labelled search pill. */
+@media (max-width: 1280px) {
+  .search-toggle {
+    width: 44px;
+    margin-right: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .search-toggle-label {
+    display: none;
+  }
 }
 
 @media (max-width: 1120px) {
@@ -151,33 +310,36 @@
   }
 }
 
+/* Admins reach their account from the menu, keeping one compact Admin link. */
+@media (max-width: 760px) {
+  .header-actions.is-admin .account-link {
+    display: none;
+  }
+}
+
 @media (max-width: 680px) {
-  .announcement {
+  .utility-bar {
+    font-size: 0.7rem;
+  }
+
+  .utility-bar-inner {
+    min-height: 28px;
     justify-content: center;
-    padding-inline: 12px;
     text-align: center;
   }
 
-  /* Small screens reach the theme toggle in the side nav instead. */
-  .announcement-edition,
-  .header-actions .header-theme-toggle,
-  .header-actions .account-actions button,
-  .icon-action > span {
+  /* Utility links live in the mobile menu on small screens. */
+  .utility-links {
     display: none;
   }
 
   .header-shell {
     min-height: 66px;
-    gap: 10px;
+    gap: 8px;
   }
 
   .header-actions {
-    gap: 1px;
-  }
-
-  .icon-action {
-    width: 39px;
-    justify-content: center;
+    gap: 0;
   }
 
   .wordmark {
@@ -185,23 +347,52 @@
   }
 }
 
-/* Keep the admin entry readable while account actions remain in the menu. */
-.account-actions .admin-link {
-  flex-shrink: 0;
+/* Logo + five 44px controls overflow below ~400px, so controls narrow
+   (height stays 44px) and the gutter tightens. The theme toggle stays. */
+@media (max-width: 400px) {
+  .header-shell.container {
+    width: calc(100% - 20px);
+  }
+
+  .icon-action,
+  .search-toggle {
+    width: 40px;
+  }
+
+  .admin-link {
+    width: auto;
+    padding-inline: 8px;
+  }
+
+  .wordmark {
+    font-size: 1.05rem;
+  }
 }
 
-@media (max-width: 760px) {
-  .account-actions.is-admin .account-profile,
-  .account-actions.is-admin button {
-    display: none;
+@media (max-width: 360px) {
+  .icon-action,
+  .search-toggle {
+    width: 36px;
   }
 
-  .account-actions.is-admin {
-    gap: 0;
+  .admin-link {
+    width: auto;
+    padding-inline: 6px;
   }
 
-  .account-actions .admin-link {
-    width: 44px;
-    justify-content: center;
+  .wordmark {
+    font-size: 0.98rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mega-panel {
+    animation: none;
+  }
+
+  .desktop-nav-link::after,
+  .desktop-nav-link svg,
+  .icon-action {
+    transition: none;
   }
 }

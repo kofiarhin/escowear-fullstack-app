@@ -5,6 +5,9 @@ import Search from "../Search/Search.component";
 import ThemeToggle from "../ThemeToggle/ThemeToggle.component";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../../redux/actions/user.action";
+import { policiesVisible } from "../../policies/content";
+import MegaNav from "./MegaNav.component";
+import { MOBILE_MENU_ID } from "./navigation";
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -57,19 +60,36 @@ const usePublishedHeaderHeight = (headerRef, searchPanelRef) => {
   }, [headerRef, searchPanelRef]);
 };
 
-const Header = ({ setShowSideNav }) => {
+const Header = ({ showSideNav = false, setShowSideNav }) => {
   const { user } = useSelector((state) => state.userReducer);
   const dispatch = useDispatch();
   const [showSearch, setShowSearch] = useState(false);
   const headerRef = useRef(null);
   const searchPanelRef = useRef(null);
   usePublishedHeaderHeight(headerRef, searchPanelRef);
+  const isAdmin = user?.role === "admin";
 
   return (
     <header className="main-header" ref={headerRef}>
-      <div className="announcement">
-        <span>Escowear / Premium sneaker store</span>
-        <span className="announcement-edition">Icons / Releases / Rotation</span>
+      <div className="utility-bar">
+        <div className="utility-bar-inner container">
+          <p className="utility-note">Authentic UK sneakers, delivered to Ghana</p>
+          <nav className="utility-links" aria-label="Help and account">
+            <Link to="/track-order">Track order</Link>
+            {policiesVisible() && <Link to="/policies">Shop policies</Link>}
+            {user ? (
+              <>
+                <Link to="/dashboard">Hi, {user.name.split(" ")[0]}</Link>
+                <button type="button" onClick={() => dispatch(logoutUser())}>Logout</button>
+              </>
+            ) : (
+              <>
+                <Link to="/register">Register</Link>
+                <Link to="/login">Login</Link>
+              </>
+            )}
+          </nav>
+        </div>
       </div>
 
       <div className="header-shell container">
@@ -77,15 +97,9 @@ const Header = ({ setShowSideNav }) => {
           ESCOWEAR
         </Link>
 
-        <nav className="desktop-nav" aria-label="Primary navigation">
-          <Link to="/">Home</Link>
-          <Link to="/store">Shop</Link>
-          <Link to="/#latest-releases">New Releases</Link>
-          <Link to="/#collections">Collections</Link>
-          <Link to="/#about">About</Link>
-        </nav>
+        <MegaNav />
 
-        <div className="header-actions">
+        <div className={`header-actions ${isAdmin ? "is-admin" : ""}`.trim()}>
           <button
             type="button"
             className="icon-action search-toggle"
@@ -94,40 +108,31 @@ const Header = ({ setShowSideNav }) => {
             onClick={() => setShowSearch((isOpen) => !isOpen)}
           >
             <SearchIcon />
-            <span>Search</span>
+            <span className="search-toggle-label">Search</span>
           </button>
 
-          {user ? (
-            <div className={`account-actions ${user.role === "admin" ? "is-admin" : ""}`}>
-              {user.role === "admin" && (
-                <Link to="/admin" className="icon-action admin-link">Admin</Link>
-              )}
-              <Link to="/dashboard" className="icon-action account-profile" aria-label="Your account">
-                <AccountIcon />
-                <span>{user.name.split(" ")[0]}</span>
-              </Link>
-              <button type="button" onClick={() => dispatch(logoutUser())}>
-                Logout
-              </button>
-            </div>
-          ) : (
-            <Link to="/login" className="icon-action account-link" aria-label="Account">
-              <AccountIcon />
-              <span>Account</span>
-            </Link>
-          )}
+          {isAdmin && <Link to="/admin" className="icon-action admin-link">Admin</Link>}
+
+          <Link
+            to={user ? "/dashboard" : "/login"}
+            className="icon-action account-link"
+            aria-label={user ? "Your account" : "Account"}
+          >
+            <AccountIcon />
+          </Link>
 
           <Link to="/cart" className="icon-action cart-link" aria-label="Shopping cart">
             <CartIcon />
-            <span>Cart</span>
           </Link>
 
-          <ThemeToggle className="header-theme-toggle" />
+          <ThemeToggle className="icon-action header-theme-toggle" />
 
           <button
             type="button"
-            className="menu"
+            className="icon-action menu"
             aria-label="Open navigation"
+            aria-expanded={showSideNav}
+            aria-controls={MOBILE_MENU_ID}
             onClick={() => setShowSideNav(true)}
           >
             <MenuIcon />
