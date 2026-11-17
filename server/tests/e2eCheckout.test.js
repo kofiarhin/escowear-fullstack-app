@@ -43,6 +43,28 @@ test("cart → guest order → acknowledgement → quote → proof → bank veri
   assert.equal(models.Order.docs.length, 1);
   const { orderId, orderNumber } = first.body;
   assert.equal(models.Order.docs[0].pricing.subtotalGBPMinor, 24100);
+  assert.equal(first.body.status, "pending_contact");
+  assert.ok(first.body.trackingHandoff.accessToken, "confirmation page gets a scoped access token");
+  assert.deepEqual(models.EmailOutbox.docs.map((message) => message.kind), ["order_received"]);
+
+  // The admin overview's "Needs attention" queue and the status filter must
+  // follow the order through every manual step.
+  const queue = async () => {
+    const stats = await ctx.request("GET", "/api/admin/stats", { token: adminToken });
+    assert.equal(stats.status, 200);
+    return {
+      attention: stats.body.attentionOrders.filter((order) => order.id === orderId).map((order) => order.status),
+      byStatus: stats.body.orders.byStatus,
+    };
+  };
+  const listed = async (status) => {
+    const list = await ctx.request("GET", `/api/admin/orders?status=${status}`, { token: adminToken });
+    assert.equal(list.status, 200);
+    return list.body.items.map((order) => order.orderNumber);
+  };
+  assert.deepEqual((await queue()).attention, ["pending_contact"]);
+  assert.equal((await queue()).byStatus.pending_contact, 1);
+  assert.deepEqual(await listed("pending_contact"), [orderNumber]);
 
   // 2. Mail provider outage: the order survives and the email is retried later.
   await deliver();
@@ -67,6 +89,8 @@ test("cart → guest order → acknowledgement → quote → proof → bank veri
     ).status,
     200
   );
+  assert.deepEqual((await queue()).attention, ["awaiting_payment"]);
+  assert.deepEqual(await listed("awaiting_payment"), [orderNumber]);
   await deliver();
   const instructions = inbox.find((mail) => /payment details/.test(mail.subject));
   assert.match(instructions.text, /E2E TEST CHANNEL/);
@@ -75,6 +99,8 @@ test("cart → guest order → acknowledgement → quote → proof → bank veri
   // 4. Customer emails a screenshot (outside the app); admin records review, then the bank receipt.
   assert.equal((await act("payment-review", { expectedStatus: "awaiting_payment", note: "screenshot in mailbox" })).status, 200);
   assert.equal(models.Order.docs[0].payment.status, "under_review");
+  assert.deepEqual((await queue()).attention, ["payment_review"]);
+  assert.deepEqual(await listed("payment_review"), [orderNumber]);
   const verify = await act("verify-payment", {
     expectedStatus: "payment_review",
     amountReceivedGHSMinor: 440000,
@@ -83,12 +109,21 @@ test("cart → guest order → acknowledgement → quote → proof → bank veri
     bankReceiptConfirmed: true,
   });
   assert.equal(verify.status, 200);
+  // Verified orders leave the attention queue and move to fulfilment.
+  const afterVerify = await queue();
+  assert.deepEqual(afterVerify.attention, []);
+  assert.equal(afterVerify.byStatus.confirmed, 1);
+  assert.equal(afterVerify.byStatus.payment_review, 0);
   await deliver();
   assert.ok(inbox.some((mail) => /order confirmed/.test(mail.subject)));
 
   // 5. Fulfilment.
+  assert.deepEqual(await listed("confirmed"), [orderNumber]);
   assert.equal((await act("fulfilment", { expectedStatus: "confirmed", toStatus: "processing", supplierReference: "E2E-SUPPLIER" })).status, 200);
+  assert.deepEqual(await listed("processing"), [orderNumber]);
   assert.equal((await act("fulfilment", { expectedStatus: "processing", toStatus: "dispatched", carrier: "E2E Courier", trackingNumber: "E2E123" })).status, 200);
+  assert.deepEqual(await listed("dispatched"), [orderNumber]);
+  assert.deepEqual((await queue()).attention, []);
   await deliver();
   assert.ok(inbox.some((mail) => /dispatched/.test(mail.text) && /E2E123/.test(mail.text)));
 
@@ -112,7 +147,11 @@ test("cart → guest order → acknowledgement → quote → proof → bank veri
 
   // 7. Delivery and completion; every email was sent exactly once.
   assert.equal((await act("fulfilment", { expectedStatus: "dispatched", toStatus: "delivered" })).status, 200);
+  assert.deepEqual(await listed("delivered"), [orderNumber]);
   assert.equal((await act("fulfilment", { expectedStatus: "delivered", toStatus: "completed" })).status, 200);
+  const finalCounts = (await queue()).byStatus;
+  assert.equal(finalCounts.completed, 1);
+  assert.equal(Object.values(finalCounts).reduce((sum, count) => sum + count, 0), 1, "the order is counted once, in its final status");
   await deliver();
   await deliver();
   const subjects = inbox.map((mail) => mail.subject);

@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import reducers from "../../redux/reducers";
 import Checkout from "./Checkout.page";
 import OrderConfirmation from "../OrderConfirmation/OrderConfirmation.page";
+import Login from "../Login/Login.page";
 import { CART_KEY } from "../../utils/cart";
 import review from "../../policies/review.json";
 import { getOrderAccess, getProofAccess } from "../../utils/orderAccess";
@@ -90,6 +91,32 @@ test("guest checkout explains no payment now and GBP estimate vs final GHS amoun
   expect(within(summary).getByText("£329.98", { selector: "dd" })).toBeInTheDocument();
   expect(within(summary).getByText(/indicative subtotal \(gbp\)/i)).toBeInTheDocument();
   expect(within(summary).getByText(/final amount in ghs/i)).toBeInTheDocument();
+});
+
+test("a guest who signs in from checkout as a customer comes back to checkout with the cart kept", async () => {
+  render(
+    <Provider store={createStore(reducers, applyMiddleware(thunkMiddleware))}>
+      <MemoryRouter initialEntries={["/checkout"]}>
+        <Routes>
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/account" element={<p>Account page</p>} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>
+  );
+
+  await userEvent.click(screen.getByRole("link", { name: "Sign in" }));
+  global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ name: "Ama Mensah", email: "ama@example.test", role: "customer", token: "t" }) });
+  await userEvent.type(screen.getByPlaceholderText("Enter Email"), "ama@example.test");
+  await userEvent.type(screen.getByPlaceholderText("Enter Password"), "a-long-password");
+  await userEvent.click(screen.getByRole("button", { name: /login/i }));
+
+  // The customer role default (/account) must not override the checkout return.
+  expect(await screen.findByText(/signed in as ama@example\.test/i)).toBeInTheDocument();
+  expect(screen.queryByText("Account page")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /place order request/i })).toBeInTheDocument();
+  expect(storedCart()).toEqual(cartItems);
 });
 
 test("empty cart cannot check out", () => {

@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const { assertCheckoutReadiness } = require("../server");
 const { getOrderConfig } = require("../config/orders");
 const { checkReleaseConfig } = require("../scripts/releaseCheck");
-const { newIdempotencyKey, sampleProduct, startTestApp, validOrderBody } = require("./helpers/testApp");
+const { newIdempotencyKey, sampleProduct, startTestApp, userToken, validOrderBody } = require("./helpers/testApp");
 
 test("checkout is closed unless ESCOWEAR_CHECKOUT_OPEN is exactly true", () => {
   assert.equal(getOrderConfig({}).checkoutOpen, false);
@@ -31,6 +31,14 @@ test("a closed checkout refuses new orders but still replays an existing one", a
   assert.equal(refused.body.code, "CHECKOUT_CLOSED");
   assert.equal((await place(key)).status, 200, "retry of the earlier order replays");
   assert.equal(ctx.models.Order.docs.length, 1);
+
+  // Signing in does not bypass a closed checkout.
+  const customer = await ctx.addUser();
+  const signedIn = await ctx.request("POST", "/api/orders", { body, headers: { "Idempotency-Key": newIdempotencyKey() }, token: userToken(customer._id) });
+  assert.equal(signedIn.status, 503);
+  assert.equal(signedIn.body.code, "CHECKOUT_CLOSED");
+  assert.equal(ctx.models.Order.docs.length, 1);
+  assert.equal(ctx.models.EmailOutbox.docs.filter((message) => message.kind === "order_received").length, 1, "no acknowledgement for a refused order");
 });
 
 test("the server refuses to start with checkout open while launch requirements are missing", () => {
