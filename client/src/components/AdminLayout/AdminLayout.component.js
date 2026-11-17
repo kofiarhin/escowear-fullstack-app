@@ -15,7 +15,7 @@ export const ADMIN_SECTIONS = [
   { id: "orders", to: "/admin/orders", label: "Orders", icon: <Icon><path d="M5 4h14v16H5zM8.5 9h7M8.5 13h7M8.5 17h4" /></Icon> },
   { id: "products", to: "/admin/products", label: "Products", icon: <Icon><path d="M3 15c3 0 5-2 7-5l3 3c2 1 5 1 8 1v3H3z" /></Icon> },
   { id: "featured", to: "/admin/products/featured", label: "Featured sneakers", icon: <Icon><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></Icon> },
-  { id: "hero", to: "/admin/hero-slides", label: "Hero slides", icon: <Icon><path d="M3 5h18v14H3zM3 15l5-4 4 3 3-2 6 4" /></Icon> },
+  { id: "hero", to: "/admin/hero-slides", label: "Hero videos", icon: <Icon><path d="M3 5h18v14H3zM3 15l5-4 4 3 3-2 6 4" /></Icon> },
 ];
 
 // /admin/products/featured sits under /admin/products, so match the most

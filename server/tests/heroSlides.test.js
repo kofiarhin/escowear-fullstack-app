@@ -77,6 +77,55 @@ test("admin rejects a ninth active slide without partial writes, including concu
   assert.equal(results.filter((result) => result.status === 201).length, 1);
   assert.equal(results.filter((result) => result.status === 409).length, 2);
   assert.equal(ctx.models.HeroSlide.docs.filter((slide) => slide.isActive).length, 8);
+  assert.equal(ctx.models.HeroSlide.docs.length, 8);
+});
+
+test("admin rejects a ninth slide of any status with SLIDE_LIMIT and allows it again after a delete", async (t) => {
+  const ctx = await startTestApp();
+  t.after(ctx.close);
+  const admin = await ctx.addUser({ role: "admin" });
+  const token = userToken(admin._id);
+  const products = await Promise.all(Array.from({ length: 10 }, (_, index) => ctx.models.Product.create(sampleProduct({ name: `Pair ${index}` }))));
+  const ids = [];
+  for (let index = 0; index < 8; index += 1) {
+    const result = await ctx.request("POST", "/api/admin/hero-slides", { token, body: createSlide(products[index]._id, { order: index, isActive: index < 2 }) });
+    assert.equal(result.status, 201);
+    ids.push(result.body.item.id);
+  }
+
+  for (const isActive of [false, true]) {
+    const ninth = await ctx.request("POST", "/api/admin/hero-slides", { token, body: createSlide(products[8]._id, { order: 8, isActive, desktopVideo: "https://res.cloudinary.com/demo/video/upload/ninth.mp4" }) });
+    assert.equal(ninth.status, 409);
+    assert.equal(ninth.body.code, "SLIDE_LIMIT");
+    assert.equal(ninth.body.error, "Only eight hero slides are allowed");
+  }
+  assert.equal(ctx.models.HeroSlide.docs.length, 8);
+
+  assert.equal((await ctx.request("DELETE", `/api/admin/hero-slides/${ids[0]}`, { token })).status, 204);
+  const replacement = await ctx.request("POST", "/api/admin/hero-slides", { token, body: createSlide(products[9]._id, { order: 0, desktopVideo: "https://res.cloudinary.com/demo/video/upload/replacement.mp4" }) });
+  assert.equal(replacement.status, 201);
+  assert.equal(replacement.body.item.desktopVideo, "https://res.cloudinary.com/demo/video/upload/replacement.mp4");
+});
+
+test("activating a slide still respects ACTIVE_SLIDE_LIMIT for legacy collections above the total cap", async (t) => {
+  const ctx = await startTestApp();
+  t.after(ctx.close);
+  const admin = await ctx.addUser({ role: "admin" });
+  const token = userToken(admin._id);
+  const products = await Promise.all(Array.from({ length: 9 }, (_, index) => ctx.models.Product.create(sampleProduct({ name: `Pair ${index}` }))));
+  // Written straight to the model: the API no longer allows a ninth slide.
+  for (let index = 0; index < 8; index += 1) await ctx.models.HeroSlide.create(createSlide(products[index]._id, { order: index, isActive: true }));
+  const draft = await ctx.models.HeroSlide.create(createSlide(products[8]._id, { order: 8, isActive: false, desktopImage: "/images/hero/legacy.jpg" }));
+
+  const activated = await ctx.request("PATCH", `/api/admin/hero-slides/${draft._id}`, { token, body: { isActive: true } });
+  assert.equal(activated.status, 409);
+  assert.equal(activated.body.code, "ACTIVE_SLIDE_LIMIT");
+
+  // Editing a draft without activating it keeps working and leaves its image untouched.
+  const edited = await ctx.request("PATCH", `/api/admin/hero-slides/${draft._id}`, { token, body: { headline: "STILL A DRAFT", desktopVideo: "https://res.cloudinary.com/demo/video/upload/legacy.mp4" } });
+  assert.equal(edited.status, 200);
+  assert.equal(edited.body.item.desktopImage, "/images/hero/legacy.jpg");
+  assert.equal(edited.body.item.desktopVideo, "https://res.cloudinary.com/demo/video/upload/legacy.mp4");
 });
 
 test("video fields are accepted, persisted, returned and validated correctly", async (t) => {

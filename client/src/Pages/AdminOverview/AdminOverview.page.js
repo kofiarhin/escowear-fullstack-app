@@ -83,7 +83,7 @@ const QuickActions = () => (
         Manage featured
       </Link>
       <Link to="/admin/hero-slides" className="admin-button">
-        Hero slides
+        Hero videos
       </Link>
     </div>
   </section>
@@ -149,9 +149,9 @@ const Stats = ({ stats }) => {
               </Link>
             </div>
           </StatCard>
-          <StatCard tone="neutral" label="Hero slides active" value={`${stats.heroSlides.active}/${MAX_ACTIVE_SLIDES}`} detail={`${stats.heroSlides.total} slide${stats.heroSlides.total === 1 ? "" : "s"} in total`}>
+          <StatCard tone="neutral" label="Hero videos active" value={`${stats.heroSlides.active}/${MAX_ACTIVE_SLIDES}`} detail={`${stats.heroSlides.total} slide${stats.heroSlides.total === 1 ? "" : "s"} in total`}>
             <Link to="/admin/hero-slides" className="admin-stat__link">
-              Manage hero slides
+              Manage hero videos
             </Link>
           </StatCard>
           <StatCard

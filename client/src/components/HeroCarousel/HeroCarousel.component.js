@@ -78,9 +78,11 @@ const HeroCarousel = () => {
         const response = await fetch("/api/hero-slides", { signal: controller.signal });
         if (!response.ok) throw new Error("Hero request failed");
         const data = await response.json();
-        const all = Array.isArray(data?.items) ? data.items.filter((item) => item && item.id && item.headline && (item.desktopImage || item.desktopVideo)) : [];
-        const videoItems = all.filter((item) => item.desktopVideo);
-        const items = videoItems.length ? videoItems : DEFAULT_VIDEO_SLIDES;
+        // Each published slide plays its video when it has one; legacy
+        // image-only slides still render with their image (the API resolves
+        // the product image when no custom image was set).
+        const published = Array.isArray(data?.items) ? data.items.filter((item) => item && item.id && item.headline && (item.desktopImage || item.desktopVideo)) : [];
+        const items = published.length ? published : DEFAULT_VIDEO_SLIDES;
         setSlides(items);
         setActiveIndex(0);
         setState(items.length ? "ready" : "fallback");
@@ -367,7 +369,7 @@ const HeroCarousel = () => {
           return (
             <picture className={`hero-carousel__media ${slide.desktopImage.startsWith("/images/shoes/") ? "hero-carousel__media--catalogue" : "hero-carousel__media--custom"} ${layerState(index)}`} key={slide.id}>
               {slide.mobileImage && <source media={HERO_MOBILE_QUERY} srcSet={slide.mobileImage} />}
-              <img src={slide.desktopImage} alt="" fetchpriority={index === 0 ? "high" : "auto"} loading={index === 0 ? "eager" : "lazy"} onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.style.display = "none"; }} />
+              <img data-testid={`hero-image-${slide.id}`} src={slide.desktopImage} alt="" fetchpriority={index === 0 ? "high" : "auto"} loading={index === 0 ? "eager" : "lazy"} onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.style.display = "none"; }} />
             </picture>
           );
         })}

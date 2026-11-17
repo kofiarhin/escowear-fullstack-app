@@ -33,7 +33,7 @@ test("/admin renders counts, safe order rows and filtered links from stats", asy
   expect(within(card("In progress")).getByText("4")).toBeInTheDocument();
   expect(within(card("Total orders")).getByText("12")).toBeInTheDocument();
   expect(within(card("Published products")).getByText("7")).toBeInTheDocument();
-  expect(within(card("Hero slides active")).getByText("2/8")).toBeInTheDocument();
+  expect(within(card("Hero videos active")).getByText("2/8")).toBeInTheDocument();
   expect(within(card("Featured sneakers set")).getByText("3/4")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /payment review 2/i })).toHaveAttribute("href", "/admin/orders?status=payment_review");
   expect(screen.getByRole("link", { name: "View completed orders" })).toHaveAttribute("href", "/admin/orders?status=completed");

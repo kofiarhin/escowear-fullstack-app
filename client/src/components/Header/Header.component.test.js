@@ -236,7 +236,7 @@ test("admins see one compact Admin link instead of individual admin sections", (
   render(<Provider store={store}><MemoryRouter><Header setShowSideNav={jest.fn()} /></MemoryRouter></Provider>);
   expect(screen.getAllByRole("link", { name: "Admin" })).toHaveLength(1);
   expect(screen.getByRole("link", { name: "Admin" })).toHaveAttribute("href", "/admin");
-  for (const name of ["Admin orders", "Manage products", "Manage hero slides"]) expect(screen.queryByRole("link", { name })).not.toBeInTheDocument();
+  for (const name of ["Admin orders", "Manage products", "Manage hero videos"]) expect(screen.queryByRole("link", { name })).not.toBeInTheDocument();
 });
 
 test.each([null, "customer"])("%s visitors do not see admin links", (role) => {
