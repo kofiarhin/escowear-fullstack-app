@@ -83,15 +83,15 @@ test("renders the sneaker homepage and products from the API", async () => {
     "/store"
   );
 
-  expect(await screen.findByText("Nike Air Max Dn8")).toBeInTheDocument();
-  expect(screen.getByText("£164.99")).toBeInTheDocument();
-  expect(screen.getByRole("img", { name: /nike air max dn8/i })).toHaveAttribute(
+  expect(await screen.findAllByText("Nike Air Max Dn8")).not.toHaveLength(0);
+  expect(screen.getAllByText("£164.99")).not.toHaveLength(0);
+  expect(screen.getAllByRole("img", { name: /nike air max dn8/i })[0]).toHaveAttribute(
     "src",
     "https://example.test/nike-air-max-dn8.jpg"
   );
   await waitFor(() =>
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/products?limit=9&page=1"
+      "/api/products?limit=4&page=1"
     )
   );
   expect(global.fetch).toHaveBeenCalledWith(
@@ -106,7 +106,7 @@ test("renders the sneaker homepage and products from the API", async () => {
 
 test("opens and closes the accessible navigation menu", async () => {
   renderApp();
-  await screen.findByText("Nike Air Max Dn8");
+  await screen.findAllByText("Nike Air Max Dn8");
 
   await userEvent.click(
     screen.getByRole("button", { name: /open navigation/i })

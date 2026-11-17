@@ -8,10 +8,10 @@ import { getProducts } from "../../redux/actions/products.actions";
 import { brandLinks, classicLinks, howSteps } from "./homeContent";
 import useFeaturedSneakers, { FEATURED_LIMIT } from "./useFeaturedSneakers";
 
-const HOME_PRODUCT_QUERY = { limit: 9, page: 1 };
-// Latest Releases keeps its original catalogue window (items 6–9) now that
-// Featured Sneakers come from the admin-managed selection instead.
-const LATEST_OFFSET = 5;
+const HOME_PRODUCT_QUERY = { limit: 4, page: 1 };
+// Latest Releases shows the 4 newest catalogue products. Featured is
+// admin-curated, so no catalogue offset is needed.
+const LATEST_OFFSET = 0;
 
 const ArrowIcon = () => (
   <svg className="home-arrow" viewBox="0 0 18 18" aria-hidden="true">
@@ -44,7 +44,7 @@ const Home = () => {
     dispatch(getProducts(HOME_PRODUCT_QUERY));
   }, [dispatch]);
 
-  const latestSneakers = products.slice(LATEST_OFFSET);
+  const latestSneakers = products.slice(LATEST_OFFSET, LATEST_OFFSET + HOME_PRODUCT_QUERY.limit);
   const catalogueRequest = {
     status,
     error,

@@ -21,7 +21,7 @@ const makeProduct = (index) => ({
 
 const products = Array.from({ length: 9 }, (_, index) => makeProduct(index + 1));
 
-const catalogue = { items: products, pagination: { total: 3258, page: 1, limit: 9, pages: 362 } };
+const catalogue = { items: products, pagination: { total: 3258, page: 1, limit: 4, pages: 815 } };
 const featuredPicks = { items: [makeProduct(12), makeProduct(10), { ...makeProduct(11), inStock: false }, makeProduct(13)], version: 3 };
 
 // Each homepage request is answered independently so one can fail alone.
@@ -46,7 +46,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-test("shows the admin-selected featured sneakers in order while latest releases keep the catalogue window", async () => {
+test("shows the admin-selected featured sneakers in order and the newest catalogue products as latest releases", async () => {
   global.fetch = jest.fn(respond(catalogue));
   renderHome();
 
@@ -60,10 +60,10 @@ test("shows the admin-selected featured sneakers in order while latest releases 
   expect(within(featured).queryByText("Catalogue Runner 1")).not.toBeInTheDocument();
 
   const latestLinks = await within(latest).findAllByRole("link", { name: /catalogue runner/i });
-  expect(latestLinks.map((link) => link.getAttribute("href"))).toEqual(["/details/product-6", "/details/product-7", "/details/product-8", "/details/product-9"]);
+  expect(latestLinks.map((link) => link.getAttribute("href"))).toEqual(["/details/product-1", "/details/product-2", "/details/product-3", "/details/product-4"]);
   expect(within(featured).getByText("3,258")).toBeInTheDocument();
   expect(within(featured).getByRole("link", { name: /shop all sneakers/i })).toHaveAttribute("href", "/store");
-  expect(global.fetch).toHaveBeenCalledWith("/api/products?limit=9&page=1");
+  expect(global.fetch).toHaveBeenCalledWith("/api/products?limit=4&page=1");
   expect(global.fetch).toHaveBeenCalledWith("/api/featured-sneakers", expect.objectContaining({ signal: expect.any(AbortSignal) }));
 });
 
@@ -82,14 +82,14 @@ test("a featured failure retries on its own without hiding latest releases", asy
   const featured = screen.getByRole("region", { name: /featured sneakers/i });
   const latest = screen.getByRole("region", { name: /latest releases/i });
   const alert = await within(featured).findByRole("alert");
-  expect(await within(latest).findByText("Catalogue Runner 6")).toBeInTheDocument();
+  expect(await within(latest).findByText("Catalogue Runner 1")).toBeInTheDocument();
   expect(within(latest).queryByRole("alert")).not.toBeInTheDocument();
 
   global.fetch.mockImplementation(respond(catalogue));
   await userEvent.click(within(alert).getByRole("button", { name: /try again/i }));
   expect(await within(featured).findByText("Catalogue Runner 12")).toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  expect(global.fetch.mock.calls.filter(([path]) => path === "/api/products?limit=9&page=1")).toHaveLength(1);
+  expect(global.fetch.mock.calls.filter(([path]) => path === "/api/products?limit=4&page=1")).toHaveLength(1);
 });
 
 test("an empty featured selection shows the empty state instead of catalogue products", async () => {
@@ -99,7 +99,7 @@ test("an empty featured selection shows the empty state instead of catalogue pro
   const featured = screen.getByRole("region", { name: /featured sneakers/i });
   expect(await within(featured).findByText(/no sneakers are available/i)).toBeInTheDocument();
   expect(within(featured).getByRole("link", { name: /browse all sneakers/i })).toHaveAttribute("href", "/store");
-  expect(await screen.findByText("Catalogue Runner 6")).toBeInTheDocument();
+  expect(await screen.findByText("Catalogue Runner 1")).toBeInTheDocument();
   expect(within(featured).queryByRole("link", { name: /catalogue runner/i })).not.toBeInTheDocument();
 });
 
@@ -115,9 +115,9 @@ test("a catalogue failure does not hide the featured selection", async () => {
 });
 
 test("links brand and classic discovery to live catalogue searches", async () => {
-  global.fetch = jest.fn(respond({ items: products, pagination: { total: 9, page: 1, limit: 9, pages: 1 } }));
+  global.fetch = jest.fn(respond({ items: products, pagination: { total: 9, page: 1, limit: 4, pages: 3 } }));
   renderHome();
-  await screen.findByText("Catalogue Runner 6");
+  await screen.findByText("Catalogue Runner 1");
 
   const collections = screen.getByRole("region", { name: /shop by brand/i });
   expect(collections).toHaveAttribute("id", "collections");
@@ -140,15 +140,15 @@ test("offers a retry when the catalogue request fails", async () => {
 
   const latest = screen.getByRole("region", { name: /latest releases/i });
   const alert = await within(latest).findByRole("alert");
-  global.fetch.mockImplementation(respond({ items: products, pagination: { total: 9, page: 1, limit: 9, pages: 1 } }));
+  global.fetch.mockImplementation(respond({ items: products, pagination: { total: 9, page: 1, limit: 4, pages: 3 } }));
   await userEvent.click(within(alert).getByRole("button", { name: /try again/i }));
 
-  expect(await screen.findByText("Catalogue Runner 6")).toBeInTheDocument();
+  expect(await screen.findByText("Catalogue Runner 1")).toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 
 test("shows an empty state that routes to the store when no sneakers are available", async () => {
-  global.fetch = jest.fn(respond({ items: [], pagination: { total: 0, page: 1, limit: 9, pages: 0 } }, { featured: { items: [], version: 0 } }));
+  global.fetch = jest.fn(respond({ items: [], pagination: { total: 0, page: 1, limit: 4, pages: 0 } }, { featured: { items: [], version: 0 } }));
   renderHome();
 
   expect(await screen.findByText(/no sneakers are available/i)).toBeInTheDocument();
