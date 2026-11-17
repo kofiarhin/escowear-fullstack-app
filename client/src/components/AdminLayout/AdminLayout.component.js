@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { logoutUser } from "../../redux/actions/user.action";
 import "./adminLayout.styles.css";
 
 const Icon = ({ children }) => (
@@ -121,6 +123,14 @@ const AdminLayout = ({ eyebrow = "Admin", title, description, actions, children,
   const current = sectionFor(pathname);
   const currentLabel = ADMIN_SECTIONS.find((section) => section.id === current)?.label || "Admin";
   const menu = useAdminMenu();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    menu.close();
+    dispatch(logoutUser());
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="admin-layout">
@@ -162,9 +172,14 @@ const AdminLayout = ({ eyebrow = "Admin", title, description, actions, children,
             </button>
           </div>
           <AdminNav current={current} label="Admin sections" onNavigate={menu.close} />
-          <Link to="/" className="admin-button admin-menu__store" onClick={menu.close}>
-            View store
-          </Link>
+          <div className="admin-menu__footer">
+            <Link to="/" className="admin-button admin-menu__store" onClick={menu.close}>
+              View store
+            </Link>
+            <button type="button" className="admin-button admin-logout" onClick={handleLogout}>
+              Log out
+            </button>
+          </div>
         </div>
       </div>
 
@@ -175,6 +190,9 @@ const AdminLayout = ({ eyebrow = "Admin", title, description, actions, children,
           <Link to="/" className="admin-sidebar__store">
             View store
           </Link>
+          <button type="button" className="admin-button admin-logout admin-sidebar__logout" onClick={handleLogout}>
+            Log out
+          </button>
         </aside>
 
         <main className={`admin admin-main ${className}`.trim()} id="admin-main">

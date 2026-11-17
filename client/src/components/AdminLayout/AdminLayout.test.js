@@ -1,12 +1,25 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { Provider } from "react-redux";
+import { createStore } from "redux";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import reducers from "../../redux/reducers";
 import AdminLayout from "./AdminLayout.component";
 
-const renderLayout = (path = "/admin") => render(
-  <MemoryRouter initialEntries={[path]}>
-    <AdminLayout title="Dashboard"><p>Page content</p></AdminLayout>
-  </MemoryRouter>
-);
+const renderLayout = (path = "/admin") => {
+  const store = createStore(reducers);
+  store.dispatch({ type: "LOGIN_SUCCESS", payload: { name: "Esco Admin", email: "admin@example.test", role: "admin", token: "admin-token" } });
+  const view = render(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/admin/*" element={<AdminLayout title="Dashboard"><p>Page content</p></AdminLayout>} />
+          <Route path="/login" element={<p>Login page</p>} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>
+  );
+  return { store, ...view };
+};
 
 afterEach(() => { document.body.style.overflow = ""; });
 
@@ -38,7 +51,7 @@ test("menu focuses its contents, traps Tab, locks scroll and restores focus on E
   expect(trigger).toHaveAttribute("aria-expanded", "true");
   const dialog = screen.getByRole("dialog", { name: "Admin menu" });
   const close = within(dialog).getByRole("button", { name: "Close" });
-  const last = within(dialog).getByRole("link", { name: "View store" });
+  const last = within(dialog).getByRole("button", { name: "Log out" });
   expect(close).toHaveFocus();
   expect(document.body.style.overflow).toBe("hidden");
   fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
@@ -60,6 +73,23 @@ test("navigation closes the menu and releases the scroll lock", () => {
   expect(screen.getByRole("button", { name: "Menu" })).toHaveAttribute("aria-expanded", "false");
   expect(document.body.style.overflow).toBe("");
   expect(screen.getByRole("link", { name: "Products" })).toHaveAttribute("aria-current", "page");
+});
+
+test("sidebar Log out signs the admin out and goes to login", () => {
+  const { store } = renderLayout("/admin/orders");
+  const sidebar = screen.getByRole("complementary", { name: "Admin navigation" });
+  fireEvent.click(within(sidebar).getByRole("button", { name: "Log out" }));
+  expect(store.getState().userReducer.user).toBeFalsy();
+  expect(screen.getByText("Login page")).toBeInTheDocument();
+});
+
+test("mobile menu Log out signs the admin out and goes to login", () => {
+  const { store } = renderLayout();
+  fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Admin menu" })).getByRole("button", { name: "Log out" }));
+  expect(store.getState().userReducer.user).toBeFalsy();
+  expect(screen.getByText("Login page")).toBeInTheDocument();
+  expect(document.body.style.overflow).toBe("");
 });
 
 test("resizing to desktop releases an open menu's scroll lock", () => {
