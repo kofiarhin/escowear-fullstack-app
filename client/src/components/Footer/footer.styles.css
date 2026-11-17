@@ -1,7 +1,7 @@
 .footer {
   padding-top: clamp(80px, 9vw, 140px);
-  background: #0b0b0b;
-  color: var(--white);
+  background: var(--inverse-surface-deep);
+  color: var(--inverse-text);
 }
 
 .footer-lead {
@@ -14,7 +14,7 @@
 
 .footer-kicker {
   margin-bottom: 20px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--footer-text-subtle);
   font-family: var(--font-condensed);
   font-size: 0.72rem;
   font-weight: 700;
@@ -39,8 +39,8 @@
   justify-content: space-between;
   gap: 24px;
   padding: 0 22px;
-  background: var(--white);
-  color: var(--ink);
+  background: var(--inverse-button-bg);
+  color: var(--inverse-button-text);
   font-family: var(--font-condensed);
   font-size: 0.8rem;
   font-weight: 800;
@@ -50,7 +50,7 @@
 }
 
 .footer-shop:hover {
-  background: #d9d9d9;
+  background: var(--inverse-button-hover);
 }
 
 .footer-shop span {
@@ -63,7 +63,7 @@
   grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 0.6fr));
   gap: 48px;
   padding-block: 56px;
-  border-block: 1px solid rgba(255, 255, 255, 0.17);
+  border-block: 1px solid var(--footer-border);
 }
 
 .footer-brand {
@@ -75,7 +75,7 @@
 
 .footer-brand p {
   max-width: 32ch;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--footer-text-muted);
   line-height: 1.6;
 }
 
@@ -97,7 +97,7 @@
 
 .footer nav > p {
   margin-bottom: 14px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--footer-heading);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -123,7 +123,7 @@
 }
 
 .footer a:focus-visible {
-  outline-color: var(--white);
+  outline-color: var(--inverse-text);
 }
 
 .footer-bottom {
@@ -132,7 +132,7 @@
   justify-content: space-between;
   gap: 16px;
   padding-block: 20px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--footer-text-subtle);
   font-family: var(--font-condensed);
   font-size: 0.7rem;
   font-weight: 600;
@@ -145,7 +145,7 @@
   min-height: 44px;
   align-items: center;
   gap: 8px;
-  color: var(--white);
+  color: var(--inverse-text);
 }
 
 @media (max-width: 900px) {

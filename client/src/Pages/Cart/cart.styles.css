@@ -6,7 +6,7 @@
 
 .cart-eyebrow {
   margin-bottom: 12px;
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.72rem;
   font-weight: 700;
@@ -20,7 +20,7 @@
   justify-content: space-between;
   gap: 24px;
   padding-bottom: 24px;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .cart-header .title {
@@ -57,21 +57,21 @@
   gap: 24px;
   align-items: start;
   padding-block: 28px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 
 .cart-item-media {
   aspect-ratio: 1;
   overflow: hidden;
-  border: 1px solid var(--line);
-  background: #f0f0ee;
+  border: 1px solid var(--border);
+  background: var(--tile);
 }
 
 .cart-item-media img {
   display: block;
   width: 100%;
   height: 100%;
-  mix-blend-mode: multiply;
+  mix-blend-mode: var(--image-blend);
   object-fit: contain;
 }
 
@@ -88,7 +88,7 @@
   display: inline-block;
   margin-bottom: 10px;
   padding: 5px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   font-family: var(--font-condensed);
   font-size: 0.72rem;
   font-weight: 700;
@@ -97,7 +97,7 @@
 }
 
 .cart-item-unit {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -111,7 +111,7 @@
 .cart-qty label {
   display: block;
   margin-bottom: 6px;
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.64rem;
   font-weight: 700;
@@ -122,7 +122,7 @@
 
 .cart-qty-stepper {
   display: inline-flex;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-strong);
 }
 
 .cart-qty-stepper button {
@@ -133,8 +133,8 @@
 }
 
 .cart-qty-stepper button:hover:not(:disabled) {
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .cart-qty-stepper button:disabled {
@@ -146,7 +146,7 @@
   width: 48px;
   height: 40px;
   border: 0;
-  border-inline: 1px solid var(--line);
+  border-inline: 1px solid var(--border);
   border-radius: 0;
   background: transparent;
   font-family: var(--font-condensed);
@@ -163,14 +163,14 @@
 }
 
 .cart-item-total {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.8rem;
   white-space: nowrap;
 }
 
 .cart-item-total span {
   margin-left: 4px;
-  color: var(--ink);
+  color: var(--text);
   font-family: var(--font-condensed);
   font-size: 1.15rem;
   font-weight: 700;
@@ -179,7 +179,7 @@
 .cart-remove {
   padding-bottom: 2px;
   border-bottom: 1px solid currentColor;
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.68rem;
   font-weight: 700;
@@ -189,7 +189,7 @@
 }
 
 .cart-remove:hover {
-  color: #a22d25;
+  color: var(--danger-soft-text);
 }
 
 /* Summary */
@@ -199,8 +199,8 @@
   top: 120px;
   margin-top: 28px;
   padding: 28px;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--inverse-surface);
+  color: var(--inverse-text);
 }
 
 .cart-summary h2 {
@@ -216,7 +216,7 @@
   justify-content: space-between;
   gap: 16px;
   padding-block: 12px;
-  border-bottom: 1px solid rgba(250, 250, 250, 0.16);
+  border-bottom: 1px solid var(--inverse-border-soft);
   font-size: 0.9rem;
 }
 
@@ -238,7 +238,7 @@
 
 .cart-summary-note {
   margin: 8px 0 24px;
-  color: rgba(250, 250, 250, 0.6);
+  color: var(--inverse-text-muted);
   font-size: 0.78rem;
   line-height: 1.45;
 }
@@ -268,23 +268,23 @@
 }
 
 .cart-summary .cart-button-primary {
-  background: var(--white);
-  color: var(--ink);
+  background: var(--inverse-button-bg);
+  color: var(--inverse-button-text);
 }
 
 .cart-summary .cart-button-secondary {
   margin-top: 10px;
-  border: 1px solid rgba(250, 250, 250, 0.4);
-  color: var(--white);
+  border: 1px solid var(--inverse-border-strong);
+  color: var(--inverse-text);
 }
 
 .cart-summary .cart-button-secondary:hover {
-  border-color: #e0574c;
-  background: #a22d25;
+  border-color: var(--inverse-danger-border);
+  background: var(--inverse-danger);
 }
 
 .cart-summary :focus-visible {
-  outline-color: var(--white);
+  outline-color: var(--inverse-text);
 }
 
 /* Empty state */
@@ -309,18 +309,18 @@
 .cart-empty-copy {
   max-width: 420px;
   margin: 18px 0 32px;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .cart-empty .cart-button-primary {
   width: auto;
   min-width: 260px;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .cart-empty .cart-button-primary:hover {
-  background: #303030;
+  background: var(--accent-hover);
 }
 
 /* Responsive */

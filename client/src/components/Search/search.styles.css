@@ -17,7 +17,7 @@
   width: 100%;
   padding: 12px 4px;
   border: 0;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--border-strong);
   border-radius: 0;
   outline: 0;
   background: transparent;
@@ -28,14 +28,14 @@
 }
 
 .search input::placeholder {
-  color: #888;
+  color: var(--text-placeholder);
 }
 
 .search button {
   min-height: 44px;
   padding: 0 24px;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-family: var(--font-condensed);
   font-size: 0.7rem;
   font-weight: 700;
@@ -45,7 +45,7 @@
 }
 
 .search button:hover {
-  background: #303030;
+  background: var(--accent-hover);
 }
 
 .search button:active {

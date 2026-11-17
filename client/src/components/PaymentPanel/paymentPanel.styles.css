@@ -11,7 +11,7 @@
 }
 
 .payment-panel-breakdown dt {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .payment-panel-breakdown dd {
@@ -20,15 +20,15 @@
 
 .payment-panel-breakdown .is-total {
   padding-top: 8px;
-  border-top: 2px solid var(--ink);
-  color: var(--ink);
+  border-top: 2px solid var(--border-strong);
+  color: var(--text);
   font-weight: 800;
 }
 
 .payment-panel-instructions {
   margin: 20px 0;
   padding: 16px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border-strong);
 }
 
 .payment-panel-instructions h3,
@@ -51,7 +51,7 @@
   gap: 14px;
   margin: 24px 0 12px;
   padding: 16px;
-  background: #f4f4f1;
+  background: var(--surface-subtle);
 }
 
 .payment-panel-field {
@@ -68,8 +68,8 @@
   width: 100%;
   min-height: 48px;
   padding: 10px 12px;
-  border: 1px solid var(--ink);
-  background: var(--white);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
   font: inherit;
 }
 
@@ -78,16 +78,16 @@
 }
 
 .payment-panel-field input[aria-invalid="true"] {
-  border: 2px solid #b00020;
+  border: 2px solid var(--danger-alt);
 }
 
 .payment-panel-error {
-  color: #b00020;
+  color: var(--danger-alt);
   font-weight: 600;
 }
 
 .payment-panel-muted {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.92rem;
 }
 
@@ -101,7 +101,7 @@
 }
 
 .payment-panel-status.is-error {
-  color: #b00020;
+  color: var(--danger-alt);
   font-weight: 600;
 }
 
@@ -114,8 +114,8 @@
   min-height: 48px;
   padding: 14px 22px;
   border: 0;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-family: var(--font-condensed);
   font-size: 0.85rem;
   font-weight: 700;
@@ -132,15 +132,15 @@
 .payment-panel-button:focus-visible,
 .payment-panel-field input:focus-visible,
 .payment-panel-link:focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
 .payment-panel-notice {
   margin: 0 0 16px;
   padding: 14px 16px;
-  border-left: 4px solid var(--ink);
-  background: #f4f4f1;
+  border-left: 4px solid var(--border-strong);
+  background: var(--surface-subtle);
 }
 
 .payment-panel-notice p {
@@ -148,15 +148,15 @@
 }
 
 .payment-panel-notice.is-good {
-  border-left-color: #1b7f3b;
+  border-left-color: var(--success-strong);
 }
 
 .payment-panel-notice.is-review {
-  border-left-color: #b26a00;
+  border-left-color: var(--warning);
 }
 
 .payment-panel-notice.is-warning {
-  border-left-color: #b00020;
+  border-left-color: var(--danger-alt);
 }
 
 .payment-panel-link {

@@ -2,8 +2,8 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  border-bottom: 1px solid var(--line);
-  background: rgba(250, 250, 250, 0.96);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-header);
   backdrop-filter: blur(14px);
 }
 
@@ -13,8 +13,8 @@
   align-items: center;
   justify-content: space-between;
   padding-inline: 22px;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--inverse-surface);
+  color: var(--inverse-text);
   font-family: var(--font-condensed);
   font-size: 0.6rem;
   font-weight: 700;
@@ -129,8 +129,8 @@
 }
 
 .search-panel {
-  border-top: 1px solid var(--line);
-  background: var(--white);
+  border-top: 1px solid var(--border);
+  background: var(--surface-raised);
 }
 
 .search-panel .container {
@@ -158,7 +158,9 @@
     text-align: center;
   }
 
+  /* Small screens reach the theme toggle in the side nav instead. */
   .announcement-edition,
+  .header-actions .header-theme-toggle,
   .header-actions .account-actions button,
   .icon-action > span {
     display: none;

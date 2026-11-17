@@ -1,13 +1,167 @@
 @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600&display=swap");
 
+/* Colour tokens. The light theme is the default and keeps the original
+   EscoWear values; [data-theme="dark"] overrides only what changes.
+   data-theme is set on <html> before first paint by public/index.html. */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces */
+  --surface: #f1f1ef;
+  --surface-raised: #fafafa;
+  --surface-sunken: #dedede;
+  --surface-subtle: #f4f4f1;
+  --surface-hover: #f1f1ef;
+  --surface-header: rgba(250, 250, 250, 0.96);
+  --input-bg: #fafafa;
+
+  /* Product image tiles; multiply hides white cut-out backgrounds on light tiles */
+  --tile: #f0f0ee;
+  --tile-soft: #f1f1ef;
+  --tile-feature: #f5f5f3;
+  --image-blend: multiply;
+  --skeleton-base: #e5e5e5;
+  --skeleton-highlight: #f2f2f2;
+
+  /* Text */
+  --text: #0e0e0e;
+  --text-muted: #666666;
+  --text-placeholder: #888888;
+
+  /* Borders and focus */
+  --border: rgba(14, 14, 14, 0.18);
+  --border-soft: rgba(14, 14, 14, 0.08);
+  --border-subtle: rgba(14, 14, 14, 0.12);
+  --border-input: rgba(14, 14, 14, 0.45);
+  --border-strong: #0e0e0e;
+  --border-neutral: #dddddd;
+  --border-neutral-strong: #cccccc;
+  --focus-ring: #0e0e0e;
+
+  /* Accent: primary buttons, selected states, hover inversions */
+  --accent: #0e0e0e;
+  --accent-contrast: #fafafa;
+  --accent-contrast-muted: rgba(250, 250, 250, 0.6);
+  --accent-hover: #303030;
+  --accent-hover-soft: #333333;
+  --accent-hover-strong: #292929;
+  --overlay-strong: rgba(14, 14, 14, 0.94);
+  --badge-bg: rgba(255, 255, 255, 0.9);
+
+  /* Inverse bands (announcement strip, The Classics, side nav, footer,
+     cart summary). They stay dark in both themes, so the on-inverse
+     colours below are shared; only the band surfaces shift in dark mode. */
+  --inverse-surface: #0e0e0e;
+  --inverse-surface-deep: #0b0b0b;
+  --inverse-text: #fafafa;
+  --inverse-text-muted: rgba(250, 250, 250, 0.6);
+  --inverse-text-subtle: rgba(250, 250, 250, 0.45);
+  --inverse-text-soft: #b4b4b4;
+  --inverse-text-hover: #c9c9c9;
+  --inverse-border: rgba(250, 250, 250, 0.2);
+  --inverse-border-soft: rgba(250, 250, 250, 0.16);
+  --inverse-border-strong: rgba(250, 250, 250, 0.4);
+  --inverse-button-bg: #fafafa;
+  --inverse-button-text: #0e0e0e;
+  --inverse-button-hover: #d9d9d9;
+  --inverse-danger: #a22d25;
+  --inverse-danger-border: #e0574c;
+  --nav-border: rgba(255, 255, 255, 0.2);
+  --nav-text-muted: rgba(255, 255, 255, 0.62);
+  --nav-link-hover: #b8b8b8;
+  --nav-index: #888888;
+  --footer-text-muted: rgba(255, 255, 255, 0.6);
+  --footer-text-subtle: rgba(255, 255, 255, 0.55);
+  --footer-heading: rgba(255, 255, 255, 0.5);
+  --footer-border: rgba(255, 255, 255, 0.17);
+
+  /* Status */
+  --success: #356346;
+  --success-strong: #1b7f3b;
+  --warning: #b26a00;
+  --warning-text: #8a4b00;
+  --danger: #b42318;
+  --danger-alt: #b00020;
+  --danger-soft-text: #a22d25;
+  --error: #a32121;
+  --danger-surface: #fef3f2;
+  --danger-on-surface: #7a271a;
+  --pending: green;
+  --pending-text: #fafafa;
+
+  /* Legacy names, kept as aliases of the semantic tokens */
+  --ink: var(--text);
+  --canvas: var(--surface);
+  --paper: var(--surface);
+  --paper-deep: var(--surface-sunken);
+  --white: var(--surface-raised);
+  --muted: var(--text-muted);
+  --line: var(--border);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface: #0e0e0e;
+  --surface-raised: #161616;
+  --surface-sunken: #262626;
+  --surface-subtle: #1a1a1a;
+  --surface-hover: #242424;
+  --surface-header: rgba(22, 22, 22, 0.96);
+  --input-bg: #161616;
+
+  /* Product photos are white-background cut-outs, so dark mode keeps soft
+     light tiles (dimmed slightly) and the same multiply blend as light mode.
+     A dark tile would show white rectangles, and multiply on it would black
+     the image out. */
+  --tile: #e2e2e0;
+  --tile-soft: #e2e2e0;
+  --tile-feature: #e6e6e4;
+  --image-blend: multiply;
+  --skeleton-base: #1f1f1f;
+  --skeleton-highlight: #2a2a2a;
+
+  --text: #f1f1ef;
+  --text-muted: #a6a6a4;
+  --text-placeholder: #8f8f8d;
+
+  --border: rgba(241, 241, 239, 0.2);
+  --border-soft: rgba(241, 241, 239, 0.08);
+  --border-subtle: rgba(241, 241, 239, 0.14);
+  --border-input: rgba(241, 241, 239, 0.45);
+  --border-strong: #f1f1ef;
+  --border-neutral: #333333;
+  --border-neutral-strong: #444444;
+  --focus-ring: #f1f1ef;
+
+  --accent: #f1f1ef;
+  --accent-contrast: #0e0e0e;
+  --accent-contrast-muted: rgba(14, 14, 14, 0.66);
+  --accent-hover: #d4d4d2;
+  --accent-hover-soft: #d9d9d7;
+  --accent-hover-strong: #cfcfcd;
+  --overlay-strong: rgba(241, 241, 239, 0.94);
+  --badge-bg: rgba(14, 14, 14, 0.88);
+
+  --inverse-surface: #1f1f1f;
+  --inverse-surface-deep: #1a1a1a;
+  --inverse-text-subtle: rgba(250, 250, 250, 0.5);
+
+  --success: #7fc79a;
+  --success-strong: #4ade80;
+  --warning: #f5a524;
+  --warning-text: #f5b85c;
+  --danger: #f97066;
+  --danger-alt: #ff8095;
+  --danger-soft-text: #f97066;
+  --error: #f28b82;
+  --danger-surface: #2a1715;
+  --danger-on-surface: #fecdca;
+  --pending: #1b7f3b;
+}
+
 :root {
-  --ink: #0e0e0e;
-  --canvas: #f1f1ef;
-  --paper: #f1f1ef;
-  --paper-deep: #dedede;
-  --white: #fafafa;
-  --muted: #666666;
-  --line: rgba(14, 14, 14, 0.18);
   --font-sans: "Barlow", "Arial Narrow", sans-serif;
   --font-display: "Archivo Black", Impact, sans-serif;
   --font-condensed: "Barlow Condensed", "Arial Narrow", sans-serif;
@@ -23,7 +177,7 @@
 
 html {
   scroll-behavior: smooth;
-  background: var(--paper);
+  background: var(--surface);
 }
 
 #collections,
@@ -34,10 +188,11 @@ html {
 
 body {
   min-width: 320px;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--surface);
+  color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 button,
@@ -76,7 +231,7 @@ ul {
 }
 
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 4px;
 }
 
@@ -113,11 +268,11 @@ ul {
 }
 
 .info {
-  color: #356346;
+  color: var(--success);
 }
 
 .error {
-  color: #a32121;
+  color: var(--error);
 }
 
 .form-wrapper {
@@ -141,7 +296,7 @@ ul {
 .form-wrapper .form-unit input {
   width: 100%;
   padding: 0.95rem 1rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 0;
   background: transparent;
   font-size: 1rem;
@@ -151,8 +306,8 @@ ul {
   display: block;
   width: 100%;
   padding: 1rem;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-family: var(--font-mono);
   font-size: 0.76rem;
   letter-spacing: 0.08em;

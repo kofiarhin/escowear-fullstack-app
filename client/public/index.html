@@ -5,7 +5,24 @@
     <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg?v=3" />
     <link rel="alternate icon" href="%PUBLIC_URL%/favicon.ico?v=3" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#f1f1ef" />
+    <!-- Apply the saved theme before first paint (see src/utils/theme.js). -->
+    <script>
+      (function () {
+        var theme = "light";
+        try {
+          var stored = window.localStorage.getItem("escowear-theme");
+          if (stored === "light" || stored === "dark") theme = stored;
+        } catch (error) {
+          // Storage can be blocked; fall back to the default light theme.
+        }
+        var root = document.documentElement;
+        root.setAttribute("data-theme", theme);
+        root.style.colorScheme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", theme === "dark" ? "#0e0e0e" : "#f1f1ef");
+      })();
+    </script>
     <meta
       name="description"
       content="Web site created using create-react-app"

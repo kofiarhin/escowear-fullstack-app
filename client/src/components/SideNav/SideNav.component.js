@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./sideNav.styles.css";
 import { logoutUser } from "../../redux/actions/user.action";
+import ThemeToggle from "../ThemeToggle/ThemeToggle.component";
 
 const navigation = [
   { label: "Home", to: "/" },
@@ -43,16 +44,19 @@ const SideNav = ({ setShowSideNav }) => {
         <Link to="/" className="sideNav-wordmark" onClick={() => setShowSideNav(false)}>
           ESCOWEAR
         </Link>
-        <button
-          type="button"
-          className="close"
-          aria-label="Close navigation"
-          onClick={() => setShowSideNav(false)}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m4 4 16 16M20 4 4 20" />
-          </svg>
-        </button>
+        <div className="sideNav-topline-actions">
+          <ThemeToggle />
+          <button
+            type="button"
+            className="close"
+            aria-label="Close navigation"
+            onClick={() => setShowSideNav(false)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m4 4 16 16M20 4 4 20" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <nav className="links-wrapper" aria-label="Mobile navigation">

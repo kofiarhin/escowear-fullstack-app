@@ -64,7 +64,8 @@ const Login = ({ setIsLoggedIn }) => {
             <button
               type="submit"
               style={{
-                backgroundColor: isPending ? "green" : "",
+                backgroundColor: isPending ? "var(--pending)" : "",
+                color: isPending ? "var(--pending-text)" : "",
               }}
             >
               {isPending ? "Loging in User " : "Login"}{" "}

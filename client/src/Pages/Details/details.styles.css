@@ -30,15 +30,15 @@
 .details-main-image {
   aspect-ratio: 1 / 0.9;
   overflow: hidden;
-  border: 1px solid var(--line);
-  background: #f0f0ee;
+  border: 1px solid var(--border);
+  background: var(--tile);
 }
 
 .details-main-image img {
   display: block;
   width: 100%;
   height: 100%;
-  mix-blend-mode: multiply;
+  mix-blend-mode: var(--image-blend);
   object-fit: contain;
 }
 
@@ -52,15 +52,15 @@
 .details-thumbnails button {
   aspect-ratio: 1;
   overflow: hidden;
-  border: 1px solid var(--line);
-  background: #f0f0ee;
+  border: 1px solid var(--border);
+  background: var(--tile);
   transition: border-color 180ms ease, transform 180ms ease;
 }
 
 .details-thumbnails button:hover,
 .details-thumbnails button:focus-visible,
 .details-thumbnails button.is-active {
-  border-color: var(--ink);
+  border-color: var(--border-strong);
 }
 
 .details-thumbnails button:active {
@@ -84,8 +84,8 @@
   justify-content: space-between;
   gap: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--line);
-  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.64rem;
   font-weight: 700;
@@ -94,7 +94,7 @@
 }
 
 .details-meta .is-sold-out {
-  color: #a22d25;
+  color: var(--danger-soft-text);
 }
 
 .details .product-name {
@@ -107,7 +107,7 @@
 }
 
 .details-brand {
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.72rem;
   font-weight: 700;
@@ -124,7 +124,7 @@
 
 .details-sizes {
   padding-block: 22px;
-  border-block: 1px solid var(--line);
+  border-block: 1px solid var(--border);
 }
 
 .details-sizes > div {
@@ -143,7 +143,7 @@
 
 .details-sizes > div span,
 .details-sizes > p {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.75rem;
 }
 
@@ -158,7 +158,7 @@
 .details-sizes li {
   min-width: 58px;
   padding: 10px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   font-family: var(--font-condensed);
   font-size: 0.7rem;
   font-weight: 700;
@@ -169,8 +169,8 @@
   width: 100%;
   margin-top: 28px;
   padding: 17px 24px;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-family: var(--font-condensed);
   font-size: 0.72rem;
   font-weight: 700;
@@ -211,7 +211,7 @@
 }
 
 .details-state span {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.78rem;
 }
 
@@ -229,14 +229,14 @@
   width: min(320px, 70vw);
   height: 2px;
   overflow: hidden;
-  background: var(--line);
+  background: var(--border);
 }
 
 .details-state-line::after {
   display: block;
   width: 42%;
   height: 100%;
-  background: var(--ink);
+  background: var(--text);
   content: "";
   animation: details-loading 1.2s var(--ease-out) infinite alternate;
 }

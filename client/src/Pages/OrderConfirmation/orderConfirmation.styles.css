@@ -11,7 +11,7 @@
 
 .order-confirmation-eyebrow {
   margin-bottom: 12px;
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.8rem;
   font-weight: 700;
@@ -41,8 +41,8 @@
   gap: 4px;
   margin-bottom: 32px;
   padding: 20px 24px;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .order-confirmation-reference strong {
@@ -59,7 +59,7 @@
 
 .order-confirmation-note {
   margin: 16px 0 32px;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.92rem;
 }
 
@@ -75,7 +75,7 @@
 }
 
 .order-confirmation-link:focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 4px;
 }
 

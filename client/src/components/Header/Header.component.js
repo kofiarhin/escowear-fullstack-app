@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./header.styles.css";
 import Search from "../Search/Search.component";
+import ThemeToggle from "../ThemeToggle/ThemeToggle.component";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../../redux/actions/user.action";
 
@@ -98,6 +99,8 @@ const Header = ({ setShowSideNav }) => {
             <CartIcon />
             <span>Cart</span>
           </Link>
+
+          <ThemeToggle className="header-theme-toggle" />
 
           <button
             type="button"

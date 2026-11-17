@@ -31,19 +31,19 @@
 .track-order-field input {
   min-height: 48px;
   padding: 10px 14px;
-  border: 1px solid rgba(14, 14, 14, 0.45);
+  border: 1px solid var(--border-input);
   border-radius: 0;
-  background: var(--white);
+  background: var(--input-bg);
   font: inherit;
   font-size: 1rem;
 }
 
 .track-order-field input[aria-invalid="true"] {
-  border: 2px solid #b42318;
+  border: 2px solid var(--danger);
 }
 
 .track-order-error {
-  color: #b42318;
+  color: var(--danger);
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -51,8 +51,8 @@
 .track-order-button {
   min-height: 52px;
   border: 0;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-family: var(--font-condensed);
   font-size: 0.8rem;
   font-weight: 700;
@@ -77,7 +77,7 @@
 }
 
 .track-order :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -92,14 +92,14 @@
 
 .track-order-status.is-info {
   padding: 14px 16px;
-  border-left: 4px solid var(--ink);
-  background: var(--white);
+  border-left: 4px solid var(--border-strong);
+  background: var(--surface-raised);
 }
 
 .track-order-status.is-error {
   padding: 14px 16px;
-  border: 1px solid #b42318;
-  background: #fef3f2;
-  color: #7a271a;
+  border: 1px solid var(--danger);
+  background: var(--danger-surface);
+  color: var(--danger-on-surface);
   font-weight: 600;
 }

@@ -1,11 +1,14 @@
-/* Editorial sneaker showcase. Catalogue images are contained, not cropped. */
+/* Editorial sneaker showcase. Catalogue images are contained, not cropped.
+   Intentionally fixed colours: the hero is always a dark on-image/video stage
+   in both themes, so its text, scrims, controls and backdrops keep literal
+   values instead of theme tokens. */
 .hero-carousel {
   position: relative;
   display: grid;
   min-height: clamp(560px, calc(100dvh - 106px), 820px);
   overflow: hidden;
   isolation: isolate;
-  color: var(--white);
+  color: #fafafa;
   background: #0d1117;
   touch-action: pan-y;
 }

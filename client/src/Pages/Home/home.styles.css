@@ -2,7 +2,7 @@
    (or scoped inside one) so nothing here can reach the hero carousel. */
 .home {
   overflow: hidden;
-  background: var(--white);
+  background: var(--surface-raised);
 }
 
 /* Shared homepage primitives */
@@ -54,26 +54,26 @@
 }
 
 .home-button--dark {
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .home-button--dark:hover {
-  background: #333;
+  background: var(--accent-hover-soft);
 }
 
 .home-button--light {
-  background: var(--white);
-  color: var(--ink);
+  background: var(--inverse-button-bg);
+  color: var(--inverse-button-text);
 }
 
 .home-button--light:hover {
-  background: #d9d9d9;
+  background: var(--inverse-button-hover);
 }
 
 .home-button--light:focus-visible,
 .home-classics a:focus-visible {
-  outline-color: var(--white);
+  outline-color: var(--inverse-text);
 }
 
 .home-link {
@@ -110,7 +110,7 @@
   gap: 32px;
   margin-bottom: clamp(36px, 4.5vw, 64px);
   padding-bottom: clamp(24px, 3vw, 36px);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 
 .home-heading h2 {
@@ -134,7 +134,7 @@
 
 .home-heading__meta {
   max-width: 26ch;
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.74rem;
   font-weight: 600;
@@ -144,15 +144,15 @@
 }
 
 .home-heading__meta strong {
-  color: var(--ink);
+  color: var(--text);
   font-size: 1rem;
 }
 
 /* Collections: brand discovery */
 .home-brands {
   padding-top: clamp(56px, 6vw, 88px);
-  border-bottom: 1px solid var(--line);
-  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-raised);
 }
 
 .home-brands__intro {
@@ -165,7 +165,7 @@
 
 .home-brands__intro .home-eyebrow {
   grid-column: 1 / -1;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .home-brands__intro h2 {
@@ -180,11 +180,11 @@
 .home-brands__list {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
 }
 
 .home-brands__list li + li {
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--border);
 }
 
 .home-brands__list a {
@@ -200,19 +200,19 @@
 
 .home-brands__list a:hover,
 .home-brands__list a:focus-visible {
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .home-brands__list a:focus-visible {
   outline-offset: -4px;
-  outline-color: var(--white);
+  outline-color: var(--accent-contrast);
 }
 
 .home-brands__index {
   grid-column: 1 / -1;
   align-self: start;
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.68rem;
   font-weight: 700;
@@ -220,7 +220,7 @@
 }
 
 .home-brands__list a:hover .home-brands__index {
-  color: rgba(250, 250, 250, 0.6);
+  color: var(--accent-contrast-muted);
 }
 
 .home-brands__list strong {
@@ -247,13 +247,13 @@
 .home-featured .product-image-wrap,
 .home-latest .product-image-wrap {
   border-color: transparent;
-  background: var(--canvas);
+  background: var(--tile-soft);
 }
 
 .home-skeleton span,
 .home-skeleton i {
   display: block;
-  background: linear-gradient(90deg, #e5e5e5 25%, #f2f2f2 50%, #e5e5e5 75%);
+  background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-highlight) 50%, var(--skeleton-base) 75%);
   background-size: 200% 100%;
   animation: home-skeleton 1.4s ease infinite;
 }
@@ -284,7 +284,7 @@
   align-items: center;
   justify-content: center;
   gap: 14px;
-  border-block: 1px solid var(--line);
+  border-block: 1px solid var(--border);
   text-align: center;
 }
 
@@ -310,19 +310,19 @@
 }
 
 .home-message span {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.78rem;
 }
 
 /* The Classics: editorial feature */
 .home-classics {
   padding-block: clamp(80px, 9vw, 140px);
-  background: var(--ink);
-  color: var(--white);
+  background: var(--inverse-surface);
+  color: var(--inverse-text);
 }
 
 .home-classics .home-eyebrow {
-  color: rgba(250, 250, 250, 0.6);
+  color: var(--inverse-text-muted);
 }
 
 .home-classics__title {
@@ -351,15 +351,15 @@
   position: relative;
   margin: 0;
   overflow: hidden;
-  background: #f5f5f3;
-  color: var(--ink);
+  background: var(--tile-feature);
+  color: var(--text);
 }
 
 .home-classics__frame img {
   display: block;
   width: 100%;
   height: 100%;
-  mix-blend-mode: multiply;
+  mix-blend-mode: var(--image-blend);
   object-fit: contain;
   transition: transform 700ms var(--ease-out);
 }
@@ -373,8 +373,8 @@
   bottom: 0;
   left: 0;
   padding: 10px 12px;
-  background: var(--ink);
-  color: var(--white);
+  background: var(--inverse-surface);
+  color: var(--inverse-text);
   font-family: var(--font-condensed);
   font-size: 0.66rem;
   font-weight: 700;
@@ -393,7 +393,7 @@
   bottom: 0;
   width: 44%;
   aspect-ratio: 1.1;
-  border: 8px solid var(--ink);
+  border: 8px solid var(--inverse-surface);
 }
 
 .home-classics__copy {
@@ -404,7 +404,7 @@
 
 .home-classics__copy > p {
   max-width: 38ch;
-  color: #b4b4b4;
+  color: var(--inverse-text-soft);
   font-size: 1.05rem;
   line-height: 1.6;
 }
@@ -415,7 +415,7 @@
 }
 
 .home-classics__index {
-  border-top: 1px solid rgba(250, 250, 250, 0.2);
+  border-top: 1px solid var(--inverse-border);
   list-style: none;
 }
 
@@ -424,7 +424,7 @@
   min-height: 60px;
   grid-template-columns: 44px 1fr auto;
   align-items: center;
-  border-bottom: 1px solid rgba(250, 250, 250, 0.2);
+  border-bottom: 1px solid var(--inverse-border);
   font-family: var(--font-display);
   font-size: clamp(1.3rem, 2vw, 1.9rem);
   font-weight: 900;
@@ -434,7 +434,7 @@
 }
 
 .home-classics__index a span {
-  color: rgba(250, 250, 250, 0.45);
+  color: var(--inverse-text-subtle);
   font-family: var(--font-condensed);
   font-size: 0.7rem;
   font-weight: 700;
@@ -443,7 +443,7 @@
 
 .home-classics__index a:hover {
   padding-left: 8px;
-  color: #c9c9c9;
+  color: var(--inverse-text-hover);
 }
 
 .home-classics__index a:hover .home-arrow {
@@ -452,13 +452,13 @@
 
 /* Latest releases */
 .home-latest {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 
 /* How it works */
 .home-how {
   padding-block: clamp(80px, 9vw, 140px);
-  background: var(--canvas);
+  background: var(--surface);
 }
 
 .home-how__inner {
@@ -481,12 +481,12 @@
 .home-how__note {
   max-width: 36ch;
   margin-bottom: 32px;
-  color: var(--muted);
+  color: var(--text-muted);
   line-height: 1.6;
 }
 
 .home-how__steps {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
   list-style: none;
 }
 
@@ -495,7 +495,7 @@
   grid-template-columns: clamp(64px, 8vw, 120px) 1fr;
   gap: 4px 20px;
   padding-block: clamp(26px, 3vw, 40px);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 
 .home-how__steps span {
@@ -506,7 +506,7 @@
   letter-spacing: -0.06em;
   line-height: 0.85;
   color: transparent;
-  -webkit-text-stroke: 1.2px var(--ink);
+  -webkit-text-stroke: 1.2px var(--text);
 }
 
 .home-how__steps h3 {
@@ -521,14 +521,14 @@
 .home-how__steps p {
   max-width: 44ch;
   margin-top: 8px;
-  color: var(--muted);
+  color: var(--text-muted);
   line-height: 1.6;
 }
 
 /* About */
 .home-about {
   padding-block: clamp(88px, 10vw, 160px);
-  background: var(--white);
+  background: var(--surface-raised);
 }
 
 .home-about__inner {
@@ -540,7 +540,7 @@
 
 .home-about__inner .home-eyebrow {
   grid-column: 1 / -1;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .home-about h2 {
@@ -558,11 +558,11 @@
   align-items: flex-start;
   gap: 20px;
   padding-left: 24px;
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--border);
 }
 
 .home-about__body p {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 1.05rem;
   line-height: 1.6;
 }
@@ -577,7 +577,7 @@
   }
 
   .home-brands__list li:nth-child(-n + 3) {
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--border);
   }
 
   .home-featured__grid {
@@ -637,12 +637,12 @@
 
   .home-brands__list li,
   .home-brands__list li:nth-child(-n + 3) {
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--border);
     border-left: 0;
   }
 
   .home-brands__list li:nth-child(even) {
-    border-left: 1px solid var(--line);
+    border-left: 1px solid var(--border);
   }
 
   .home-brands__list li:nth-last-child(-n + 2) {
@@ -694,7 +694,7 @@
   .home-about__body {
     padding-left: 0;
     padding-top: 20px;
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--border);
     border-left: 0;
   }
 }

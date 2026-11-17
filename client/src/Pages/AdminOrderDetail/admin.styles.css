@@ -16,7 +16,7 @@
 
 .admin-eyebrow {
   margin-bottom: 8px;
-  color: var(--muted);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.8rem;
   font-weight: 700;
@@ -25,7 +25,7 @@
 }
 
 .admin-muted {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.92rem;
 }
 
@@ -53,10 +53,10 @@
 .admin textarea {
   min-height: 44px;
   padding: 8px 12px;
-  border: 1px solid rgba(14, 14, 14, 0.45);
+  border: 1px solid var(--border-input);
   border-radius: 0;
-  background: var(--white);
-  color: var(--ink);
+  background: var(--input-bg);
+  color: var(--text);
   font: inherit;
 }
 
@@ -67,9 +67,9 @@
 .admin-button {
   min-height: 44px;
   padding: 10px 18px;
-  border: 1px solid var(--ink);
-  background: var(--white);
-  color: var(--ink);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--text);
   font-family: var(--font-condensed);
   font-size: 0.8rem;
   font-weight: 700;
@@ -79,8 +79,8 @@
 }
 
 .admin-button-dark {
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .admin-button:disabled {
@@ -93,7 +93,7 @@
   border: 0;
   border-bottom: 1px solid currentColor;
   background: none;
-  color: var(--ink);
+  color: var(--text);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -104,14 +104,14 @@
 }
 
 .admin :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
 .admin-table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--line);
-  background: var(--white);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
 }
 
 .admin-table {
@@ -123,7 +123,7 @@
 .admin-table th,
 .admin-table td {
   padding: 12px 14px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
   white-space: nowrap;
@@ -139,7 +139,7 @@
 .admin-badge {
   display: inline-block;
   padding: 3px 8px;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-strong);
   font-family: var(--font-condensed);
   font-size: 0.78rem;
   font-weight: 700;
@@ -152,15 +152,15 @@
 .admin-badge.is-dispatched,
 .admin-badge.is-delivered,
 .admin-badge.is-completed {
-  background: var(--ink);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .admin-badge.is-payment_issue,
 .admin-badge.is-sourcing_failed,
 .admin-badge.is-refund_pending {
-  border-color: #b42318;
-  color: #b42318;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .admin-pagination {
@@ -184,8 +184,8 @@
   align-content: start;
   gap: 12px;
   padding: 20px;
-  border: 1px solid var(--line);
-  background: var(--white);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
 }
 
 .admin-panel h2,
@@ -211,7 +211,7 @@
 }
 
 .admin-dl dt {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .admin-dl dd {
@@ -246,7 +246,7 @@
   width: 20px;
   height: 20px;
   margin-top: 2px;
-  accent-color: var(--ink);
+  accent-color: var(--accent);
 }
 
 .admin-field.is-checkbox .admin-error {
@@ -254,16 +254,16 @@
 }
 
 .admin-error {
-  color: #b42318;
+  color: var(--danger);
   font-size: 0.9rem;
   font-weight: 600;
 }
 
 .admin-warning {
   padding: 10px 12px;
-  border: 1px solid #b42318;
-  background: #fef3f2;
-  color: #7a271a;
+  border: 1px solid var(--danger);
+  background: var(--danger-surface);
+  color: var(--danger-on-surface);
 }
 
 .admin-status:empty {
@@ -271,15 +271,15 @@
 }
 
 .admin-status.is-error {
-  color: #b42318;
+  color: var(--danger);
   font-weight: 600;
 }
 
 .admin-status.is-done {
   margin-bottom: 16px;
   padding: 10px 12px;
-  border-left: 4px solid var(--ink);
-  background: var(--white);
+  border-left: 4px solid var(--border-strong);
+  background: var(--surface-raised);
 }
 
 .visually-hidden {
@@ -314,11 +314,11 @@
 
 .admin-proof-list li {
   padding: 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-neutral);
 }
 
 .admin-proof-list li.is-active {
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border-strong);
 }
 
 .admin-proof-figure {
@@ -330,9 +330,9 @@
   max-width: 100%;
   max-height: 80vh;
   height: auto;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-neutral-strong);
 }
 
 .admin-proof-flag {
-  color: #8a4b00;
+  color: var(--warning-text);
 }
