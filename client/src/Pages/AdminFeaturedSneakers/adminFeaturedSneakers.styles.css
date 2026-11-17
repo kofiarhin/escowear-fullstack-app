@@ -1,0 +1,28 @@
+.featured-admin__header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+.featured-admin__layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px;align-items:start}
+.featured-admin__preview{grid-column:1 / -1}
+.featured-admin__panel-heading{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.featured-admin__empty{padding:18px;border:1px dashed var(--line);color:var(--muted)}
+.featured-admin__slots,.featured-admin__results,.featured-admin__preview-grid{margin:0;padding:0;list-style:none}
+.featured-admin__slots{display:grid;gap:10px}
+.featured-admin__slot{display:grid;grid-template-columns:28px 64px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);background:var(--white)}
+.featured-admin__position{font-family:var(--font-condensed);font-size:1.4rem;font-weight:800;text-align:center}
+.featured-admin__slot img,.featured-admin__placeholder{width:64px;height:54px;object-fit:cover;background:var(--canvas)}
+.featured-admin__placeholder{display:grid;place-items:center;color:var(--muted);font-weight:800}
+.featured-admin__details{display:grid;gap:3px;min-width:0}
+.featured-admin__details strong{overflow-wrap:anywhere}
+.featured-admin__details small,.featured-admin__results small{color:var(--muted)}
+.featured-admin__details .admin-warning{margin:6px 0 0}
+.featured-admin__slot-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start}
+.featured-admin__actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.featured-admin__search-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:flex-end}
+.featured-admin__results{display:grid;max-height:420px;overflow:auto;margin-top:12px;border:1px solid var(--line)}
+.featured-admin__results li{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px}
+.featured-admin__results li + li{border-top:1px solid var(--line)}
+.featured-admin__results img{width:46px;height:38px;object-fit:cover;background:var(--canvas)}
+.featured-admin__results span{display:grid;gap:2px;min-width:0}
+.featured-admin__preview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.featured-admin__preview-grid li{display:grid;gap:6px;align-content:start}
+.featured-admin__preview-grid img{width:100%;aspect-ratio:1 / 1.04;object-fit:cover;background:var(--canvas)}
+@media(max-width:900px){.featured-admin__layout{grid-template-columns:1fr}.featured-admin__preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.featured-admin__header{flex-direction:column}.featured-admin__slot{grid-template-columns:24px 52px minmax(0,1fr)}.featured-admin__slot img,.featured-admin__placeholder{width:52px;height:44px}.featured-admin__slot-actions{grid-column:1 / -1}.featured-admin__search-form{grid-template-columns:1fr}}

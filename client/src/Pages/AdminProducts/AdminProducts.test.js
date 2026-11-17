@@ -22,6 +22,8 @@ test("admin sees manual and imported products with filters", async () => {
   renderAdmin("/admin/products");
   expect(await screen.findByText("Nike P-6000")).toBeInTheDocument();
   expect(screen.getAllByText("Draft").length).toBeGreaterThan(1);
+  expect(screen.getByRole("link", { name: "Manage Featured Sneakers" })).toHaveAttribute("href", "/admin/products/featured");
+  expect(screen.getByRole("link", { name: "Add product" })).toHaveAttribute("href", "/admin/products/new");
   fireEvent.change(screen.getByLabelText("Status"), { target: { value: "draft" } });
   await waitFor(() => expect(global.fetch).toHaveBeenLastCalledWith(expect.stringContaining("status=draft"), expect.any(Object)));
   expect(await screen.findByText("Nike P-6000 filtered")).toBeInTheDocument();

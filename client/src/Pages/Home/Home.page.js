@@ -6,9 +6,12 @@ import Product from "../../components/Product/Product.component";
 import HeroCarousel from "../../components/HeroCarousel/HeroCarousel.component";
 import { getProducts } from "../../redux/actions/products.actions";
 import { brandLinks, classicLinks, howSteps } from "./homeContent";
+import useFeaturedSneakers, { FEATURED_LIMIT } from "./useFeaturedSneakers";
 
-const HOME_PRODUCT_QUERY = { limit: 9, page: 1 };
-const FEATURED_COUNT = 5;
+const HOME_PRODUCT_QUERY = { limit: 4, page: 1 };
+// Latest Releases shows the 4 newest catalogue products. Featured is
+// admin-curated, so no catalogue offset is needed.
+const LATEST_OFFSET = 0;
 
 const ArrowIcon = () => (
   <svg className="home-arrow" viewBox="0 0 18 18" aria-hidden="true">
@@ -35,31 +38,37 @@ const Home = () => {
     (state) => state.productsReducer
   );
 
+  const featured = useFeaturedSneakers();
+
   useEffect(() => {
     dispatch(getProducts(HOME_PRODUCT_QUERY));
   }, [dispatch]);
 
-  const featuredSneakers = products.slice(0, FEATURED_COUNT);
-  const latestSneakers = products.slice(FEATURED_COUNT);
+  const latestSneakers = products.slice(LATEST_OFFSET, LATEST_OFFSET + HOME_PRODUCT_QUERY.limit);
+  const catalogueRequest = {
+    status,
+    error,
+    retry: () => dispatch(getProducts(HOME_PRODUCT_QUERY)),
+  };
   // Store and Home share products state; only trust a total fetched with the homepage query.
   const catalogueTotal =
     status === "success" && pagination?.limit === HOME_PRODUCT_QUERY.limit
       ? pagination.total || 0
       : 0;
 
-  const renderProducts = (items, { label, className, emptyCopy, skeletons }) => {
-    if (status === "pending" || status === "idle") {
+  const renderProducts = (items, { request, label, className, emptyCopy, skeletons }) => {
+    if (request.status === "pending" || request.status === "idle") {
       return <ProductSkeletons label={label} className={className} count={skeletons} />;
     }
 
-    if (status === "failed") {
+    if (request.status === "failed") {
       return (
         <div className="home-message" role="alert">
           <p>We couldn't load the sneaker edit.</p>
-          <button type="button" onClick={() => dispatch(getProducts(HOME_PRODUCT_QUERY))}>
+          <button type="button" onClick={request.retry}>
             Try again
           </button>
-          {error && <span>{error}</span>}
+          {request.error && <span>{request.error}</span>}
         </div>
       );
     }
@@ -122,10 +131,11 @@ const Home = () => {
             </Link>
           </div>
         </header>
-        {renderProducts(featuredSneakers, {
+        {renderProducts(featured.items, {
+          request: featured,
           label: "Loading featured sneakers",
           className: "home-featured__grid",
-          skeletons: FEATURED_COUNT,
+          skeletons: FEATURED_LIMIT,
           emptyCopy: "No sneakers are available in this edit yet.",
         })}
       </section>
@@ -195,9 +205,10 @@ const Home = () => {
           </div>
         </header>
         {renderProducts(latestSneakers, {
+          request: catalogueRequest,
           label: "Loading latest releases",
           className: "home-latest__grid",
-          skeletons: HOME_PRODUCT_QUERY.limit - FEATURED_COUNT,
+          skeletons: HOME_PRODUCT_QUERY.limit - LATEST_OFFSET,
           emptyCopy: "New releases are on the way.",
         })}
       </section>
