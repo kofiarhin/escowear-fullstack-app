@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
@@ -23,11 +23,16 @@ const products = Array.from({ length: 9 }, (_, index) => makeProduct(index + 1))
 
 const catalogue = { items: products, pagination: { total: 3258, page: 1, limit: 4, pages: 815 } };
 const featuredPicks = { items: [makeProduct(12), makeProduct(10), { ...makeProduct(11), inStock: false }, makeProduct(13)], version: 3 };
+const classicSearches = ["air force", "dunk", "air max", "samba", "spezial", "campus"];
+const classicNames = ["Air Force 1", "Dunk", "Air Max", "Samba", "Spezial", "Campus"];
+const classicProducts = classicSearches.map((search, index) => ({ ...makeProduct(index + 20), name: `${classicNames[index]} catalogue pair` }));
 
 // Each homepage request is answered independently so one can fail alone.
-const respond = (productBody, { ok = true, featured = featuredPicks, featuredOk = true } = {}) => (path) => {
+const respond = (productBody, { ok = true, featured = featuredPicks, featuredOk = true, classics = classicProducts } = {}) => (path) => {
   if (path === "/api/hero-slides") return Promise.resolve({ ok: true, json: async () => ({ items: [] }) });
   if (path === "/api/featured-sneakers") return Promise.resolve({ ok: featuredOk, json: async () => (featuredOk ? featured : { error: "Unable to load featured sneakers" }) });
+  const search = new URL(path, "https://example.test").searchParams.get("search");
+  if (search) return Promise.resolve({ ok: true, json: async () => ({ items: [classics[classicSearches.indexOf(search)]].filter(Boolean) }) });
   return Promise.resolve({ ok, json: async () => productBody });
 };
 
@@ -123,6 +128,18 @@ test("links brand and classic discovery to live catalogue searches", async () =>
   expect(collections).toHaveAttribute("id", "collections");
   expect(within(collections).getByRole("link", { name: /new balance/i })).toHaveAttribute("href", "/store?search=new%20balance");
   expect(within(collections).getByRole("link", { name: /jordan/i })).toHaveAttribute("href", "/store?search=jordan");
+  [
+    ["Nike", "nike"], ["adidas", "adidas"], ["Jordan", "jordan"],
+    ["New Balance", "new%20balance"], ["ASICS", "asics"], ["On Running", "on%20running"],
+  ].forEach(([name, search]) => {
+    const link = within(collections).getByRole("link", { name, exact: true });
+    expect(link).toHaveAttribute("href", `/store?search=${search}`);
+    const logo = within(link).getByTestId("brand-logo");
+    // Decorative logos share the visible brand label; don't announce it twice.
+    expect(logo).toHaveAttribute("aria-hidden", "true");
+    expect(logo).toHaveAttribute("fill", "currentColor");
+    expect(logo).toHaveAttribute("viewBox");
+  });
 
   const classics = screen.getByRole("navigation", { name: /shop classic silhouettes/i });
   expect(within(classics).getByRole("link", { name: /air force 1/i })).toHaveAttribute("href", "/store?search=air%20force");
@@ -134,7 +151,7 @@ test("links brand and classic discovery to live catalogue searches", async () =>
   expect(screen.getAllByRole("region", { name: /authentic uk sneakers/i }).map((region) => region.id)).toContain("about");
 });
 
-test("renders The Classics as a simple header and an even grid of silhouette links", async () => {
+test("renders The Classics with catalogue photos and the existing silhouette search links", async () => {
   global.fetch = jest.fn(respond(catalogue));
   renderHome();
   await screen.findByText("Catalogue Runner 1");
@@ -144,23 +161,74 @@ test("renders The Classics as a simple header and an even grid of silhouette lin
   expect(within(section).getByRole("heading", { level: 2, name: /the classics/i })).toBeInTheDocument();
   expect(within(section).getByText(/icons, always in rotation/i)).toBeInTheDocument();
 
-  // No collage: the section has no photos or floating caption tags.
-  expect(within(section).queryByRole("img")).not.toBeInTheDocument();
-  expect(within(section).queryByRole("figure")).not.toBeInTheDocument();
-
   const nav = within(section).getByRole("navigation", { name: /shop classic silhouettes/i });
+  await within(nav).findByRole("img", { name: "Campus catalogue pair" });
   const links = within(nav).getAllByRole("link");
   expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
-    ["01Air Force 1", "/store?search=air%20force"],
-    ["02Dunk", "/store?search=dunk"],
-    ["03Air Max", "/store?search=air%20max"],
-    ["04Samba", "/store?search=samba"],
-    ["05Spezial", "/store?search=spezial"],
-    ["06Campus", "/store?search=campus"],
+    ["Air Force 1", "/store?search=air%20force"],
+    ["Dunk", "/store?search=dunk"],
+    ["Air Max", "/store?search=air%20max"],
+    ["Samba", "/store?search=samba"],
+    ["Spezial", "/store?search=spezial"],
+    ["Campus", "/store?search=campus"],
   ]);
-  // Index numbers are decorative; each link's accessible name is the model alone.
+  links.forEach((link, index) => {
+    expect(link).toHaveAccessibleName(classicNames[index]);
+    expect(within(link).getByRole("img", { name: classicProducts[index].name })).toHaveAttribute("src", classicProducts[index].image);
+    expect(global.fetch).toHaveBeenCalledWith(`/api/products?search=${classicSearches[index].replace(/ /g, "+")}&limit=1`, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+  });
+  // Product alt text must not duplicate the silhouette link's accessible name.
   expect(within(nav).getByRole("link", { name: "Air Max" })).toBeInTheDocument();
   expect(within(section).getByRole("link", { name: /shop the classics/i })).toHaveAttribute("href", "/store?search=nike");
+});
+
+test.each([
+  ["an empty search", () => Promise.resolve({ ok: true, json: async () => ({ items: [] }) })],
+  ["missing image fields", () => Promise.resolve({ ok: true, json: async () => ({ items: [{ name: "Air Force 1 pair" }] }) })],
+  ["an HTTP failure", () => Promise.resolve({ ok: false })],
+  ["a network failure", () => Promise.reject(new Error("Offline"))],
+  ["invalid JSON", () => Promise.resolve({ ok: true, json: async () => { throw new SyntaxError("Invalid JSON"); } })],
+])("uses the default classic image for %s without hiding other tiles or releases", async (_, response) => {
+  const normalResponse = respond(catalogue);
+  global.fetch = jest.fn((path) => path.includes("search=air+force") ? response() : normalResponse(path));
+  renderHome();
+  const nav = screen.getByRole("navigation", { name: /shop classic silhouettes/i });
+  const link = within(nav).getByRole("link", { name: "Air Force 1" });
+  expect(await within(link).findByRole("img")).toHaveAttribute("src", "/images/default.jpg");
+  expect(link).toHaveAttribute("href", "/store?search=air%20force");
+  expect(within(nav).getByRole("img", { name: "Dunk catalogue pair" })).toHaveAttribute("src", classicProducts[1].image);
+  expect(await screen.findByText("Catalogue Runner 1")).toBeInTheDocument();
+});
+
+test("uses catalogue image arrays and handles both a broken photo and a broken default", async () => {
+  const classics = [...classicProducts];
+  classics[0] = { name: "Air Force 1 pair", images: ["", "https://example.test/af1.jpg"] };
+  global.fetch = jest.fn(respond(catalogue, { classics }));
+  renderHome();
+  const image = await screen.findByRole("img", { name: "Air Force 1 pair" });
+  expect(image).toHaveAttribute("src", "https://example.test/af1.jpg");
+  fireEvent.error(image);
+  expect(image).toHaveAttribute("src", "/images/default.jpg");
+  fireEvent.error(image);
+  expect(image).not.toBeVisible();
+  expect(screen.getByRole("link", { name: "Air Force 1" })).toBeVisible();
+});
+
+test("loads classics independently and aborts their requests on unmount", async () => {
+  let resolveAirForce;
+  const normalResponse = respond(catalogue);
+  global.fetch = jest.fn((path) => path.includes("search=air+force")
+    ? new Promise((resolve) => { resolveAirForce = resolve; })
+    : normalResponse(path));
+  const { unmount } = renderHome();
+  expect(screen.getByRole("status", { name: "Loading Air Force 1 image" })).toBeInTheDocument();
+  expect(await screen.findByRole("img", { name: "Dunk catalogue pair" })).toBeInTheDocument();
+  const requests = global.fetch.mock.calls.filter(([path]) => path.includes("search="));
+  expect(requests).toHaveLength(6);
+  unmount();
+  requests.forEach(([, options]) => expect(options.signal.aborted).toBe(true));
+  // A body resolving after navigation must not cause another state update.
+  await act(async () => resolveAirForce({ ok: true, json: async () => ({ items: [classicProducts[0]] }) }));
 });
 
 test("offers a retry when the catalogue request fails", async () => {

@@ -7,6 +7,9 @@ import HeroCarousel from "../../components/HeroCarousel/HeroCarousel.component";
 import { getProducts } from "../../redux/actions/products.actions";
 import { brandLinks, classicLinks, howSteps } from "./homeContent";
 import useFeaturedSneakers, { FEATURED_LIMIT } from "./useFeaturedSneakers";
+import BrandLogo from "./BrandLogo";
+import useClassicProducts from "./useClassicProducts";
+import { getProductImage } from "../../utils/product";
 
 const HOME_PRODUCT_QUERY = { limit: 4, page: 1 };
 // Latest Releases shows the 4 newest catalogue products. Featured is
@@ -21,6 +24,14 @@ const ArrowIcon = () => (
 
 const formatCount = (value) => new Intl.NumberFormat("en-GB").format(value);
 const padIndex = (index) => String(index + 1).padStart(2, "0");
+
+const handleClassicImageError = ({ currentTarget: image }) => {
+  if (image.getAttribute("src") === "/images/default.jpg") {
+    image.style.visibility = "hidden";
+  } else {
+    image.src = "/images/default.jpg";
+  }
+};
 
 const ProductSkeletons = ({ label, className, count }) => (
   <div className={className} role="status" aria-label={label} aria-busy="true">
@@ -39,6 +50,7 @@ const Home = () => {
   );
 
   const featured = useFeaturedSneakers();
+  const classicProducts = useClassicProducts();
 
   useEffect(() => {
     dispatch(getProducts(HOME_PRODUCT_QUERY));
@@ -102,10 +114,10 @@ const Home = () => {
           <Link to="/store" className="home-link">View the full catalogue</Link>
         </div>
         <ul className="home-brands__list">
-          {brandLinks.map((brand, index) => (
+          {brandLinks.map((brand) => (
             <li key={brand.name}>
               <Link to={brand.to}>
-                <span className="home-brands__index" aria-hidden="true">{padIndex(index)}</span>
+                <BrandLogo brand={brand} />
                 <strong>{brand.name}</strong>
                 <ArrowIcon />
               </Link>
@@ -157,12 +169,26 @@ const Home = () => {
 
           <nav aria-label="Shop classic silhouettes">
             <ol className="home-classics__grid">
-              {classicLinks.map((classic, index) => (
+              {classicLinks.map((classic) => (
                 <li key={classic.name}>
-                  <Link to={classic.to} className="home-classics__card">
-                    <span className="home-classics__index" aria-hidden="true">{padIndex(index)}</span>
-                    <span className="home-classics__name">{classic.name}</span>
-                    <ArrowIcon />
+                  <Link to={classic.to} className="home-classics__card" aria-labelledby={`classic-${classic.search.replace(/ /g, "-")}`}>
+                    <span className="home-classics__image">
+                      {classicProducts[classic.search] === undefined ? (
+                        <span className="home-classics__loading" role="status" aria-label={`Loading ${classic.name} image`} />
+                      ) : (
+                        <img
+                          src={getProductImage(classicProducts[classic.search] || {})}
+                          alt={classicProducts[classic.search]?.name || `${classic.name} sneaker`}
+                          loading="lazy"
+                          decoding="async"
+                          onError={handleClassicImageError}
+                        />
+                      )}
+                    </span>
+                    <span className="home-classics__caption">
+                      <span className="home-classics__name" id={`classic-${classic.search.replace(/ /g, "-")}`}>{classic.name}</span>
+                      <ArrowIcon />
+                    </span>
                   </Link>
                 </li>
               ))}
