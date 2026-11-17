@@ -98,15 +98,11 @@ const Header = ({ setShowSideNav }) => {
           </button>
 
           {user ? (
-            <div className="account-actions">
+            <div className={`account-actions ${user.role === "admin" ? "is-admin" : ""}`}>
               {user.role === "admin" && (
-                <>
-                  <Link to="/admin/orders" className="icon-action" aria-label="Admin orders"><span>Orders</span></Link>
-                  <Link to="/admin/products" className="icon-action" aria-label="Manage products"><span>Products</span></Link>
-                  <Link to="/admin/hero-slides" className="icon-action" aria-label="Manage hero slides"><span>Hero slides</span></Link>
-                </>
+                <Link to="/admin" className="icon-action admin-link">Admin</Link>
               )}
-              <Link to="/dashboard" className="icon-action">
+              <Link to="/dashboard" className="icon-action account-profile" aria-label="Your account">
                 <AccountIcon />
                 <span>{user.name.split(" ")[0]}</span>
               </Link>

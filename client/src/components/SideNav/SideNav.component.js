@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./sideNav.styles.css";
 import { logoutUser } from "../../redux/actions/user.action";
+import { ADMIN_SECTIONS } from "../AdminLayout/AdminLayout.component";
 import ThemeToggle from "../ThemeToggle/ThemeToggle.component";
 
 const navigation = [
@@ -66,6 +67,16 @@ const SideNav = ({ setShowSideNav }) => {
           </Link>
         ))}
       </nav>
+
+      {user?.role === "admin" && (
+        <nav className="sideNav-admin" aria-label="Admin navigation">
+          {ADMIN_SECTIONS.map((section) => (
+            <Link key={section.id} to={section.to} onClick={() => setShowSideNav(false)}>
+              {section.label === "Overview" ? "Admin overview" : section.label}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       <div className="sideNav-footer">
         <p>Sneakers first.<br />Everything else second.</p>
