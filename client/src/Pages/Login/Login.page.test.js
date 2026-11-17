@@ -82,7 +82,8 @@ describe("postLoginPath", () => {
     expect(postLoginPath(admin, { search: "?returnTo=/store?brand=nike" })).toBe("/store?brand=nike");
   });
 
-  test.each(["//evil.com", "https://evil.com", "http:/evil.com", "/\\evil.com", "%2F%2Fevil.com", "evil.com", "javascript:alert(1)", "", "%E0%A4%A"])(
+  // eslint-disable-next-line no-script-url
+  test.each(["//evil.com", "https://evil.com", "http:/evil.com", "/\\evil.com", "%2F%2Fevil.com", "evil.com", "javascript:alert(1)", "/a\nb", "", "%E0%A4%A"])(
     "rejects %p",
     (target) => {
       expect(safeReturnPath(target)).toBeNull();

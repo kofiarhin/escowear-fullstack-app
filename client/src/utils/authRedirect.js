@@ -13,6 +13,7 @@ export const safeReturnPath = (value) => {
   }
   // Backslashes and control characters are rejected because browsers treat
   // "/\evil.com" like "//evil.com".
+  // eslint-disable-next-line no-control-regex
   if (!/^\/(?!\/)/.test(path) || /[\\\u0000-\u001f]/.test(path)) return null;
   return path;
 };
