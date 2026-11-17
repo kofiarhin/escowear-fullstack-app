@@ -94,7 +94,7 @@ const App = () => {
     <div className="site-shell" id="top">
       <BrowserRouter>
         <ScrollToHash />
-        <Header setShowSideNav={setShowSideNav} />
+        <Header showSideNav={showSideNav} setShowSideNav={setShowSideNav} />
         {showSideNav && <SideNav setShowSideNav={setShowSideNav} />}
         <Routes>
           <Route path="/" element={<Home />} />
