@@ -1,20 +1,21 @@
 @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600&display=swap");
 
-/* Colour tokens. The light theme is the default and keeps the original
-   EscoWear values; [data-theme="dark"] overrides only what changes.
+/* Colour tokens. Every surface (header, side nav, footer, cards, forms)
+   follows the active theme: light is white with black text and black
+   primary buttons, dark is black with white text and white primary buttons.
    data-theme is set on <html> before first paint by public/index.html. */
 :root,
 [data-theme="light"] {
   color-scheme: light;
 
   /* Surfaces */
-  --surface: #f1f1ef;
-  --surface-raised: #fafafa;
-  --surface-sunken: #dedede;
-  --surface-subtle: #f4f4f1;
-  --surface-hover: #f1f1ef;
-  --surface-header: rgba(250, 250, 250, 0.96);
-  --input-bg: #fafafa;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #ebebeb;
+  --surface-subtle: #f5f5f5;
+  --surface-hover: #f2f2f2;
+  --surface-header: rgba(255, 255, 255, 0.96);
+  --input-bg: #ffffff;
 
   /* Product image tiles; multiply hides white cut-out backgrounds on light tiles */
   --tile: #f0f0ee;
@@ -25,56 +26,29 @@
   --skeleton-highlight: #f2f2f2;
 
   /* Text */
-  --text: #0e0e0e;
-  --text-muted: #666666;
-  --text-placeholder: #888888;
+  --text: #000000;
+  --text-muted: #5c5c5c;
+  --text-placeholder: #757575;
 
   /* Borders and focus */
-  --border: rgba(14, 14, 14, 0.18);
-  --border-soft: rgba(14, 14, 14, 0.08);
-  --border-subtle: rgba(14, 14, 14, 0.12);
-  --border-input: rgba(14, 14, 14, 0.45);
-  --border-strong: #0e0e0e;
+  --border: rgba(0, 0, 0, 0.18);
+  --border-soft: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(0, 0, 0, 0.12);
+  --border-input: rgba(0, 0, 0, 0.45);
+  --border-strong: #000000;
   --border-neutral: #dddddd;
   --border-neutral-strong: #cccccc;
-  --focus-ring: #0e0e0e;
+  --focus-ring: #000000;
 
   /* Accent: primary buttons, selected states, hover inversions */
-  --accent: #0e0e0e;
-  --accent-contrast: #fafafa;
-  --accent-contrast-muted: rgba(250, 250, 250, 0.6);
-  --accent-hover: #303030;
+  --accent: #000000;
+  --accent-contrast: #ffffff;
+  --accent-contrast-muted: rgba(255, 255, 255, 0.6);
+  --accent-hover: #262626;
   --accent-hover-soft: #333333;
-  --accent-hover-strong: #292929;
-  --overlay-strong: rgba(14, 14, 14, 0.94);
+  --accent-hover-strong: #1f1f1f;
+  --overlay-strong: rgba(0, 0, 0, 0.94);
   --badge-bg: rgba(255, 255, 255, 0.9);
-
-  /* Inverse bands (announcement strip, The Classics, side nav, footer,
-     cart summary). They stay dark in both themes, so the on-inverse
-     colours below are shared; only the band surfaces shift in dark mode. */
-  --inverse-surface: #0e0e0e;
-  --inverse-surface-deep: #0b0b0b;
-  --inverse-text: #fafafa;
-  --inverse-text-muted: rgba(250, 250, 250, 0.6);
-  --inverse-text-subtle: rgba(250, 250, 250, 0.45);
-  --inverse-text-soft: #b4b4b4;
-  --inverse-text-hover: #c9c9c9;
-  --inverse-border: rgba(250, 250, 250, 0.2);
-  --inverse-border-soft: rgba(250, 250, 250, 0.16);
-  --inverse-border-strong: rgba(250, 250, 250, 0.4);
-  --inverse-button-bg: #fafafa;
-  --inverse-button-text: #0e0e0e;
-  --inverse-button-hover: #d9d9d9;
-  --inverse-danger: #a22d25;
-  --inverse-danger-border: #e0574c;
-  --nav-border: rgba(255, 255, 255, 0.2);
-  --nav-text-muted: rgba(255, 255, 255, 0.62);
-  --nav-link-hover: #b8b8b8;
-  --nav-index: #888888;
-  --footer-text-muted: rgba(255, 255, 255, 0.6);
-  --footer-text-subtle: rgba(255, 255, 255, 0.55);
-  --footer-heading: rgba(255, 255, 255, 0.5);
-  --footer-border: rgba(255, 255, 255, 0.17);
 
   /* Status */
   --success: #356346;
@@ -88,7 +62,7 @@
   --danger-surface: #fef3f2;
   --danger-on-surface: #7a271a;
   --pending: green;
-  --pending-text: #fafafa;
+  --pending-text: #ffffff;
 
   /* Legacy names, kept as aliases of the semantic tokens */
   --ink: var(--text);
@@ -103,13 +77,13 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --surface: #0e0e0e;
-  --surface-raised: #161616;
+  --surface: #000000;
+  --surface-raised: #111111;
   --surface-sunken: #262626;
-  --surface-subtle: #1a1a1a;
-  --surface-hover: #242424;
-  --surface-header: rgba(22, 22, 22, 0.96);
-  --input-bg: #161616;
+  --surface-subtle: #141414;
+  --surface-hover: #1f1f1f;
+  --surface-header: rgba(0, 0, 0, 0.96);
+  --input-bg: #000000;
 
   /* Product photos are white-background cut-outs, so dark mode keeps soft
      light tiles (dimmed slightly) and the same multiply blend as light mode.
@@ -122,31 +96,27 @@
   --skeleton-base: #1f1f1f;
   --skeleton-highlight: #2a2a2a;
 
-  --text: #f1f1ef;
-  --text-muted: #a6a6a4;
-  --text-placeholder: #8f8f8d;
+  --text: #ffffff;
+  --text-muted: #a6a6a6;
+  --text-placeholder: #8c8c8c;
 
-  --border: rgba(241, 241, 239, 0.2);
-  --border-soft: rgba(241, 241, 239, 0.08);
-  --border-subtle: rgba(241, 241, 239, 0.14);
-  --border-input: rgba(241, 241, 239, 0.45);
-  --border-strong: #f1f1ef;
+  --border: rgba(255, 255, 255, 0.2);
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.14);
+  --border-input: rgba(255, 255, 255, 0.45);
+  --border-strong: #ffffff;
   --border-neutral: #333333;
   --border-neutral-strong: #444444;
-  --focus-ring: #f1f1ef;
+  --focus-ring: #ffffff;
 
-  --accent: #f1f1ef;
-  --accent-contrast: #0e0e0e;
-  --accent-contrast-muted: rgba(14, 14, 14, 0.66);
-  --accent-hover: #d4d4d2;
-  --accent-hover-soft: #d9d9d7;
-  --accent-hover-strong: #cfcfcd;
-  --overlay-strong: rgba(241, 241, 239, 0.94);
-  --badge-bg: rgba(14, 14, 14, 0.88);
-
-  --inverse-surface: #1f1f1f;
-  --inverse-surface-deep: #1a1a1a;
-  --inverse-text-subtle: rgba(250, 250, 250, 0.5);
+  --accent: #ffffff;
+  --accent-contrast: #000000;
+  --accent-contrast-muted: rgba(0, 0, 0, 0.66);
+  --accent-hover: #d9d9d9;
+  --accent-hover-soft: #dedede;
+  --accent-hover-strong: #d1d1d1;
+  --overlay-strong: rgba(255, 255, 255, 0.94);
+  --badge-bg: rgba(0, 0, 0, 0.88);
 
   --success: #7fc79a;
   --success-strong: #4ade80;

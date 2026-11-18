@@ -11,7 +11,7 @@ beforeEach(() => {
   root.style.colorScheme = "";
   themeColorMeta = document.createElement("meta");
   themeColorMeta.setAttribute("name", "theme-color");
-  themeColorMeta.setAttribute("content", "#f1f1ef");
+  themeColorMeta.setAttribute("content", "#ffffff");
   document.head.replaceChildren(themeColorMeta);
 });
 
@@ -37,13 +37,13 @@ test("toggling switches data-theme, storage, meta colour and button state", () =
   expect(root).toHaveAttribute("data-theme", "dark");
   expect(root.style.colorScheme).toBe("dark");
   expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
-  expect(themeColorMeta).toHaveAttribute("content", "#0e0e0e");
+  expect(themeColorMeta).toHaveAttribute("content", "#000000");
 
   fireEvent.click(toggle);
   expect(screen.getByRole("button", { name: "Switch to dark theme" })).toHaveAttribute("aria-pressed", "false");
   expect(root).toHaveAttribute("data-theme", "light");
   expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
-  expect(themeColorMeta).toHaveAttribute("content", "#f1f1ef");
+  expect(themeColorMeta).toHaveAttribute("content", "#ffffff");
 });
 
 test("restores a stored dark theme on mount", () => {

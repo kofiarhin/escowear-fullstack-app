@@ -4,7 +4,7 @@ export const THEME_STORAGE_KEY = "escowear-theme";
 export const THEME_CHANGE_EVENT = "escowear-themechange";
 export const DEFAULT_THEME = "light";
 
-const THEME_COLORS = { light: "#f1f1ef", dark: "#0e0e0e" };
+const THEME_COLORS = { light: "#ffffff", dark: "#000000" };
 
 export const normalizeTheme = (value) => (value === "dark" || value === "light" ? value : DEFAULT_THEME);
 
