@@ -18,23 +18,6 @@ const LOOP_LEAD_S = 0.75;
 const Arrow = ({ direction }) => <svg viewBox="0 0 20 20" aria-hidden="true"><path d={direction === "previous" ? "M12.5 3.5 6 10l6.5 6.5M7 10h8" : "m7.5 3.5 6.5 6.5-6.5 6.5M13 10H5"} /></svg>;
 const staticFallback = { headline: "Authentic UK sneakers. Delivered to Ghana.", description: "Choose your pair from trusted UK retailers and let Escowear handle the journey to Ghana." };
 
-const DEFAULT_VIDEO_SLIDES = [
-  {
-    id: "video-hero-1", productId: "", productName: "Escowear", productInStock: true,
-    headline: "STEP INTO STYLE", description: "Premium sneakers delivered from the UK to your doorstep in Ghana.",
-    desktopImage: "", mobileImage: "",
-    desktopVideo: "https://res.cloudinary.com/dlsiabgiw/video/upload/hero-video-2_nr2029.mp4",
-    mobileVideo: "", posterImage: "", order: 0,
-  },
-  {
-    id: "video-hero-2", productId: "", productName: "Escowear", productInStock: true,
-    headline: "AUTHENTIC KICKS", description: "Trusted UK retailers. Verified authenticity. Fast delivery to Ghana.",
-    desktopImage: "", mobileImage: "",
-    desktopVideo: "https://res.cloudinary.com/dlsiabgiw/video/upload/hero-video-1_kcv6pl.mp4",
-    mobileVideo: "", posterImage: "", order: 1,
-  },
-];
-
 const isVideoSlide = (slide) => Boolean(slide && slide.desktopVideo);
 
 const readMediaQuery = (query) => window.matchMedia?.(query).matches || false;
@@ -82,15 +65,15 @@ const HeroCarousel = () => {
         // image-only slides still render with their image (the API resolves
         // the product image when no custom image was set).
         const published = Array.isArray(data?.items) ? data.items.filter((item) => item && item.id && item.headline && (item.desktopImage || item.desktopVideo)) : [];
-        const items = published.length ? published : DEFAULT_VIDEO_SLIDES;
+        const items = published;
         setSlides(items);
         setActiveIndex(0);
         setState(items.length ? "ready" : "fallback");
       } catch (error) {
         if (error.name !== "AbortError") {
-          setSlides(DEFAULT_VIDEO_SLIDES);
+          setSlides([]);
           setActiveIndex(0);
-          setState("ready");
+          setState("fallback");
         }
       }
     };

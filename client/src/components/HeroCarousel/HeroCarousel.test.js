@@ -136,25 +136,27 @@ test("image-only API slides (legacy live data) still render instead of the defau
   expect(screen.getByRole("heading", { name: "SECOND PAIR" })).toBeInTheDocument();
 });
 
-test("falls back to default video slides when API returns empty response", async () => {
+test("shows the static banner and no videos when admin has published no slides", async () => {
   global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ items: [] }) });
   renderCarousel();
-  expect(await screen.findByRole("heading", { name: "STEP INTO STYLE" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Authentic UK sneakers. Delivered to Ghana." })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Shop Now" })).toHaveAttribute("href", "/store");
+  expect(screen.queryByTestId(/^hero-video-/)).not.toBeInTheDocument();
+  expect(screen.queryByTestId("hero-carousel")).not.toBeInTheDocument();
 });
 
-test("falls back to default video slides when API fails", async () => {
+test("shows the static banner and no videos when the hero API fails", async () => {
   global.fetch.mockResolvedValueOnce({ ok: false });
   renderCarousel();
-  expect(await screen.findByRole("heading", { name: "STEP INTO STYLE" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Authentic UK sneakers. Delivered to Ghana." })).toBeInTheDocument();
+  expect(screen.queryByTestId(/^hero-video-/)).not.toBeInTheDocument();
 });
 
-test("default video slides link to /store and show branded eyebrow", async () => {
-  global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ items: [] }) });
+test("shows the static banner and no videos when the hero API rejects", async () => {
+  global.fetch.mockRejectedValueOnce(new Error("Network unavailable"));
   renderCarousel();
-  await screen.findByRole("heading", { name: "STEP INTO STYLE" });
-  expect(screen.getByText("Escowear / UK to Ghana")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Shop Now" })).toHaveAttribute("href", "/store");
+  expect(await screen.findByRole("heading", { name: "Authentic UK sneakers. Delivered to Ghana." })).toBeInTheDocument();
+  expect(screen.queryByTestId(/^hero-video-/)).not.toBeInTheDocument();
 });
 
 test("video slide renders a <video> element with muted and playsInline attributes", async () => {
