@@ -1,7 +1,7 @@
 .store {
   min-height: 70dvh;
   padding: 72px 0 130px;
-  background: var(--surface-raised);
+  background: var(--surface);
 }
 
 .store-heading {

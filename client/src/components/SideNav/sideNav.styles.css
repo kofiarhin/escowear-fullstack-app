@@ -6,8 +6,8 @@
   grid-template-rows: auto 1fr auto;
   overflow-y: auto;
   padding: 22px clamp(20px, 5vw, 72px) 32px;
-  background: var(--inverse-surface);
-  color: var(--inverse-text);
+  background: var(--surface);
+  color: var(--text);
   animation: nav-enter 320ms var(--ease-out) both;
 }
 
@@ -32,9 +32,8 @@
   to { opacity: 1; }
 }
 
-/* The global focus ring is dark in the light theme; the overlay is always dark. */
+/* Tighter offset than the global ring so it stays inside the overlay. */
 .sideNav :focus-visible {
-  outline: 2px solid var(--inverse-text);
   outline-offset: 2px;
 }
 
@@ -43,7 +42,7 @@
   align-items: center;
   justify-content: space-between;
   padding-bottom: 18px;
-  border-bottom: 1px solid var(--nav-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .sideNav-wordmark {
@@ -99,7 +98,7 @@
   min-height: 44px;
   align-items: center;
   padding-inline: 16px;
-  border: 1px solid var(--inverse-border-strong);
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
   font-family: var(--font-condensed);
   font-size: 0.85rem;
@@ -109,7 +108,7 @@
 }
 
 .sideNav-brands a:hover {
-  border-color: var(--inverse-text);
+  border-color: var(--text);
 }
 
 .links-wrapper > a {
@@ -129,12 +128,12 @@
 }
 
 .links-wrapper > a:hover {
-  color: var(--nav-link-hover);
+  color: var(--text-muted);
   transform: translateX(10px);
 }
 
 .links-wrapper > a span {
-  color: var(--nav-index);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.65rem;
   font-weight: 600;
@@ -147,8 +146,8 @@
   justify-content: space-between;
   gap: 26px;
   padding-top: 20px;
-  border-top: 1px solid var(--nav-border);
-  color: var(--nav-text-muted);
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.66rem;
   font-weight: 600;
@@ -161,7 +160,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0 22px;
-  color: var(--inverse-text);
+  color: var(--text);
 }
 
 .sideNav-account a,
@@ -211,7 +210,7 @@
   flex-wrap: wrap;
   gap: 4px 20px;
   padding-block: 12px;
-  border-top: 1px solid var(--nav-border);
+  border-top: 1px solid var(--border);
   font-family: var(--font-condensed);
   font-weight: 700;
   text-transform: uppercase;

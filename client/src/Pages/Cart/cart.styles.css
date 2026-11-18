@@ -199,8 +199,9 @@
   top: 120px;
   margin-top: 28px;
   padding: 28px;
-  background: var(--inverse-surface);
-  color: var(--inverse-text);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
 }
 
 .cart-summary h2 {
@@ -216,7 +217,7 @@
   justify-content: space-between;
   gap: 16px;
   padding-block: 12px;
-  border-bottom: 1px solid var(--inverse-border-soft);
+  border-bottom: 1px solid var(--border);
   font-size: 0.9rem;
 }
 
@@ -238,7 +239,7 @@
 
 .cart-summary-note {
   margin: 8px 0 24px;
-  color: var(--inverse-text-muted);
+  color: var(--text-muted);
   font-size: 0.78rem;
   line-height: 1.45;
 }
@@ -268,23 +269,20 @@
 }
 
 .cart-summary .cart-button-primary {
-  background: var(--inverse-button-bg);
-  color: var(--inverse-button-text);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .cart-summary .cart-button-secondary {
   margin-top: 10px;
-  border: 1px solid var(--inverse-border-strong);
-  color: var(--inverse-text);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
 }
 
 .cart-summary .cart-button-secondary:hover {
-  border-color: var(--inverse-danger-border);
-  background: var(--inverse-danger);
-}
-
-.cart-summary :focus-visible {
-  outline-color: var(--inverse-text);
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--accent-contrast);
 }
 
 /* Empty state */

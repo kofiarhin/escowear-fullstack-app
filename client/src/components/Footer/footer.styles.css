@@ -1,7 +1,8 @@
 .footer {
   padding-top: clamp(80px, 9vw, 140px);
-  background: var(--inverse-surface-deep);
-  color: var(--inverse-text);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .footer-lead {
@@ -14,7 +15,7 @@
 
 .footer-kicker {
   margin-bottom: 20px;
-  color: var(--footer-text-subtle);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.72rem;
   font-weight: 700;
@@ -39,8 +40,8 @@
   justify-content: space-between;
   gap: 24px;
   padding: 0 22px;
-  background: var(--inverse-button-bg);
-  color: var(--inverse-button-text);
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-family: var(--font-condensed);
   font-size: 0.8rem;
   font-weight: 800;
@@ -50,7 +51,7 @@
 }
 
 .footer-shop:hover {
-  background: var(--inverse-button-hover);
+  background: var(--accent-hover);
 }
 
 .footer-shop span {
@@ -63,7 +64,7 @@
   grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 0.6fr));
   gap: 48px;
   padding-block: 56px;
-  border-block: 1px solid var(--footer-border);
+  border-block: 1px solid var(--border);
 }
 
 .footer-brand {
@@ -75,7 +76,7 @@
 
 .footer-brand p {
   max-width: 32ch;
-  color: var(--footer-text-muted);
+  color: var(--text-muted);
   line-height: 1.6;
 }
 
@@ -97,7 +98,7 @@
 
 .footer nav > p {
   margin-bottom: 14px;
-  color: var(--footer-heading);
+  color: var(--text-muted);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -122,17 +123,13 @@
   border-color: currentColor;
 }
 
-.footer a:focus-visible {
-  outline-color: var(--inverse-text);
-}
-
 .footer-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding-block: 20px;
-  color: var(--footer-text-subtle);
+  color: var(--text-muted);
   font-family: var(--font-condensed);
   font-size: 0.7rem;
   font-weight: 600;
@@ -145,7 +142,7 @@
   min-height: 44px;
   align-items: center;
   gap: 8px;
-  color: var(--inverse-text);
+  color: var(--text);
 }
 
 @media (max-width: 900px) {

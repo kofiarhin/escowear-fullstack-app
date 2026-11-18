@@ -2,7 +2,7 @@
    (or scoped inside one) so nothing here can reach the hero carousel. */
 .home {
   overflow: hidden;
-  background: var(--surface-raised);
+  background: var(--surface);
 }
 
 /* Shared homepage primitives */
@@ -63,17 +63,12 @@
 }
 
 .home-button--light {
-  background: var(--inverse-button-bg);
-  color: var(--inverse-button-text);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .home-button--light:hover {
-  background: var(--inverse-button-hover);
-}
-
-.home-button--light:focus-visible,
-.home-classics a:focus-visible {
-  outline-color: var(--inverse-text);
+  background: var(--accent-hover);
 }
 
 .home-link {
@@ -152,7 +147,7 @@
 .home-brands {
   padding-top: clamp(28px, 3vw, 44px);
   border-bottom: 1px solid var(--border);
-  background: var(--surface-raised);
+  background: var(--surface);
 }
 
 .home-brands__intro {
@@ -317,8 +312,9 @@
 /* The Classics: catalogue photography leads, compact labels underneath */
 .home-classics {
   padding-block: clamp(36px, 4vw, 64px);
-  background: var(--inverse-surface);
-  color: var(--inverse-text);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .home-classics__header {
@@ -330,7 +326,7 @@
 }
 
 .home-classics .home-eyebrow {
-  color: var(--inverse-text-muted);
+  color: var(--text-muted);
 }
 
 .home-classics__intro h2 {
@@ -346,7 +342,7 @@
 .home-classics__lede {
   max-width: 46ch;
   margin-top: 14px;
-  color: var(--inverse-text-soft);
+  color: var(--text-muted);
   font-size: 1rem;
   line-height: 1.55;
 }
@@ -362,8 +358,8 @@
   display: flex;
   height: 100%;
   flex-direction: column;
-  border: 1px solid var(--inverse-border);
-  background: var(--inverse-surface-deep);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
   transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease;
 }
 
@@ -409,9 +405,9 @@
 
 .home-classics__card:hover,
 .home-classics__card:focus-visible {
-  border-color: var(--inverse-button-bg);
-  background: var(--inverse-button-bg);
-  color: var(--inverse-button-text);
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .home-classics__card:hover .home-arrow {
@@ -500,7 +496,7 @@
 /* About */
 .home-about {
   padding-block: clamp(88px, 10vw, 160px);
-  background: var(--surface-raised);
+  background: var(--surface);
 }
 
 .home-about__inner {
