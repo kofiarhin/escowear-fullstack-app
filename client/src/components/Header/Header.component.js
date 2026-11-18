@@ -8,6 +8,9 @@ import { logoutUser } from "../../redux/actions/user.action";
 import { policiesVisible } from "../../policies/content";
 import MegaNav from "./MegaNav.component";
 import { MOBILE_MENU_ID } from "./navigation";
+import { HeartIcon } from "../WishlistButton/WishlistButton.component";
+import useWishlist from "../WishlistButton/useWishlist";
+import { wishlistLinkLabel } from "../../utils/wishlist";
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -68,6 +71,7 @@ const Header = ({ showSideNav = false, setShowSideNav }) => {
   const searchPanelRef = useRef(null);
   usePublishedHeaderHeight(headerRef, searchPanelRef);
   const isAdmin = user?.role === "admin";
+  const { count: wishlistCount } = useWishlist();
 
   return (
     <header className="main-header" ref={headerRef}>
@@ -119,6 +123,11 @@ const Header = ({ showSideNav = false, setShowSideNav }) => {
             aria-label={user ? "Your account" : "Account"}
           >
             <AccountIcon />
+          </Link>
+
+          <Link to="/wishlist" className="icon-action wishlist-link" aria-label={wishlistLinkLabel(wishlistCount)}>
+            <HeartIcon />
+            {wishlistCount > 0 && <span className="wishlist-count" aria-hidden="true">{wishlistCount}</span>}
           </Link>
 
           <Link to="/cart" className="icon-action cart-link" aria-label="Shopping cart">

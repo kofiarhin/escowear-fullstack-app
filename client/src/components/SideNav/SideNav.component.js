@@ -6,6 +6,7 @@ import { logoutUser } from "../../redux/actions/user.action";
 import { ADMIN_SECTIONS } from "../AdminLayout/AdminLayout.component";
 import ThemeToggle from "../ThemeToggle/ThemeToggle.component";
 import { BRAND_LINKS, MOBILE_MENU_ID, PRIMARY_NAV } from "../Header/navigation";
+import useWishlist from "../WishlistButton/useWishlist";
 
 // Matches the nav-exit animation in sideNav.styles.css.
 export const MENU_EXIT_MS = 180;
@@ -26,6 +27,7 @@ const SideNav = ({ setShowSideNav }) => {
   const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
   const [closing, setClosing] = useState(false);
+  const { count: wishlistCount } = useWishlist();
 
   const close = useCallback(() => {
     if (allowsMotion()) setClosing(true);
@@ -142,6 +144,7 @@ const SideNav = ({ setShowSideNav }) => {
         <p>Sneakers first.<br />Everything else second.</p>
         <div className="sideNav-account">
           <Link to="/cart" onClick={close}>Cart</Link>
+          <Link to="/wishlist" onClick={close}>Wishlist ({wishlistCount})</Link>
           <Link to="/track-order" onClick={close}>Track order</Link>
           {user ? (
             <>

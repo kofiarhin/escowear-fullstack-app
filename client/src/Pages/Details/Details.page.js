@@ -10,6 +10,7 @@ import {
 } from "../../utils/product";
 import "./details.styles.css";
 import { addCartItem, readCart, saveCart, MAX_CART_QUANTITY } from "../../utils/cart";
+import WishlistButton from "../../components/WishlistButton/WishlistButton.component";
 
 const Details = () => {
   const [product, setProduct] = useState(null);
@@ -145,14 +146,17 @@ const Details = () => {
 
           <label htmlFor="details-quantity">Quantity</label>
           <input id="details-quantity" type="number" min="1" max={MAX_CART_QUANTITY} value={quantity} onChange={event => setQuantity(Number(event.target.value))} />
-          <button
-            className="details-cart-button"
-            type="button"
-            onClick={addToCart}
-            disabled={product.inStock === false || !selectedSize || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_CART_QUANTITY}
-          >
-            {product.inStock === false ? "Currently unavailable" : "Add to cart"}
-          </button>
+          <div className="details-actions">
+            <button
+              className="details-cart-button"
+              type="button"
+              onClick={addToCart}
+              disabled={product.inStock === false || !selectedSize || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_CART_QUANTITY}
+            >
+              {product.inStock === false ? "Currently unavailable" : "Add to cart"}
+            </button>
+            <WishlistButton productId={product._id} productName={product.name} className="details-wishlist" />
+          </div>
 
           {product.productUrl && (
             <a

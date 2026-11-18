@@ -147,3 +147,9 @@ test("with reduced motion the overlay closes instantly", () => {
   fireEvent.keyDown(document, { key: "Escape" });
   expect(close).toHaveBeenCalledWith(false);
 });
+
+test("mobile menu links to the wishlist with the saved count", () => {
+  localStorage.setItem("escowear-wishlist-v1", JSON.stringify(["p1", "p2"]));
+  renderMenu();
+  expect(screen.getByRole("link", { name: "Wishlist (2)" })).toHaveAttribute("href", "/wishlist");
+});

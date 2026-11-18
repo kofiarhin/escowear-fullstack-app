@@ -234,6 +234,27 @@
   stroke-width: 1.8;
 }
 
+.wishlist-link {
+  position: relative;
+}
+
+.wishlist-count {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-family: var(--font-condensed);
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
 /* ThemeToggle ships its own 40px minimums; the header sizes it like its siblings. */
 .header-actions .header-theme-toggle {
   min-width: 0;
@@ -347,7 +368,7 @@
   }
 }
 
-/* Logo + five 44px controls overflow below ~400px, so controls narrow
+/* Logo + six 44px controls overflow below ~400px, so controls narrow
    (height stays 44px) and the gutter tightens. The theme toggle stays. */
 @media (max-width: 400px) {
   .header-shell.container {
@@ -369,10 +390,12 @@
   }
 }
 
+/* The wishlist icon makes six controls; at this width they narrow to 32px
+   (still 44px tall) so the wordmark keeps clear of the search control. */
 @media (max-width: 360px) {
   .icon-action,
   .search-toggle {
-    width: 36px;
+    width: 32px;
   }
 
   .admin-link {
