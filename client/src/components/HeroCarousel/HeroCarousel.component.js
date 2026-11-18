@@ -3,18 +3,12 @@ import { Link } from "react-router-dom";
 import { HERO_MOBILE_QUERY, resolveHeroVideo } from "./heroMedia";
 import "./heroCarousel.styles.css";
 
-const AUTOPLAY_MS = 10_000;
+const SLIDE_INTERVAL_S = 5;
+const AUTOPLAY_MS = SLIDE_INTERVAL_S * 1000;
 const STALL_TIMEOUT_MS = 15_000;
 // Keep in sync with the hero media animations in heroCarousel.styles.css.
 const TRANSITION_MS = 950;
 const REDUCED_TRANSITION_MS = 300;
-// Video slides advance at a loop boundary, never mid-clip: after at least one
-// full pass and MIN seconds of playback, or unconditionally after MAX seconds.
-const MIN_VIDEO_SLIDE_S = 8;
-const MAX_VIDEO_SLIDE_S = 30;
-// Start the transition just before the clip wraps so the outgoing video never
-// visibly jumps back to its first frame.
-const LOOP_LEAD_S = 0.75;
 const Arrow = ({ direction }) => <svg viewBox="0 0 20 20" aria-hidden="true"><path d={direction === "previous" ? "M12.5 3.5 6 10l6.5 6.5M7 10h8" : "m7.5 3.5 6.5 6.5-6.5 6.5M13 10H5"} /></svg>;
 const staticFallback = { headline: "Authentic UK sneakers. Delivered to Ghana.", description: "Choose your pair from trusted UK retailers and let Escowear handle the journey to Ghana." };
 
@@ -242,10 +236,10 @@ const HeroCarousel = () => {
         else if (progress.last !== null && time - progress.last < 1.5) progress.played += time - progress.last;
         progress.last = time;
 
-        const remaining = duration ? Math.max(0, duration - time) : Infinity;
-        const atLoopBoundary = wrapped || remaining <= LOOP_LEAD_S;
-        const playedThisPass = progress.played + (wrapped ? 0 : remaining);
-        if ((atLoopBoundary && playedThisPass >= MIN_VIDEO_SLIDE_S) || progress.played >= MAX_VIDEO_SLIDE_S) advanceOnce();
+        // Count real playback rather than wall-clock time, so a clip that is
+        // still buffering is seen for the full interval. Longer clips are cut
+        // mid-play; the outgoing video keeps playing under the transition.
+        if (progress.played >= SLIDE_INTERVAL_S) advanceOnce();
       };
       const onError = () => advanceOnce();
       video.addEventListener("timeupdate", onTimeUpdate);
@@ -260,7 +254,7 @@ const HeroCarousel = () => {
       };
     }
 
-    // Image slides: existing 10-second timer
+    // Image slides use the same interval as video slides.
     const timer = window.setTimeout(advanceOnce, AUTOPLAY_MS);
     return () => window.clearTimeout(timer);
   }, [activeIndex, activeIsVideo, hasControls, isPaused, active, goTo]);
@@ -323,9 +317,9 @@ const HeroCarousel = () => {
           const isActive = index === activeIndex;
           if (isVideoSlide(slide)) {
             const { src, poster } = resolveHeroVideo(slide, isMobile);
-            let preload = "none";
-            if (isActive || index === leavingIndex) preload = "auto";
-            else if (index === nextIndex) preload = "metadata";
+            // Five seconds is too short to start fetching the next clip on
+            // arrival, so it buffers fully while the current slide plays.
+            const preload = isActive || index === leavingIndex || index === nextIndex ? "auto" : "none";
             return (
               <div className={`hero-carousel__media hero-carousel__media--video ${layerState(index)}`} data-testid={`hero-media-${slide.id}`} key={slide.id}>
                 {poster && <img className="hero-carousel__poster" data-testid={`hero-poster-${slide.id}`} src={poster} alt="" decoding="async" fetchpriority={index === 0 ? "high" : "low"} />}

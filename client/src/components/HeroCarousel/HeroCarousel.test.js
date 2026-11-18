@@ -56,7 +56,7 @@ const mockMatchMedia = (matchingQueries) => {
 };
 
 // Simulates playback with timeupdate events from `from` up to just before the
-// clip wraps (the loop boundary where the carousel may advance).
+// clip wraps.
 const playToLoopBoundary = (video, { duration = 10, from = 0 } = {}) => {
   let time = from;
   Object.defineProperty(video, "duration", { configurable: true, value: duration });
@@ -131,8 +131,10 @@ test("image-only API slides (legacy live data) still render instead of the defau
   expect(screen.queryByTestId(/^hero-video-/)).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: /shop now/i })).toHaveAttribute("href", "/details/product-1");
   expect(screen.getByRole("button", { name: /pause carousel/i })).toBeInTheDocument();
-  // Image slides keep the 10-second rotation.
-  act(() => { jest.advanceTimersByTime(10_000); });
+  // Image slides rotate every five seconds, like video slides.
+  act(() => { jest.advanceTimersByTime(4_900); });
+  expect(screen.getByRole("heading", { name: "FIRST PAIR" })).toBeInTheDocument();
+  act(() => { jest.advanceTimersByTime(100); });
   expect(screen.getByRole("heading", { name: "SECOND PAIR" })).toBeInTheDocument();
 });
 
@@ -195,7 +197,7 @@ test("navigates correctly between two video slides", async () => {
   expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
 });
 
-test("video slide advances at the loop boundary exactly once", async () => {
+test("video slide advances exactly once", async () => {
   renderCarousel();
   await screen.findByRole("heading", { name: "VIDEO SLIDE" });
 
@@ -208,31 +210,42 @@ test("video slide advances at the loop boundary exactly once", async () => {
   expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
 });
 
-test("video slide does not advance mid-clip, even after a long healthy playback", async () => {
+// Plays a 22.7s clip (the live hero clip length) in 250ms timeupdate steps.
+const playLongClipFor = (video, seconds) => {
+  let time = 0;
+  Object.defineProperty(video, "duration", { configurable: true, value: 22.7 });
+  Object.defineProperty(video, "currentTime", { configurable: true, get: () => time, set: (value) => { time = value; } });
+  act(() => {
+    for (time = 0; time <= seconds; time += 0.25) video.dispatchEvent(new Event("timeupdate"));
+  });
+};
+
+test("a long clip advances after five seconds of playback, without waiting for the clip to end", async () => {
   renderCarousel();
   await screen.findByRole("heading", { name: "VIDEO SLIDE" });
 
-  // 12s into a 20s clip: past the minimum, but not at a loop boundary.
-  const video = screen.getByTestId("hero-video-slide-v1");
-  let time = 0;
-  Object.defineProperty(video, "duration", { configurable: true, value: 20 });
-  Object.defineProperty(video, "currentTime", { configurable: true, get: () => time, set: (value) => { time = value; } });
-  act(() => {
-    for (time = 0; time <= 12; time += 1) video.dispatchEvent(new Event("timeupdate"));
-  });
+  playLongClipFor(screen.getByTestId("hero-video-slide-v1"), 5.25);
+  expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
+});
+
+test("video slide stays up until five seconds have actually played", async () => {
+  renderCarousel();
+  await screen.findByRole("heading", { name: "VIDEO SLIDE" });
+
+  playLongClipFor(screen.getByTestId("hero-video-slide-v1"), 4.75);
   expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
 });
 
-test("short clips loop until the minimum display time before advancing", async () => {
+test("short clips loop until five seconds have played before advancing", async () => {
   renderCarousel();
   await screen.findByRole("heading", { name: "VIDEO SLIDE" });
 
   const video = screen.getByTestId("hero-video-slide-v1");
-  playToLoopBoundary(video, { duration: 5 });
-  // One 5s pass is shorter than the minimum: the clip loops instead.
+  playToLoopBoundary(video, { duration: 3 });
+  // One 3s pass is shorter than the slide interval: the clip loops instead.
   expect(screen.getByRole("heading", { name: "VIDEO SLIDE" })).toBeInTheDocument();
   wrapLoop(video);
-  playToLoopBoundary(video, { duration: 5, from: 1 });
+  playToLoopBoundary(video, { duration: 3, from: 1 });
   expect(screen.getByRole("heading", { name: "SECOND VIDEO" })).toBeInTheDocument();
 });
 
@@ -459,7 +472,8 @@ test("video is looping, muted, inline and serves the optimised rendition with a 
   expect(video).toHaveAttribute("poster", `${CLOUDINARY_BASE}/so_0,w_1280,q_auto,f_auto/hero-video-2_nr2029.jpg`);
   expect(screen.getByTestId("hero-poster-slide-v2")).toHaveAttribute("src", video.getAttribute("poster"));
   expect(screen.getByTestId("hero-video-slide-v1")).toHaveAttribute("preload", "auto");
-  expect(video).toHaveAttribute("preload", "metadata");
+  // The next clip buffers during the current five seconds so it is ready to play.
+  expect(video).toHaveAttribute("preload", "auto");
 });
 
 test("mobile viewports get the 720px rendition and poster", async () => {
