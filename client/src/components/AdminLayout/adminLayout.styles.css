@@ -54,7 +54,7 @@
   background: var(--surface-hover);
 }
 
-.admin-nav__link[aria-current="page"] {
+.admin-nav .admin-nav__link[aria-current="page"] {
   background: var(--accent);
   color: var(--accent-contrast);
 }
