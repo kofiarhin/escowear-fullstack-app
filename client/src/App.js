@@ -27,6 +27,7 @@ import {
   Policies,
   ForgotPassword,
   ResetPassword,
+  Wishlist,
 } from "./Pages";
 
 const SCROLL_STORAGE_KEY = "escowear-scroll-positions";
@@ -105,6 +106,7 @@ const App = () => {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/store" element={<Store />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders/:id/confirmation" element={<OrderConfirmation />} />
           <Route path="/orders/:id" element={<OrderDetails />} />

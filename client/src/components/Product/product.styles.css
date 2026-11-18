@@ -1,8 +1,19 @@
 .product {
+  position: relative;
   display: block;
   min-width: 0;
   animation: product-enter 650ms var(--ease-out) both;
   animation-delay: calc(var(--product-index, 0) * 80ms);
+}
+
+.product-link {
+  display: block;
+}
+
+.product-wishlist {
+  position: absolute;
+  top: 8px;
+  right: 8px;
 }
 
 @keyframes product-enter {
@@ -54,6 +65,8 @@
   position: absolute;
   top: 10px;
   left: 10px;
+  /* Leaves room for the wishlist heart in the opposite corner on narrow cards. */
+  max-width: calc(100% - 70px);
   padding: 7px 9px;
   border: 1px solid var(--border-subtle);
   background: var(--badge-bg);
@@ -71,7 +84,7 @@
 }
 
 .product:hover .product-view,
-.product:focus-visible .product-view {
+.product-link:focus-visible .product-view {
   opacity: 1;
   transform: translateY(0);
 }

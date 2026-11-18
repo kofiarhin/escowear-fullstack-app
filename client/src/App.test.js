@@ -188,3 +188,24 @@ test("renders imported product details and preserves cart navigation", async () 
     }),
   ]);
 });
+
+test("product details heart saves the sneaker and the wishlist route lists it", async () => {
+  window.history.pushState({}, "", "/details/product-1");
+  global.fetch.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => products[0],
+  });
+
+  renderApp();
+
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Save Nike Air Max Dn8 to wishlist" })
+  );
+  expect(JSON.parse(localStorage.getItem("escowear-wishlist-v1"))).toEqual(["product-1"]);
+
+  await userEvent.click(screen.getByRole("link", { name: "Wishlist, 1 saved item" }));
+  expect(window.location.pathname).toBe("/wishlist");
+  expect(await screen.findByRole("heading", { name: "Wishlist" })).toBeInTheDocument();
+  expect(await screen.findByRole("link", { name: "Nike Air Max Dn8" })).toHaveAttribute("href", "/details/product-1");
+});

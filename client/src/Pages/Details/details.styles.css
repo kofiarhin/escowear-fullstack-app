@@ -165,9 +165,16 @@
   text-align: center;
 }
 
-.details-cart-button {
-  width: 100%;
+.details-actions {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
   margin-top: 28px;
+}
+
+.details-cart-button {
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 17px 24px;
   background: var(--accent);
   color: var(--accent-contrast);
@@ -186,6 +193,15 @@
 .details-cart-button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.wishlist-button.details-wishlist {
+  width: 56px;
+  height: auto;
+  min-height: 52px;
+  border-color: var(--border-strong);
+  border-radius: 0;
+  background: transparent;
 }
 
 .details-retailer-link {

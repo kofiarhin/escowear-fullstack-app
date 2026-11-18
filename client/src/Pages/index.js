@@ -19,5 +19,6 @@ import AdminProducts, { AdminProductForm } from "./AdminProducts/AdminProducts.p
 import AdminFeaturedSneakers from "./AdminFeaturedSneakers/AdminFeaturedSneakers.page";
 import ForgotPassword from "./PasswordRecovery/ForgotPassword.page";
 import ResetPassword from "./PasswordRecovery/ResetPassword.page";
+import Wishlist from "./Wishlist/Wishlist.page";
 
-export { Register, Login, Cart, Store, Home, Details, DashBoard, Account, Checkout, OrderConfirmation, AdminOverview, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, AdminFeaturedSneakers, TrackOrder, OrderDetails, Policies, ForgotPassword, ResetPassword };
+export { Register, Login, Cart, Store, Home, Details, DashBoard, Account, Checkout, OrderConfirmation, AdminOverview, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, AdminFeaturedSneakers, TrackOrder, OrderDetails, Policies, ForgotPassword, ResetPassword, Wishlist };
