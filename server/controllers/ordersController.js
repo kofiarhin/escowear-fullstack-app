@@ -12,7 +12,7 @@ const sendError = (res, error, logger = console) => {
   return res.status(500).json({ error: "Something went wrong. Your cart has not been changed.", code: "SERVER_ERROR" });
 };
 
-const createOrdersController = (orderService, { logger = console, trackingService, proofService, proofMaxBytes, maxConcurrentUploads = 4 } = {}) => {
+const createOrdersController = (orderService, { logger = console, trackingService, proofService, checkoutEmailService, proofMaxBytes, maxConcurrentUploads = 4 } = {}) => {
   let uploadsInFlight = 0;
   const proofViewer = (req) => ({ user: req.user, proofOrderId: verifyPaymentProofToken(req.get("X-Order-Proof-Token")) });
   const createOrder = async (req, res) => {
@@ -21,6 +21,7 @@ const createOrdersController = (orderService, { logger = console, trackingServic
         body: req.body,
         idempotencyKey: req.get("Idempotency-Key"),
         user: req.user,
+        emailProof: req.get("X-Checkout-Email-Proof"),
       });
       return res.status(result.httpStatus).json(result.body);
     } catch (error) {
@@ -70,6 +71,24 @@ const createOrdersController = (orderService, { logger = console, trackingServic
     try {
       res.set("Cache-Control", "no-store");
       return res.status(200).json(await trackingService.verifyCode(req.body));
+    } catch (error) {
+      return sendError(res, error, logger);
+    }
+  };
+
+  const requestCheckoutEmailCode = async (req, res) => {
+    try {
+      res.set("Cache-Control", "no-store");
+      return res.status(202).json(await checkoutEmailService.requestCode(req.body));
+    } catch (error) {
+      return sendError(res, error, logger);
+    }
+  };
+
+  const verifyCheckoutEmailCode = async (req, res) => {
+    try {
+      res.set("Cache-Control", "no-store");
+      return res.status(200).json(await checkoutEmailService.verifyCode(req.body));
     } catch (error) {
       return sendError(res, error, logger);
     }
@@ -131,7 +150,7 @@ const createOrdersController = (orderService, { logger = console, trackingServic
     }
   };
 
-  return { authorizePaymentProof, checkoutStatus, createOrder, getOrder, getOrders, getPaymentInstructions, requestTrackingCode, submitPaymentProof, verifyTrackingCode };
+  return { authorizePaymentProof, checkoutStatus, createOrder, requestCheckoutEmailCode, verifyCheckoutEmailCode, getOrder, getOrders, getPaymentInstructions, requestTrackingCode, submitPaymentProof, verifyTrackingCode };
 };
 
 module.exports = { createOrdersController, sendError };

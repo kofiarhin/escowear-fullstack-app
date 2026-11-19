@@ -116,3 +116,39 @@ test("an empty page past the end moves back to the last page", async () => {
   const lastCall = global.fetch.mock.calls[global.fetch.mock.calls.length - 1][0];
   expect(String(lastCall)).toContain("page=1");
 });
+
+test("shows email verification state, deadline, mail status and paused deletion; resends for pending accounts", async () => {
+  users = [
+    account({ email: "existing@example.test", verification: { state: "not_required" } }),
+    account({
+      id: "672b0e3a1a2b3c4d5e6f7002",
+      email: "pending@example.test",
+      verification: { state: "pending", deadline: "2026-11-27T10:00:00.000Z", deliveryAccepted: false, deletionPaused: true, deliveryEmail: { state: "failed", kind: "account_verification", sentAt: null } },
+    }),
+    account({ id: "672b0e3a1a2b3c4d5e6f7003", email: "verified@example.test", verification: { state: "verified", verifiedAt: "2026-11-20T10:00:00.000Z", deliveryAccepted: true, deletionPaused: false } }),
+    account({ id: "672b0e3a1a2b3c4d5e6f7004", email: "expired@example.test", verification: { state: "expired", deliveryAccepted: true, deletionPaused: false, deliveryEmail: { state: "sent" } } }),
+    admin,
+  ];
+  jest.spyOn(window, "confirm").mockReturnValue(true);
+  renderAdmin();
+  await screen.findByText("pending@example.test");
+
+  const existing = screen.getByRole("row", { name: /existing@example\.test/ });
+  expect(within(existing).getByText("Existing account")).toBeInTheDocument();
+  expect(within(existing).queryByRole("button", { name: /resend/i })).not.toBeInTheDocument();
+
+  const pending = screen.getByRole("row", { name: /pending@example\.test/ });
+  expect(within(pending).getByText("Pending")).toBeInTheDocument();
+  expect(within(pending).getByText(/verify by/i)).toBeInTheDocument();
+  expect(within(pending).getByText("Email not delivered")).toBeInTheDocument();
+  expect(within(pending).getByText(/deletion paused/i)).toBeInTheDocument();
+
+  expect(within(screen.getByRole("row", { name: /verified@example\.test/ })).getByText("Verified")).toBeInTheDocument();
+  const expired = screen.getByRole("row", { name: /expired@example\.test/ });
+  expect(within(expired).getByText("Expired")).toBeInTheDocument();
+  expect(within(expired).queryByRole("button", { name: /resend/i })).not.toBeInTheDocument();
+
+  await userEvent.click(within(pending).getByRole("button", { name: "Resend verification email to pending@example.test" }));
+  expect(global.fetch).toHaveBeenCalledWith("/api/admin/users/672b0e3a1a2b3c4d5e6f7002/resend-verification", expect.objectContaining({ method: "POST" }));
+  expect(await screen.findByText(/new verification link is queued/i)).toBeInTheDocument();
+});

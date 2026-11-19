@@ -8,6 +8,8 @@ const emailOutboxSchema = new Schema(
   {
     dedupeKey: { type: String, required: true, immutable: true },
     orderId: { type: Schema.Types.ObjectId, ref: "Order", immutable: true },
+    // Account emails (verification, final warning) are linked to their user.
+    userId: { type: Schema.Types.ObjectId, ref: "User", immutable: true },
     kind: { type: String, required: true, immutable: true },
     to: { type: String, required: true, immutable: true },
     templateVersion: { type: String, required: true, immutable: true },
@@ -30,6 +32,10 @@ const emailOutboxSchema = new Schema(
 emailOutboxSchema.index({ dedupeKey: 1 }, { name: "unique_email_dedupe_key", unique: true });
 emailOutboxSchema.index({ state: 1, nextAttemptAt: 1 }, { name: "state_next_attempt" });
 emailOutboxSchema.index({ orderId: 1, createdAt: 1 }, { name: "order_created" });
+emailOutboxSchema.index(
+  { userId: 1, kind: 1, state: 1 },
+  { name: "user_kind_state", partialFilterExpression: { userId: { $exists: true } } }
+);
 
 const EmailOutbox = mongoose.models.EmailOutbox || mongoose.model("EmailOutbox", emailOutboxSchema);
 

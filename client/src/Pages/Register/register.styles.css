@@ -1,3 +1,12 @@
 .register {
     min-height: 70vh;
 }
+
+.register-note {
+    margin: 0.75rem 0;
+    font-size: 0.9rem;
+}
+
+.register-note a {
+    border-bottom: 1px solid currentColor;
+}

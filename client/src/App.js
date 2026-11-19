@@ -30,6 +30,8 @@ import {
   Policies,
   ForgotPassword,
   ResetPassword,
+  CheckEmail,
+  VerifyEmail,
   Wishlist,
 } from "./Pages";
 
@@ -107,6 +109,8 @@ const App = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/check-email" element={<CheckEmail />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/store" element={<Store />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/wishlist" element={<Wishlist />} />

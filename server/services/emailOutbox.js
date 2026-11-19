@@ -4,7 +4,7 @@ const isDuplicateKey = (error) => error?.code === 11000;
 
 // Queues one logical email. Re-queuing the same dedupeKey returns the existing
 // message instead of creating a second one.
-const enqueueEmail = async (EmailOutbox, { dedupeKey, orderId, kind, to, context }) => {
+const enqueueEmail = async (EmailOutbox, { dedupeKey, orderId, userId, kind, to, context }) => {
   const existing = await EmailOutbox.findOne({ dedupeKey }).lean();
   if (existing) return { message: existing, created: false };
 
@@ -13,6 +13,7 @@ const enqueueEmail = async (EmailOutbox, { dedupeKey, orderId, kind, to, context
     const message = await EmailOutbox.create({
       dedupeKey,
       orderId,
+      userId,
       kind,
       to,
       templateVersion,
@@ -35,8 +36,13 @@ const ORDER_EMAIL_FIELD = {
   payment_instructions: "email.paymentInstructionState",
   order_confirmed: "email.confirmationState",
 };
-// Bodies that carry payment-channel details or one-time codes are dropped once sent.
-const PURGE_BODY_AFTER_SEND = ["payment_instructions", "tracking_code"];
+// Bodies that carry payment-channel details, one-time codes or verification
+// links are dropped once sent.
+const PURGE_BODY_AFTER_SEND = ["payment_instructions", "tracking_code", "account_verification", "account_final_warning", "checkout_email_code"];
+// One-time links and codes are also dropped when delivery fails for good; a
+// new link or code is issued instead of retrying these (IDE-152).
+const ONE_TIME_CREDENTIAL_KINDS = ["account_verification", "account_final_warning", "checkout_email_code"];
+const failedBody = (kind) => (ONE_TIME_CREDENTIAL_KINDS.includes(kind) ? { "payload.text": "[removed: not delivered]" } : {});
 
 const backoffMs = (attempts) => Math.min(60 * 60 * 1000, 60 * 1000 * 2 ** Math.max(0, attempts - 1));
 const safeError = (error) => String(error?.message || error || "send failed").replace(/\s+/g, " ").slice(0, 200);
@@ -54,7 +60,7 @@ const processOutboxBatch = async ({ EmailOutbox, Order, transport, now = () => n
   for (const message of stuck) {
     const updated = await EmailOutbox.findOneAndUpdate(
       { _id: message._id, state: "sending" },
-      { $set: { state: "failed", lastError: "Send interrupted; check the provider before retrying" } },
+      { $set: { state: "failed", lastError: "Send interrupted; check the provider before retrying", ...failedBody(message.kind) } },
       { new: true }
     ).lean();
     if (updated) results.stuck += 1;
@@ -87,7 +93,7 @@ const processOutboxBatch = async ({ EmailOutbox, Order, transport, now = () => n
     } catch (error) {
       const lastError = safeError(error);
       if (claimed.attempts >= maxAttempts) {
-        await EmailOutbox.updateOne({ _id: claimed._id }, { $set: { state: "failed", lastError }, $unset: { lockedUntil: 1 } });
+        await EmailOutbox.updateOne({ _id: claimed._id }, { $set: { state: "failed", lastError, ...failedBody(claimed.kind) }, $unset: { lockedUntil: 1 } });
         if (field && claimed.orderId) await Order.updateOne({ _id: claimed.orderId }, { $set: { [field]: "failed", "email.lastError": lastError } });
         results.failed += 1;
       } else {
@@ -106,7 +112,7 @@ const processOutboxBatch = async ({ EmailOutbox, Order, transport, now = () => n
 // Admin action: put a failed message back in the queue.
 const retryFailedEmail = async (EmailOutbox, messageId, now = () => new Date()) =>
   EmailOutbox.findOneAndUpdate(
-    { _id: messageId, state: "failed" },
+    { _id: messageId, state: "failed", kind: { $nin: ONE_TIME_CREDENTIAL_KINDS } },
     { $set: { state: "queued", nextAttemptAt: now(), attempts: 0 }, $unset: { lockedUntil: 1 } },
     { new: true }
   ).lean();

@@ -1,9 +1,21 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./register.styles.css";
 import { registerUser, errorHandler } from "../../redux/actions/user.action";
 import { useDispatch, useSelector } from "react-redux";
 import { postLoginPath } from "../../utils/authRedirect";
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+// Client-side mirror of the server rules; the server stays authoritative.
+const validate = ({ name, email, password, confirmPassword }) => {
+  if (!name.trim() || !email.trim() || !password) return "Please fill out all fields";
+  if (!EMAIL.test(email.trim())) return "Enter a valid email address";
+  if (password.length < 10) return "Password must be at least 10 characters";
+  if (password.length > 128) return "Password must be at most 128 characters";
+  if (password !== confirmPassword) return "Password does not match";
+  return "";
+};
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -14,10 +26,9 @@ const Register = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-  let { user, isPending, error } = useSelector((state) => state.userReducer);
+  const { user, isPending, error } = useSelector((state) => state.userReducer);
 
-  // New accounts are customers, so this is /account unless a safe return path
-  // was passed along.
+  // Someone already signed in has nothing to register.
   const from = location.state?.from;
   const { search } = location;
   useEffect(() => {
@@ -26,41 +37,23 @@ const Register = () => {
     }
   }, [user, from, search, navigate]);
 
-  // handleSubmit
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // simple validation will come back to this later
-    if (!name || !email || !password) {
-      dispatch(errorHandler("please fill out all fields"));
-    } else {
-      // compare password
-      if (password.length < 10) {
-        dispatch(errorHandler("Password must be at least 10 characters"));
-      } else if (password !== confirmPassword) {
-        // error = "password does not match";
-        dispatch(errorHandler("Password does not match"));
-      } else {
-        dispatch(registerUser(name, email, password));
-        // fetch("/api/users/register", {
-        //   headers: {
-        //     "Content-type": "application/json",
-        //   },
-        //   method: "POST",
-        //   body: JSON.stringify({ name, email, password }),
-        // })
-        //   .then((response) =>
-        //     response.json().then((data) => navigate("/login"))
-        //   )
-        //   .catch((error) => setError("There was a problem creating user"));
-      }
+    const problem = validate({ name, email, password, confirmPassword });
+    if (problem) {
+      dispatch(errorHandler(problem));
+      return;
     }
+    const result = await dispatch(registerUser(name, email, password, confirmPassword));
+    // New accounts verify their email before they can sign in (IDE-152).
+    if (result?.ok) navigate("/check-email", { replace: true });
   };
+
   return (
     <div className="container">
       <h1 className="title">Register</h1>
       <div className="form-wrapper">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="form-unit">
             <label htmlFor="name">Name</label>
             <input
@@ -68,6 +61,7 @@ const Register = () => {
               autoComplete="name"
               type="text"
               placeholder="Enter name"
+              maxLength={100}
               onChange={(e) => setName(e.target.value)}
               value={name}
             />
@@ -92,6 +86,7 @@ const Register = () => {
               type="password"
               placeholder="At least 10 characters"
               minLength={10}
+              maxLength={128}
               autoComplete="new-password"
               onChange={(e) => setPassword(e.target.value)}
               value={password}
@@ -105,22 +100,31 @@ const Register = () => {
               type="password"
               placeholder="Confirm Password"
               minLength={10}
+              maxLength={128}
               autoComplete="new-password"
               onChange={(e) => setConfirmPassword(e.target.value)}
               value={confirmPassword}
             />
           </div>
-          {error ? <p className="error"> {error} </p> : null}
+          {error ? (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <p className="register-note">We will email you a link to verify your address before you can sign in.</p>
           <button
             type="submit"
+            disabled={isPending}
             style={{
               backgroundColor: isPending ? "var(--pending)" : "",
               color: isPending ? "var(--pending-text)" : "",
             }}
           >
-            {" "}
-            {isPending ? "Registering User" : "Register"}{" "}
+            {isPending ? "Registering User" : "Register"}
           </button>
+          <p className="register-note">
+            Already have an account? <Link to="/login">Sign in</Link>
+          </p>
         </form>
       </div>
     </div>

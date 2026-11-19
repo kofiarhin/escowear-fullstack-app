@@ -24,13 +24,15 @@ const Login = ({ setIsLoggedIn }) => {
     }
   }, [user, from, search, navigate]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!email || !password) {
       console.log("please fill out all fields");
     } else {
-      dispatch(loginUser(email, password));
+      const result = await dispatch(loginUser(email, password));
+      // New accounts must verify their email first (IDE-152).
+      if (result?.code === "EMAIL_NOT_VERIFIED") navigate("/check-email");
     }
   };
 

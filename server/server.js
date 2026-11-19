@@ -32,10 +32,11 @@ const createApp = (deps = {}) => {
 
   // setup middlewares
   app.use(express.json({ limit: "32kb" }));
-  // Reset links contain a one-time credential until the client clears it.
-  // Prevent browser/proxy caching and cross-site referrer propagation.
+  // Reset and verification links contain a one-time credential until the
+  // client clears it. Prevent browser/proxy caching and cross-site referrer
+  // propagation.
   app.use((req, res, next) => {
-    if (req.path === "/reset-password") {
+    if (req.path === "/reset-password" || req.path === "/verify-email") {
       res.set("Cache-Control", "no-store");
       res.set("Referrer-Policy", "no-referrer");
     }
@@ -111,6 +112,20 @@ const startEmailDelivery = () => {
   return startEmailWorker({ ...models, orderService, transport, trackingCodeTtlMinutes: config.trackingCodeTtlMinutes });
 };
 
+// Day-6 warnings, Day-7 expiry and cleanup of unverified new accounts. Runs
+// whether or not email delivery is configured; without delivery, deletion
+// simply stays paused (IDE-152).
+const startAccountCleanup = () => {
+  const { startAccountLifecycle } = require("./services/accountLifecycle");
+  const { createEmailVerificationService } = require("./services/emailVerificationService");
+  const { getLifecycleConfig } = require("./config/verification");
+  const User = require("./Models/User.model");
+  const EmailOutbox = require("./Models/EmailOutbox.model");
+  const { intervalMs, dryRun } = getLifecycleConfig();
+  console.log(`Account cleanup: every ${intervalMs / 60000} minutes${dryRun ? " (dry run)" : ""}`);
+  return startAccountLifecycle({ User, EmailOutbox, verificationService: createEmailVerificationService({ User, EmailOutbox }), intervalMs, dryRun });
+};
+
 // Emails read ESCOWEAR_POLICIES_STATUS at runtime, separately from the site's
 // build-time switch. Refuse to start in "published" while the publication guard
 // fails, so emails can never make policy promises the site has not published.
@@ -152,6 +167,7 @@ const startServer = async () => {
   assertCheckoutReadiness();
   await connectDB();
   startEmailDelivery();
+  startAccountCleanup();
   return app.listen(port, () => console.log(`Listening on port ${port}`));
 };
 

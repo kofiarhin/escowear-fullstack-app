@@ -29,12 +29,23 @@ test("IDE-116 admin manual payment on real MongoDB", { skip: skipReason() }, asy
     expiresAt: new Date(Date.now() + 86400000).toISOString(), ...overrides,
   });
 
+  // IDE-152: registration needs a matching confirmation, and sign-in needs the
+  // emailed verification link to have been used first.
+  const registerVerified = async (ctx, body) => {
+    const registered = await ctx.request("POST", "/api/users/register", { body: { ...body, passwordConfirmation: body.password } });
+    assert.equal(registered.status, 201);
+    const message = await models.EmailOutbox.findOne({ kind: "account_verification", to: body.email.trim().toLowerCase() }).sort({ createdAt: -1 }).lean();
+    const token = new URL(message.payload.text.match(/https?:\/\/\S+\/verify-email\?token=\S+/)[0]).searchParams.get("token");
+    assert.equal((await ctx.request("POST", "/api/users/verify-email", { body: { token } })).status, 200);
+    return registered;
+  };
+
   await t.test("role checks use the stored role; registration cannot grant admin", async () => {
     const { ctx, placed } = await setup();
     try {
       const customer = await ctx.addUser();
       assert.equal((await ctx.request("GET", "/api/admin/orders", { token: userToken(customer._id) })).status, 403);
-      const registered = await ctx.request("POST", "/api/users/register", { body: { name: "Mallory", email: "mallory@example.test", password: "pw-1234567890", role: "admin" } });
+      const registered = await ctx.request("POST", "/api/users/register", { body: { name: "Mallory", email: "mallory@example.test", password: "pw-1234567890", passwordConfirmation: "pw-1234567890", role: "admin" } });
       assert.equal(registered.status, 201);
       const stored = await models.User.findOne({ email: "mallory@example.test" }).lean();
       assert.equal(stored.role, "customer");
@@ -127,7 +138,7 @@ test("IDE-116 admin manual payment on real MongoDB", { skip: skipReason() }, asy
   await t.test("registration rules: no pre-filled weak passwords, no role, normalized email", async () => {
     const { ctx } = await setup();
     try {
-      const register = (body) => ctx.request("POST", "/api/users/register", { body });
+      const register = (body) => ctx.request("POST", "/api/users/register", { body: { passwordConfirmation: body.password, ...body } });
       assert.equal((await register({ name: "A", email: "a@example.test", password: "password" })).status, 400, "8 chars is too short");
       assert.equal((await register({ name: "A", email: "a@example.test", password: "x".repeat(129) })).status, 400);
       assert.equal((await register({ name: { $gt: "" }, email: "a@example.test", password: "long-enough-pw" })).status, 400);
@@ -145,9 +156,9 @@ test("IDE-116 admin manual payment on real MongoDB", { skip: skipReason() }, asy
   await t.test("admin sign-in tokens last 12 hours; customer tokens 30 days", async () => {
     const { ctx } = await setup();
     try {
-      await ctx.request("POST", "/api/users/register", { body: { name: "Owner", email: "owner@example.test", password: "owner-password-1" } });
+      await registerVerified(ctx, { name: "Owner", email: "owner@example.test", password: "owner-password-1" });
       await models.User.updateOne({ email: "owner@example.test" }, { $set: { role: "admin" } });
-      await ctx.request("POST", "/api/users/register", { body: { name: "Buyer", email: "buyer@example.test", password: "buyer-password-1" } });
+      await registerVerified(ctx, { name: "Buyer", email: "buyer@example.test", password: "buyer-password-1" });
       const jwt = require("jsonwebtoken");
       const life = async (email, password) => {
         const response = await ctx.request("POST", "/api/users/login", { body: { email, password } });
@@ -165,7 +176,7 @@ test("IDE-116 admin manual payment on real MongoDB", { skip: skipReason() }, asy
   await t.test("repeated sign-in attempts for one account are rate limited", async () => {
     const { ctx } = await setup();
     try {
-      await ctx.request("POST", "/api/users/register", { body: { name: "Target", email: "target@example.test", password: "target-password-1" } });
+      await registerVerified(ctx, { name: "Target", email: "target@example.test", password: "target-password-1" });
       const statuses = [];
       for (let attempt = 0; attempt < 9; attempt += 1) {
         statuses.push((await ctx.request("POST", "/api/users/login", { body: { email: "TARGET@example.test", password: `guess-${attempt}` } })).status);
@@ -180,7 +191,7 @@ test("IDE-116 admin manual payment on real MongoDB", { skip: skipReason() }, asy
   await t.test("login does not reveal whether an account exists", async () => {
     const { ctx } = await setup();
     try {
-      await ctx.request("POST", "/api/users/register", { body: { name: "Real", email: "real@example.test", password: "correct-horse" } });
+      await registerVerified(ctx, { name: "Real", email: "real@example.test", password: "correct-horse" });
       const unknown = await ctx.request("POST", "/api/users/login", { body: { email: "nobody@example.test", password: "x" } });
       const wrong = await ctx.request("POST", "/api/users/login", { body: { email: "real@example.test", password: "x" } });
       assert.deepEqual([unknown.status, unknown.body], [wrong.status, wrong.body]);

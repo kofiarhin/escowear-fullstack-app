@@ -1,11 +1,34 @@
 const { parsePage } = require("../services/orderService");
 const { isObjectId } = require("../validators/orderValidator");
+const { VerificationError, verificationState } = require("../services/emailVerificationService");
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const emailStatus = (message) => (message ? { state: message.state, kind: message.kind, sentAt: message.sentAt || null } : null);
+
+// Verification details for /admin/users. Existing accounts report
+// "not_required". Deletion is paused for an expired account until the mail
+// server has accepted its first verification email (IDE-152).
+const verificationSummary = (user, emailsById = new Map(), now = new Date()) => {
+  const state = verificationState(user, now);
+  if (state === "not_required") return { state };
+  const delivery = emailsById.get(String(user.verificationDeliveryEmailId));
+  const deliveryAccepted = Boolean(user.verificationEmailAcceptedAt) || delivery?.state === "sent";
+  return {
+    state,
+    verifiedAt: user.emailVerifiedAt || null,
+    deadline: user.verificationDeadline || null,
+    finalWarningAt: user.finalWarningQueuedAt || null,
+    deliveryAccepted,
+    deliveryEmail: emailStatus(delivery),
+    latestEmail: emailStatus(emailsById.get(String(user.verificationLatestEmailId))),
+    deletionPaused: state !== "verified" && !deliveryAccepted,
+  };
+};
+
 // Only these fields leave the server; password hashes, reset tokens and
 // session versions never do.
-const adminUserSummary = (user) => ({
+const adminUserSummary = (user, emailsById, now) => ({
   id: String(user._id),
   email: user.email,
   name: user.name || "",
@@ -13,11 +36,12 @@ const adminUserSummary = (user) => ({
   createdAt: user.createdAt,
   blocked: Boolean(user.blocked),
   blockedAt: user.blockedAt || null,
+  verification: verificationSummary(user, emailsById, now),
 });
 
 // Admins may view every account but only block or delete customer accounts
 // other than their own, so the console can never lock out an administrator.
-const createAdminUsersController = ({ User, logger = console }) => {
+const createAdminUsersController = ({ User, EmailOutbox, verificationService, logger = console }) => {
   const fail = (res, status, code, error) => res.status(status).json({ error, code });
 
   const handle = (label, message, fn) => async (req, res) => {
@@ -48,8 +72,34 @@ const createAdminUsersController = ({ User, logger = console }) => {
       User.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       User.countDocuments(filter),
     ]);
+    const emailIds = users.flatMap((user) => [user.verificationDeliveryEmailId, user.verificationLatestEmailId]).filter(Boolean);
+    const emails = emailIds.length ? await EmailOutbox.find({ _id: { $in: emailIds } }).lean() : [];
+    const emailsById = new Map(emails.map((message) => [String(message._id), message]));
+    const now = new Date();
     res.set("Cache-Control", "no-store");
-    return res.json({ items: users.map(adminUserSummary), pagination: { total, page, limit, pages: Math.ceil(total / limit) } });
+    return res.json({ items: users.map((user) => adminUserSummary(user, emailsById, now)), pagination: { total, page, limit, pages: Math.ceil(total / limit) } });
+  });
+
+  const summaryWithEmails = async (user) => {
+    const ids = [user.verificationDeliveryEmailId, user.verificationLatestEmailId].filter(Boolean);
+    const emails = ids.length ? await EmailOutbox.find({ _id: { $in: ids } }).lean() : [];
+    return adminUserSummary(user, new Map(emails.map((message) => [String(message._id), message])));
+  };
+
+  // Sends a fresh verification link to a pending new account. Not counted
+  // against the customer's own resend limit; the 60-second cooldown applies.
+  const resendVerification = handle("resend verification", "Verification email could not be sent", async (req, res) => {
+    const { user, refusal } = await findTarget(req);
+    if (refusal) return fail(res, ...refusal);
+    try {
+      await verificationService.adminResend(user._id);
+    } catch (error) {
+      if (!(error instanceof VerificationError)) throw error;
+      if (error.extra.retryAfterSeconds) res.set("Retry-After", String(error.extra.retryAfterSeconds));
+      return fail(res, error.status, error.code, error.message);
+    }
+    res.set("Cache-Control", "no-store");
+    return res.json({ item: await summaryWithEmails(await User.findOne({ _id: user._id }).lean()) });
   });
 
   const setBlocked = handle("block", "User could not be updated", async (req, res) => {
@@ -67,7 +117,7 @@ const createAdminUsersController = ({ User, logger = console }) => {
     const updated = await User.findOneAndUpdate({ _id: user._id, role: { $ne: "admin" } }, update, { new: true }).lean();
     if (!updated) return fail(res, 404, "NOT_FOUND", "User not found");
     res.set("Cache-Control", "no-store");
-    return res.json({ item: adminUserSummary(updated) });
+    return res.json({ item: await summaryWithEmails(updated) });
   });
 
   // Orders keep their own customer snapshot, so they remain intact for the
@@ -80,7 +130,7 @@ const createAdminUsersController = ({ User, logger = console }) => {
     return res.status(204).end();
   });
 
-  return { listUsers, setBlocked, deleteUser };
+  return { listUsers, setBlocked, deleteUser, resendVerification };
 };
 
-module.exports = { adminUserSummary, createAdminUsersController };
+module.exports = { adminUserSummary, createAdminUsersController, verificationSummary };

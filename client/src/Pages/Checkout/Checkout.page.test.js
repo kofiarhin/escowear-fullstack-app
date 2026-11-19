@@ -66,14 +66,36 @@ const fillValidForm = async () => {
 };
 
 const submit = () => userEvent.click(screen.getByRole("button", { name: /place order request/i }));
+// Guests confirm their email with a code before the order is sent (IDE-152).
+const confirmEmailCode = async (code = "123456") => {
+  await userEvent.type(await screen.findByLabelText("6-digit code"), code);
+  await userEvent.click(screen.getByRole("button", { name: /verify code and place order/i }));
+};
+const submitAsGuest = async () => {
+  await submit();
+  await confirmEmailCode();
+};
+const emailCodeCalls = (kind) => global.fetch.mock.calls.filter(([url]) => url === `/api/orders/checkout-email/${kind}`);
 const storedCart = () => JSON.parse(localStorage.getItem(CART_KEY));
 const orderCalls = () => global.fetch.mock.calls.filter(([url, options]) => url === "/api/orders" && options?.method === "POST");
 
+// Each test configures `serverFetch` for the order API; the guest email-code
+// endpoints answer here unless a test overrides `codeRoutes`.
+let serverFetch;
+let codeRoutes;
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   localStorage.setItem(CART_KEY, JSON.stringify(cartItems));
-  global.fetch = jest.fn();
+  serverFetch = jest.fn();
+  codeRoutes = {
+    request: () => jsonResponse(202, { message: "We have emailed a 6-digit code.", expiresInMinutes: 10 }),
+    verify: () => jsonResponse(200, { proof: "email-proof-1", expiresInMinutes: 30 }),
+  };
+  global.fetch = jest.fn((url, options) => {
+    const match = typeof url === "string" && url.match(/^\/api\/orders\/checkout-email\/(request|verify)$/);
+    return match ? codeRoutes[match[1]](url, options) : serverFetch(url, options);
+  });
   fetchCheckoutStatus.mockReturnValue(new Promise(() => {}));
 });
 
@@ -107,7 +129,7 @@ test("a guest who signs in from checkout as a customer comes back to checkout wi
   );
 
   await userEvent.click(screen.getByRole("link", { name: "Sign in" }));
-  global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ name: "Ama Mensah", email: "ama@example.test", role: "customer", token: "t" }) });
+  serverFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ name: "Ama Mensah", email: "ama@example.test", role: "customer", token: "t" }) });
   await userEvent.type(screen.getByPlaceholderText("Enter Email"), "ama@example.test");
   await userEvent.type(screen.getByPlaceholderText("Enter Password"), "a-long-password");
   await userEvent.click(screen.getByRole("button", { name: /login/i }));
@@ -146,12 +168,12 @@ test("required fields, Ghana phone and agreement are validated before anything i
 });
 
 test("successful order sends only ids/sizes/quantities, clears the cart and shows a received-only confirmation", async () => {
-  global.fetch.mockImplementation((url, options) =>
+  serverFetch.mockImplementation((url, options) =>
     options?.method === "POST" ? jsonResponse(201, createdOrder) : jsonResponse(200, createdOrder.order)
   );
   renderCheckout();
   await fillValidForm();
-  await submit();
+  await submitAsGuest();
 
   expect(await screen.findByRole("heading", { name: "Order received — awaiting our email" })).toBeInTheDocument();
   expect(screen.getByText(/it is not paid and not yet confirmed/i)).toBeInTheDocument();
@@ -167,6 +189,11 @@ test("successful order sends only ids/sizes/quantities, clears the cart and show
   expect(body.shippingAddress.region).toBe("Greater Accra");
   expect(options.headers["Idempotency-Key"]).toMatch(/^[A-Za-z0-9_-]{16,128}$/);
   expect(options.headers.Authorization).toBeUndefined();
+  // The email code was requested and verified for this exact checkout attempt.
+  const [[, requestOptions]] = emailCodeCalls("request");
+  expect(JSON.parse(requestOptions.body)).toEqual({ email: "ama@example.test", checkoutIntent: options.headers["Idempotency-Key"] });
+  expect(JSON.parse(emailCodeCalls("verify")[0][1].body).code).toBe("123456");
+  expect(options.headers["X-Checkout-Email-Proof"]).toBe("email-proof-1");
 
   expect(storedCart()).toEqual([]);
   expect(getOrderAccess(createdOrder.orderId)).toBe("access-token-1");
@@ -181,12 +208,12 @@ test("successful order sends only ids/sizes/quantities, clears the cart and show
 });
 
 test("server error keeps the cart and a retry reuses the same idempotency key", async () => {
-  global.fetch
+  serverFetch
     .mockImplementationOnce(() => jsonResponse(500, { error: "boom" }))
     .mockImplementation((url, options) => (options?.method === "POST" ? jsonResponse(201, createdOrder) : jsonResponse(200, createdOrder.order)));
   renderCheckout();
   await fillValidForm();
-  await submit();
+  await submitAsGuest();
 
   expect(await screen.findByRole("alert")).toHaveTextContent(/your cart has been kept/i);
   expect(storedCart()).toEqual(cartItems);
@@ -199,48 +226,47 @@ test("server error keeps the cart and a retry reuses the same idempotency key", 
 });
 
 test("network uncertainty keeps the cart and says retrying is safe", async () => {
-  global.fetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+  serverFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
   renderCheckout();
   await fillValidForm();
-  await submit();
+  await submitAsGuest();
   expect(await screen.findByRole("alert")).toHaveTextContent(/trying again is safe/i);
   expect(storedCart()).toEqual(cartItems);
   expect(screen.getByRole("button", { name: /place order request/i })).toBeEnabled();
 });
 
 test("unavailable items are flagged and the cart is kept", async () => {
-  global.fetch.mockImplementation(() =>
+  serverFetch.mockImplementation(() =>
     jsonResponse(422, { code: "ITEMS_UNAVAILABLE", error: "Some items…", fields: { "items.0": "This size is not available" } })
   );
   renderCheckout();
   await fillValidForm();
-  await submit();
+  await submitAsGuest();
   expect(await screen.findByRole("alert")).toHaveTextContent(/can no longer be ordered/i);
   expect(screen.getByText("This size is not available")).toBeInTheDocument();
   expect(storedCart()).toEqual(cartItems);
 });
 
 test("server field errors are shown against the right inputs", async () => {
-  global.fetch.mockImplementation(() =>
+  serverFetch.mockImplementation(() =>
     jsonResponse(422, { code: "VALIDATION_FAILED", error: "Please correct the highlighted fields", fields: { "shippingAddress.city": "Town or city is required" } })
   );
   renderCheckout();
   await fillValidForm();
-  await submit();
+  await submitAsGuest();
   expect(await screen.findByText("Town or city is required")).toBeInTheDocument();
   expect(screen.getByLabelText("Town or city")).toHaveAttribute("aria-invalid", "true");
 });
 
 test("double submit sends a single request while processing", async () => {
   let resolve;
-  global.fetch.mockImplementation((url, options) =>
+  serverFetch.mockImplementation((url, options) =>
     options?.method === "POST" ? new Promise((done) => (resolve = done)) : jsonResponse(200, createdOrder.order)
   );
   renderCheckout();
   await fillValidForm();
-  const button = screen.getByRole("button", { name: /place order request/i });
-  await userEvent.click(button);
-  expect(screen.getByRole("button", { name: /placing order/i })).toBeDisabled();
+  await submitAsGuest();
+  expect(await screen.findByRole("button", { name: /placing order/i })).toBeDisabled();
   await userEvent.click(screen.getByRole("button", { name: /placing order/i }));
   expect(orderCalls()).toHaveLength(1);
   resolve({ ok: true, status: 201, json: async () => createdOrder });
@@ -248,7 +274,7 @@ test("double submit sends a single request while processing", async () => {
 });
 
 test("signed-in customers send their token and get prefilled details", async () => {
-  global.fetch.mockImplementation((url, options) => (options?.method === "POST" ? jsonResponse(201, createdOrder) : jsonResponse(200, createdOrder.order)));
+  serverFetch.mockImplementation((url, options) => (options?.method === "POST" ? jsonResponse(201, createdOrder) : jsonResponse(200, createdOrder.order)));
   renderCheckout({ user: { id: "u1", name: "Ama Mensah", email: "ama@example.test", token: "user-token" } });
   expect(screen.getByLabelText("Full name")).toHaveValue("Ama Mensah");
   expect(screen.getByText(/signed in as ama@example.test/i)).toBeInTheDocument();
@@ -260,11 +286,14 @@ test("signed-in customers send their token and get prefilled details", async () 
   await submit();
   await screen.findByRole("heading", { name: "Order received — awaiting our email" });
   expect(orderCalls()[0][1].headers.Authorization).toBe("Bearer user-token");
+  // A signed-in account is already verified: no email code step.
+  expect(emailCodeCalls("request")).toHaveLength(0);
+  expect(orderCalls()[0][1].headers["X-Checkout-Email-Proof"]).toBeUndefined();
 });
 
 test("an expired sign-in signs the customer out and lets them retry as a guest", async () => {
-  global.fetch.mockImplementationOnce(() => jsonResponse(401, { error: "Unauthorized - invalid token" }));
-  global.fetch.mockImplementation((url, options) => (options?.method === "POST" ? jsonResponse(201, createdOrder) : jsonResponse(200, createdOrder.order)));
+  serverFetch.mockImplementationOnce(() => jsonResponse(401, { error: "Unauthorized - invalid token" }));
+  serverFetch.mockImplementation((url, options) => (options?.method === "POST" ? jsonResponse(201, createdOrder) : jsonResponse(200, createdOrder.order)));
   renderCheckout({ user: { id: "u1", name: "Ama Mensah", email: "ama@example.test", token: "expired-token" } });
   await userEvent.type(screen.getByLabelText("Ghana phone number"), "0241234567");
   await userEvent.type(screen.getByLabelText("Street address or house number"), "12 Ring Road East");
@@ -275,7 +304,7 @@ test("an expired sign-in signs the customer out and lets them retry as a guest",
   expect(await screen.findByRole("alert")).toHaveTextContent(/sign-in has expired/i);
   expect(storedCart()).toEqual(cartItems);
   expect(screen.getByText(/checking out as a guest/i)).toBeInTheDocument();
-  await submit();
+  await submitAsGuest();
   await screen.findByRole("heading", { name: "Order received — awaiting our email" });
   const calls = orderCalls();
   expect(calls[0][1].headers.Authorization).toBe("Bearer expired-token");
@@ -313,10 +342,10 @@ test("closed checkout says ordering opens soon, keeps the cart and shows no form
 });
 
 test("a server-side closed checkout on submit switches to the opening-soon notice", async () => {
-  global.fetch.mockImplementation(() => jsonResponse(503, { error: "Online ordering opens soon.", code: "CHECKOUT_CLOSED" }));
+  serverFetch.mockImplementation(() => jsonResponse(503, { error: "Online ordering opens soon.", code: "CHECKOUT_CLOSED" }));
   renderCheckout();
   await fillValidForm();
-  await submit();
+  await submitAsGuest();
   expect(await screen.findByText(/online ordering opens soon/i)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /place order request/i })).not.toBeInTheDocument();
   expect(storedCart()).toEqual(cartItems);
@@ -328,4 +357,74 @@ test("an open checkout shows the order form", async () => {
   await waitFor(() => expect(fetchCheckoutStatus).toHaveBeenCalled());
   expect(await screen.findByRole("button", { name: /place order request/i })).toBeInTheDocument();
   expect(screen.queryByText(/online ordering opens soon/i)).not.toBeInTheDocument();
+});
+
+test("guests must confirm their email code; a wrong code shows an error and sends no order", async () => {
+  serverFetch.mockImplementation((url, options) => (options?.method === "POST" ? jsonResponse(201, createdOrder) : jsonResponse(200, createdOrder.order)));
+  codeRoutes.verify = jest
+    .fn()
+    .mockImplementationOnce(() => jsonResponse(400, { code: "INVALID_CODE", error: "That code is not valid or has expired." }))
+    .mockImplementation(() => jsonResponse(200, { proof: "email-proof-2" }));
+  renderCheckout();
+  await fillValidForm();
+  await submit();
+
+  expect(await screen.findByText(/we sent a 6-digit code to/i)).toHaveTextContent("ama@example.test");
+  expect(screen.getByLabelText("Full name")).toBeDisabled();
+  expect(orderCalls()).toHaveLength(0);
+
+  await userEvent.click(screen.getByRole("button", { name: /verify code and place order/i }));
+  expect(await screen.findByText("Enter the 6-digit code from your email")).toBeInTheDocument();
+  expect(codeRoutes.verify).not.toHaveBeenCalled();
+
+  await confirmEmailCode("111111");
+  expect(await screen.findByText(/that code is not valid or has expired/i)).toBeInTheDocument();
+  expect(screen.getByLabelText("6-digit code")).toHaveAttribute("aria-invalid", "true");
+  expect(orderCalls()).toHaveLength(0);
+
+  await userEvent.clear(screen.getByLabelText("6-digit code"));
+  await confirmEmailCode("222222");
+  expect(await screen.findByRole("heading", { name: "Order received — awaiting our email" })).toBeInTheDocument();
+  expect(orderCalls()[0][1].headers["X-Checkout-Email-Proof"]).toBe("email-proof-2");
+});
+
+test("guests can resend the code or go back and change their details", async () => {
+  renderCheckout();
+  await fillValidForm();
+  await submit();
+  await screen.findByLabelText("6-digit code");
+
+  await userEvent.click(screen.getByRole("button", { name: /send a new code/i }));
+  expect(await screen.findByText(/we sent a new code/i)).toBeInTheDocument();
+  expect(emailCodeCalls("request")).toHaveLength(2);
+
+  await userEvent.click(screen.getByRole("button", { name: /change my details/i }));
+  expect(screen.queryByLabelText("6-digit code")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Email")).toBeEnabled();
+  expect(screen.getByRole("button", { name: /place order request/i })).toBeInTheDocument();
+});
+
+test("a code request the server refuses keeps the cart and explains why", async () => {
+  codeRoutes.request = () => jsonResponse(429, { code: "RATE_LIMITED", error: "Too many code requests." });
+  renderCheckout();
+  await fillValidForm();
+  await submit();
+  expect(await screen.findByRole("alert")).toHaveTextContent(/too many code requests/i);
+  expect(screen.queryByLabelText("6-digit code")).not.toBeInTheDocument();
+  expect(orderCalls()).toHaveLength(0);
+  expect(storedCart()).toEqual(cartItems);
+});
+
+test("if the server asks for email confirmation again, the code step restarts", async () => {
+  serverFetch
+    .mockImplementationOnce(() => jsonResponse(403, { code: "EMAIL_VERIFICATION_REQUIRED", error: "Confirm your email." }))
+    .mockImplementation((url, options) => (options?.method === "POST" ? jsonResponse(201, createdOrder) : jsonResponse(200, createdOrder.order)));
+  renderCheckout();
+  await fillValidForm();
+  await submitAsGuest();
+  expect(await screen.findByText(/please confirm your email again/i)).toBeInTheDocument();
+  await confirmEmailCode();
+  expect(await screen.findByRole("heading", { name: "Order received — awaiting our email" })).toBeInTheDocument();
+  expect(emailCodeCalls("request")).toHaveLength(2);
+  expect(orderCalls()).toHaveLength(2);
 });
