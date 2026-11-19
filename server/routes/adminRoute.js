@@ -45,7 +45,7 @@ const createAdminRouter = (deps = {}) => {
   const stats = createAdminStatsController({ Order: models.Order, Product: models.Product, HeroSlide: models.HeroSlide, FeaturedSneakers: models.FeaturedSneakers, logger: deps.logger });
   const verificationService =
     deps.verificationService ||
-    createEmailVerificationService({ User: models.User, EmailOutbox: models.EmailOutbox, publicBaseUrl: deps.publicBaseUrl, now: deps.now, logger: deps.logger });
+    createEmailVerificationService({ User: models.User, EmailOutbox: models.EmailOutbox, publicBaseUrl: deps.publicBaseUrl ?? config.publicBaseUrl, now: deps.now, logger: deps.logger });
   const users = createAdminUsersController({ User: models.User, EmailOutbox: models.EmailOutbox, verificationService, logger: deps.logger });
   const limiter = createRateLimiter({ windowMs: 60 * 1000, max: 120, keyFn: (req) => String(req.user?._id || req.ip) });
   const uploadLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, keyFn: (req) => String(req.user?._id || req.ip), message: "Too many image uploads, please try again later" });
