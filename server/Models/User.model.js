@@ -35,6 +35,26 @@ const userSchema = new mongoose.Schema(
     // use an existing session.
     blocked: { type: Boolean, default: false },
     blockedAt: { type: Date },
+    // Email verification (IDE-152). Only accounts created by /register after
+    // the feature shipped carry verificationRequired; existing accounts have
+    // none of these fields and are never subject to verification or cleanup.
+    verificationRequired: { type: Boolean },
+    emailVerifiedAt: { type: Date },
+    // Fixed at registration; resends and email corrections never move it.
+    verificationDeadline: { type: Date },
+    // SHA-256 of the latest link token only; earlier links stop working.
+    emailVerificationTokenHash: { type: String, select: false },
+    emailVerificationExpires: { type: Date, select: false },
+    // Customer resends/corrections in the rolling window, for the 3-per-24h limit.
+    verificationEmailSends: { type: [Date], default: undefined },
+    lastVerificationEmailAt: { type: Date },
+    // Outbox message whose SMTP acceptance makes the account eligible for
+    // automatic deletion: the first verification email to the current address.
+    verificationDeliveryEmailId: { type: mongoose.Schema.Types.ObjectId },
+    verificationEmailAcceptedAt: { type: Date },
+    verificationLatestEmailId: { type: mongoose.Schema.Types.ObjectId },
+    finalWarningQueuedAt: { type: Date },
+    verificationExpiredAt: { type: Date },
   },
   {
     timestamps: true,
@@ -50,6 +70,17 @@ userSchema.pre("save", async function (next) {
   user.password = hashedPassword;
   next();
 });
+// Lookups for verification links and the warning/expiry/cleanup job. Partial,
+// so existing accounts without these fields add nothing to the indexes.
+userSchema.index(
+  { emailVerificationTokenHash: 1 },
+  { name: "email_verification_token", partialFilterExpression: { emailVerificationTokenHash: { $type: "string" } } }
+);
+userSchema.index(
+  { verificationDeadline: 1 },
+  { name: "verification_deadline_pending", partialFilterExpression: { verificationRequired: true } }
+);
+
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 
 module.exports = User;

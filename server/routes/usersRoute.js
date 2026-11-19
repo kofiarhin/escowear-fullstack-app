@@ -1,9 +1,11 @@
 const { Router } = require("express");
 const User = require("../Models/User.model");
 const RateLimit = require("../Models/RateLimit.model");
+const EmailOutbox = require("../Models/EmailOutbox.model");
 const { createUsersController } = require("../controllers/usersController");
 const { createPersistentRateLimiter } = require("../middlewares/persistentRateLimit");
 const { createPasswordResetService } = require("../services/passwordResetService");
+const { createEmailVerificationService } = require("../services/emailVerificationService");
 
 const emailKey = (prefix) => (req) => (typeof req.body?.email === "string" ? `${prefix}:${req.body.email.trim().toLowerCase().slice(0, 254)}` : null);
 
@@ -20,7 +22,18 @@ const createUsersRouter = (deps = {}) => {
       now: deps.now,
       logger: deps.logger,
     });
-  const { createUser, forgotPassword, loginUser, resetPassword } = createUsersController({ UserModel, passwordResetService });
+  const verificationService =
+    deps.verificationService ||
+    createEmailVerificationService({
+      User: UserModel,
+      EmailOutbox: deps.EmailOutbox || EmailOutbox,
+      publicBaseUrl: deps.publicBaseUrl,
+      randomBytes: deps.randomBytes,
+      now: deps.now,
+      logger: deps.logger,
+    });
+  const controller = createUsersController({ UserModel, passwordResetService, verificationService, logger: deps.logger });
+  const { createUser, forgotPassword, loginUser, resetPassword } = controller;
   const fifteenMinutes = 15 * 60 * 1000;
   const persistentLimiter = (options) =>
     createPersistentRateLimiter({ RateLimit: RateLimitModel, now: deps.now, ...options });
@@ -42,6 +55,10 @@ const createUsersRouter = (deps = {}) => {
     keyFn: emailKey("password-reset"),
     message: "Too many password reset requests for this account. Please wait and try again.",
   });
+  // Resend/correction limits per account (3 per 24h, 60s cooldown) are enforced
+  // by the verification service; these only stop request floods.
+  const verificationPerIp = persistentLimiter({ windowMs: fifteenMinutes, max: 30, keyFn: (req) => `email-verification:ip:${req.ip}`, message: "Too many requests. Please wait and try again." });
+  const verifyLinkPerIp = persistentLimiter({ windowMs: fifteenMinutes, max: 20, keyFn: (req) => `verify-email:ip:${req.ip}`, message: "Too many verification attempts. Please wait and try again." });
   const resetPerIp = persistentLimiter({ windowMs: fifteenMinutes, max: 20, keyFn: (req) => `reset-password:ip:${req.ip}`, message: "Too many password reset attempts. Please wait and try again." });
 
   const router = Router();
@@ -49,6 +66,10 @@ const createUsersRouter = (deps = {}) => {
   router.post("/login", loginPerIp, loginPerEmail, loginUser);
   router.post("/forgot-password", forgotPerIp, forgotPerEmail, forgotPassword);
   router.post("/reset-password", resetPerIp, resetPassword);
+  router.post("/verify-email", verifyLinkPerIp, controller.verifyEmail);
+  router.get("/verification", verificationPerIp, controller.verificationStatus);
+  router.post("/verification/resend", verificationPerIp, controller.resendVerification);
+  router.patch("/verification/email", verificationPerIp, controller.changeVerificationEmail);
   // Compatibility for existing real-DB tests. Production never calls this;
   // counters naturally expire through the TTL index.
   router.resetRateLimits = () => {

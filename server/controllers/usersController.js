@@ -2,47 +2,69 @@ const User = require("../Models/User.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { ADMIN_SESSION_SECONDS } = require("../middlewares/auth.middleware");
-const { createPasswordResetService, PASSWORD_MAX, PASSWORD_MIN } = require("../services/passwordResetService");
+const EmailOutbox = require("../Models/EmailOutbox.model");
+const { createPasswordResetService } = require("../services/passwordResetService");
+const { EXPIRED_MESSAGE, VerificationError, createEmailVerificationService } = require("../services/emailVerificationService");
 
 // Admins get short sessions; customers keep the existing 30-day sign-in.
 const createToken = (id, role, sessionVersion = 0) =>
   jwt.sign({ id, sv: sessionVersion }, process.env.JWT_SECRET, { expiresIn: role === "admin" ? ADMIN_SESSION_SECONDS : "30d" });
 
-const createUsersController = ({ UserModel = User, passwordResetService = createPasswordResetService({ User: UserModel }) } = {}) => {
+const createUsersController = ({
+  UserModel = User,
+  passwordResetService = createPasswordResetService({ User: UserModel }),
+  verificationService = createEmailVerificationService({ User: UserModel, EmailOutbox }),
+  logger = console,
+} = {}) => {
+  const sendVerificationError = (res, error, fallback) => {
+    if (error instanceof VerificationError) {
+      const { fields, retryAfterSeconds } = error.extra;
+      if (retryAfterSeconds) res.set("Retry-After", String(retryAfterSeconds));
+      return res.status(error.status).json({ error: error.message, code: error.code, ...(fields ? { fields } : {}), ...(retryAfterSeconds ? { retryAfterSeconds } : {}) });
+    }
+    logger.error(`Account verification request failed: ${error.message}`);
+    return res.status(500).json({ error: fallback, code: "SERVER_ERROR" });
+  };
+
+  const pendingToken = (req) => {
+    const header = req.headers.authorization;
+    const [scheme, token] = typeof header === "string" ? header.split(" ") : [];
+    return scheme === "Bearer" ? token : "";
+  };
+
+  const verificationHandler = (fallback, run) => async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    try {
+      return res.status(200).json(await run(req));
+    } catch (error) {
+      return sendVerificationError(res, error, fallback);
+    }
+  };
+
+  const verifyEmail = verificationHandler("Your email could not be verified. Please try again.", (req) => verificationService.verifyEmail(req.body || {}));
+  const verificationStatus = verificationHandler("Verification status could not be loaded.", (req) => verificationService.getStatus(pendingToken(req)));
+  const resendVerification = verificationHandler("We could not send a new link. Please try again.", (req) => verificationService.resend(pendingToken(req)));
+  const changeVerificationEmail = verificationHandler("We could not update your email. Please try again.", (req) =>
+    verificationService.changeEmail(pendingToken(req), req.body || {})
+  );
+
 
 // @desc create users
 // @router /api/users/register
 // @access public
+// New accounts start unverified: no session is issued, only a restricted
+// credential for the verification page (resend, email correction, status).
 const createUser = async (req, res) => {
-  // Only these fields are accepted; role and other privileged fields never come
-  // from public input.
-  const { name, email, password } = req.body || {};
-  if (typeof name !== "string" || typeof email !== "string" || typeof password !== "string" || !name.trim() || !email.trim()) {
-    return res.status(400).json({ error: "Name, email and password are required" });
-  }
-  if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
-    return res.status(400).json({ error: `Password must be ${PASSWORD_MIN}-${PASSWORD_MAX} characters` });
-  }
   try {
-    const userData = { name: name.trim(), email: email.trim().toLowerCase(), password };
-    // Production uses the Mongoose constructor; the in-memory test model
-    // exposes the equivalent create API.
-    const user = typeof UserModel === "function" ? new UserModel(userData) : await UserModel.create(userData);
-    if (typeof user.save === "function") await user.save();
-    const responseUser = user.toObject ? user.toObject() : { ...user };
-    delete responseUser.password;
-    return res.status(201).json(responseUser);
+    const { user, verification } = await verificationService.register(req.body || {});
+    res.set("Cache-Control", "no-store");
+    return res.status(201).json({
+      message: `We have sent a verification link to ${user.email}. Verify your email to sign in.`,
+      user: { id: String(user._id), name: user.name, email: user.email },
+      verification,
+    });
   } catch (error) {
-    const handleError = (error) => {
-      let message = "There was a problem registering user";
-
-      if (error.code === 11000) {
-        message = "Email already in use";
-      }
-
-      return message;
-    };
-    return res.status(400).json({ error: handleError(error) });
+    return sendVerificationError(res, error, "There was a problem registering user");
   }
 };
 
@@ -71,6 +93,18 @@ const loginUser = async (req, res) => {
         // Only revealed after a correct password, so it cannot be used to probe
         // which emails are registered.
         if (user.blocked) return res.status(403).json({ error: "This account has been blocked", code: "ACCOUNT_BLOCKED" });
+        // New accounts sign in only after verifying their email. Existing
+        // accounts have no verification requirement and are unaffected.
+        const state = verificationService.stateOf(user);
+        if (state === "pending") {
+          res.set("Cache-Control", "no-store");
+          return res.status(403).json({
+            error: "Please verify your email address before signing in.",
+            code: "EMAIL_NOT_VERIFIED",
+            verification: verificationService.pendingResponse(user),
+          });
+        }
+        if (state === "expired") return res.status(403).json({ error: EXPIRED_MESSAGE, code: "ACCOUNT_EXPIRED" });
         const { _id, email, name } = user;
         // `role` only drives what the UI shows; every admin API re-checks it server-side.
         return res
@@ -106,7 +140,7 @@ const loginUser = async (req, res) => {
     }
   };
 
-  return { createUser, forgotPassword, loginUser, resetPassword };
+  return { changeVerificationEmail, createUser, forgotPassword, loginUser, resendVerification, resetPassword, verificationStatus, verifyEmail };
 };
 
 const defaultController = createUsersController();

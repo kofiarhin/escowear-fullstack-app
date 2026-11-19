@@ -3,7 +3,7 @@
 // Bank/payment-channel details are never in source: they come from private
 // server configuration (ESCOWEAR_PAYMENT_INSTRUCTIONS) at send-queue time.
 
-const TEMPLATE_VERSION = "2026-10-27.1";
+const TEMPLATE_VERSION = "2026-11-19.1";
 const { business } = require("../../client/src/policies/review.json");
 const { ORDER_STATUS: S } = require("../services/orderStatus");
 
@@ -210,6 +210,49 @@ const templates = {
       "",
       `It expires in ${ttlMinutes} minutes and can be used once.`,
       "If you did not request this, you can ignore this email.",
+      ...signOff,
+    ].join("\n"),
+  }),
+
+  // The link carries a one-time credential; the queued body is purged once sent.
+  account_verification: ({ name, link, deadline }) => ({
+    subject: "Verify your EscoWear email address",
+    text: [
+      `Hi ${name},`,
+      "",
+      "Please confirm this is your email address to finish creating your EscoWear account.",
+      "",
+      `Verify your email: ${link}`,
+      "",
+      "This link expires in 24 hours and can only be used once.",
+      `If your email is not verified by ${formatDate(deadline)}, the account will be removed.`,
+      "If you did not create an EscoWear account, you can ignore this email.",
+      ...signOff,
+    ].join("\n"),
+  }),
+
+  account_final_warning: ({ name, link, deadline }) => ({
+    subject: "Last reminder: verify your EscoWear email",
+    text: [
+      `Hi ${name},`,
+      "",
+      `Your EscoWear account is still unverified and will be removed on ${formatDate(deadline)}.`,
+      "",
+      `Verify your email now: ${link}`,
+      "",
+      "This link can only be used once. Earlier verification links no longer work.",
+      "If you did not create an EscoWear account, you can ignore this email.",
+      ...signOff,
+    ].join("\n"),
+  }),
+
+  checkout_email_code: ({ code, ttlMinutes }) => ({
+    subject: "Your EscoWear checkout code",
+    text: [
+      `Your code to confirm your email for checkout is: ${code}`,
+      "",
+      `It expires in ${ttlMinutes} minutes and can be used once.`,
+      "If you did not start a checkout on EscoWear, you can ignore this email.",
       ...signOff,
     ].join("\n"),
   }),

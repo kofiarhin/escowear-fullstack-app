@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../Models/User.model");
+const { verificationState } = require("../services/emailVerificationService");
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
 const ADMIN_SESSION_SECONDS = 12 * 60 * 60;
@@ -38,6 +39,11 @@ const createAuth = (UserModel = User) => {
       return { error: 401, message: "Unauthorized - session expired", code: "SESSION_REVOKED" };
     }
     if (user.blocked) return { error: 403, message: "This account has been blocked", code: "ACCOUNT_BLOCKED" };
+    // Unverified new accounts are never issued sessions; this also stops a
+    // session for an account whose verification lapsed (IDE-152).
+    const state = verificationState(user);
+    if (state === "pending") return { error: 403, message: "Please verify your email address before signing in.", code: "EMAIL_NOT_VERIFIED" };
+    if (state === "expired") return { error: 403, message: "This account has expired", code: "ACCOUNT_EXPIRED" };
     return { user, issuedAt: typeof payload.iat === "number" ? payload.iat : 0 };
   };
 

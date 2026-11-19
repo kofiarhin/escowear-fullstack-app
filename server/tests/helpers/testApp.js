@@ -23,6 +23,7 @@ const createModels = () => ({
   Product: createMemoryModel(),
   User: createMemoryModel({ uniques: ["email"] }),
   TrackingChallenge: createMemoryModel(),
+  CheckoutEmailChallenge: createMemoryModel(),
   PaymentProof: createMemoryModel({ uniques: ["idempotencyKeyHash"] }),
   HeroSlide: createMemoryModel({ uniques: ["productId"] }),
   FeaturedSneakers: createMemoryModel({ uniques: ["_id"] }),
@@ -72,8 +73,17 @@ const userToken = (userId) => jwt.sign({ id: String(userId) }, process.env.JWT_S
 // `models` may be real Mongoose models (see realDb.js); defaults to in-memory.
 const startTestApp = async ({ config: configOverrides = {}, deps = {}, models = createModels() } = {}) => {
   const proofDir = configOverrides.proofUploadDir || tempProofDir();
-  const config = { ...getOrderConfig({}), checkoutOpen: true, publicBaseUrl: "https://shop.example.test", proofUploadDir: proofDir, ...configOverrides };
-  const userDeps = { RateLimit: models.RateLimit, logger: silentLogger, ...(deps.users ? { User: models.User } : {}), ...(deps.users || {}) };
+  // Suites about other order behaviour place guest orders without the email
+  // code step; guestEmailVerification.test.js turns it on (production default).
+  const config = {
+    ...getOrderConfig({}),
+    checkoutOpen: true,
+    guestEmailVerification: false,
+    publicBaseUrl: "https://shop.example.test",
+    proofUploadDir: proofDir,
+    ...configOverrides,
+  };
+  const userDeps = { RateLimit: models.RateLimit, EmailOutbox: models.EmailOutbox, logger: silentLogger, User: models.User, ...(deps.users || {}) };
   const app = createApp({
     products: { Product: models.Product },
     heroSlides: { Product: models.Product, HeroSlide: models.HeroSlide },

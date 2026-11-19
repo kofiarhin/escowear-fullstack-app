@@ -136,7 +136,7 @@ const parsePage = (query = {}) => {
   return { page, limit, skip: (page - 1) * limit };
 };
 
-const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, logger = console, randomBytes }) => {
+const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, logger = console, randomBytes, checkoutEmail }) => {
   const baseUrl = () => config.publicBaseUrl;
   // Test configs may omit the proof TTL; tracking uses the same fallback.
   const proofTtl = () => config.proofAccessTtlMinutes || config.checkoutAccessTtlMinutes;
@@ -215,7 +215,7 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
   // Public: whether new order requests are accepted (no other settings exposed).
   const checkoutStatus = () => ({ open: Boolean(config.checkoutOpen) });
 
-  const createGuestOrder = async ({ body, idempotencyKey, user }) => {
+  const createGuestOrder = async ({ body, idempotencyKey, user, emailProof }) => {
     if (!isValidIdempotencyKey(idempotencyKey)) {
       throw new OrderError(400, "IDEMPOTENCY_KEY_REQUIRED", "A valid Idempotency-Key header is required");
     }
@@ -240,6 +240,14 @@ const createOrderService = ({ Order, Product, OrderEvent, EmailOutbox, config, l
     if (config.policiesPublished && input.termsVersion !== config.policyVersion) {
       const message = "Our shop policies have been updated. Please refresh the page and review them before ordering.";
       throw new OrderError(422, "POLICY_VERSION_CHANGED", message, { termsVersion: message });
+    }
+
+    // Guests prove they control the order email with a one-time code bound to
+    // this checkout attempt (IDE-152). Signed-in customers have a verified or
+    // pre-existing account instead.
+    if (!user && config.guestEmailVerification) {
+      if (!checkoutEmail) throw new Error("Guest email verification is not configured");
+      checkoutEmail.assertProof(emailProof, { email: input.customer.email, idempotencyKey });
     }
 
     const ids = [...new Set(input.items.map((item) => item.productId))];

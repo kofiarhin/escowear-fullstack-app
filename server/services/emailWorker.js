@@ -1,15 +1,22 @@
 const { EMAIL_STATE } = require("./orderStatus");
 const { processOutboxBatch } = require("./emailOutbox");
+const { GUEST_EMAIL_CODE, VERIFICATION } = require("../config/verification");
 
 // One worker tick: repair any guest order whose acknowledgement was never
 // queued (e.g. the outbox write failed after the order was saved), then send
 // due messages.
 const runEmailWorkerTick = async ({ Order, EmailOutbox, orderService, transport, logger = console, now = () => new Date(), trackingCodeTtlMinutes = 10 }) => {
   // Never deliver a tracking code after it has expired; drop its body.
-  await EmailOutbox.updateMany(
-    { kind: "tracking_code", state: "queued", createdAt: { $lte: new Date(now().getTime() - trackingCodeTtlMinutes * 60 * 1000) } },
-    { $set: { state: "failed", lastError: "Code expired before it could be sent", "payload.text": "[removed: expired]" } }
-  );
+  const expireQueued = (kind, ttlMs, lastError) =>
+    EmailOutbox.updateMany(
+      { kind, state: "queued", createdAt: { $lte: new Date(now().getTime() - ttlMs) } },
+      { $set: { state: "failed", lastError, "payload.text": "[removed: expired]" } }
+    );
+  await expireQueued("tracking_code", trackingCodeTtlMinutes * 60 * 1000, "Code expired before it could be sent");
+  await expireQueued("checkout_email_code", GUEST_EMAIL_CODE.ttlMs, "Code expired before it could be sent");
+  // A verification link is never delivered after it has expired.
+  await expireQueued("account_verification", VERIFICATION.linkTtlMs, "Link expired before it could be sent");
+  await expireQueued("account_final_warning", VERIFICATION.linkTtlMs, "Link expired before it could be sent");
 
   const missing = await Order.find({ source: "guest_checkout", "email.acknowledgementState": EMAIL_STATE.NOT_QUEUED })
     .limit(20)

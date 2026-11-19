@@ -342,21 +342,13 @@ test("order creation is rate limited per client", async (t) => {
 
 test("registration ignores privileged fields", async (t) => {
   const ctx = await setup(t);
-  const User = require("../Models/User.model");
-  const saved = [];
-  const original = User.prototype.save;
-  User.prototype.save = async function save() {
-    saved.push(this.toObject());
-    return this;
-  };
-  t.after(() => {
-    User.prototype.save = original;
-  });
   const response = await ctx.request("POST", "/api/users/register", {
-    body: { name: "Mallory", email: "mallory@example.test", password: "pw-1234567890", role: "admin", _id: "x" },
+    body: { name: "Mallory", email: "mallory@example.test", password: "pw-1234567890", passwordConfirmation: "pw-1234567890", role: "admin", _id: "x" },
   });
   assert.equal(response.status, 201);
-  assert.notEqual(saved[0].role, "admin");
+  const saved = ctx.models.User.docs.find((user) => user.email === "mallory@example.test");
+  assert.equal(saved.role, "customer");
+  assert.notEqual(String(saved._id), "x");
 });
 
 test("validator unit rules", () => {

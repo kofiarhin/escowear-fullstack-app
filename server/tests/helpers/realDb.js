@@ -32,6 +32,7 @@ const connectTestDb = async () => {
     FeaturedSneakers: require("../../Models/FeaturedSneakers.model"),
     HomepageLatestReleases: require("../../Models/HomepageLatestReleases.model"),
     RateLimit: require("../../Models/RateLimit.model"),
+    CheckoutEmailChallenge: require("../../Models/CheckoutEmailChallenge.model"),
   };
   try {
     models.TrackingChallenge = require("../../Models/TrackingChallenge.model");

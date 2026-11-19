@@ -35,7 +35,9 @@ test("admin lists users newest first with safe fields only", async (t) => {
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual(response.body.items.map((user) => user.email), ["kojo@example.test", "ama@example.test", "admin@example.test"]);
-  assert.deepEqual(Object.keys(response.body.items[0]).sort(), ["blocked", "blockedAt", "createdAt", "email", "id", "name", "role"]);
+  assert.deepEqual(Object.keys(response.body.items[0]).sort(), ["blocked", "blockedAt", "createdAt", "email", "id", "name", "role", "verification"]);
+  // Existing accounts carry no verification requirement (IDE-152).
+  assert.deepEqual(response.body.items[0].verification, { state: "not_required" });
   assert.equal(response.body.items[0].blocked, true);
   assert.equal(response.body.items[1].blocked, false);
   assert.equal(response.body.items[2].role, "admin");
