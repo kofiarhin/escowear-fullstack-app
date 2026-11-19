@@ -11,6 +11,7 @@ const os = require("node:os");
 process.env.NODE_ENV = "production"; // serve client/build like the container does
 process.env.JWT_SECRET = crypto.randomBytes(32).toString("hex");
 
+const bcrypt = require("bcryptjs");
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const { Types } = require("mongoose");
@@ -38,8 +39,18 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
       OrderEvent: createMemoryModel({ uniques: ["dedupeKey"] }),
       EmailOutbox: createMemoryModel({ uniques: ["dedupeKey"] }),
       Product: createMemoryModel(),
-      User: createMemoryModel({ uniques: ["email"] }),
+      // Mirrors the Mongoose pre-save hook so registered accounts can sign in.
+      User: createMemoryModel({
+        uniques: ["email"],
+        hooks: {
+          beforeCreate: async (data) => {
+            if (typeof data.password === "string" && !data.password.startsWith("$2")) data.password = await bcrypt.hash(data.password, 4);
+          },
+        },
+      }),
       TrackingChallenge: createMemoryModel(),
+      CheckoutEmailChallenge: createMemoryModel(),
+      RateLimit: createMemoryModel({ uniques: ["key"] }),
       PaymentProof: createMemoryModel({ uniques: ["idempotencyKeyHash"] }),
       HeroSlide: createMemoryModel({ uniques: ["productId"] }),
     };
@@ -114,12 +125,15 @@ const start = async ({ port = 0, logger = { error() {}, log() {} } } = {}) => {
       heroSlides: { Product: models.Product, HeroSlide: models.HeroSlide },
       orders: { models, config, logger, env: paymentEnv },
       admin: { models, config, logger, env: paymentEnv },
+      users: { User: models.User, EmailOutbox: models.EmailOutbox, RateLimit: models.RateLimit, logger },
     })
   );
 
   const server = outer.listen(port, "127.0.0.1");
   await new Promise((resolve) => server.once("listening", resolve));
   const url = `http://127.0.0.1:${server.address().port}`;
+  // Verification links are built from this at request time (NODE_ENV is production here).
+  process.env.ESCOWEAR_PUBLIC_URL = url;
   const stop = async () => {
     clearInterval(timer);
     await new Promise((resolve) => server.close(resolve));

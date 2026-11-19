@@ -22,6 +22,8 @@ import AdminLatestReleases from "./AdminLatestReleases/AdminLatestReleases.page"
 import AdminUsers from "./AdminUsers/AdminUsers.page";
 import ForgotPassword from "./PasswordRecovery/ForgotPassword.page";
 import ResetPassword from "./PasswordRecovery/ResetPassword.page";
+import CheckEmail from "./VerifyEmail/CheckEmail.page";
+import VerifyEmail from "./VerifyEmail/VerifyEmail.page";
 import Wishlist from "./Wishlist/Wishlist.page";
 
-export { Register, Login, Cart, Store, Home, Details, DashBoard, Account, Checkout, OrderConfirmation, AdminOverview, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, AdminFeaturedSneakers, AdminClassics, AdminLatestReleases, AdminUsers, TrackOrder, OrderDetails, Policies, ForgotPassword, ResetPassword, Wishlist };
+export { Register, Login, Cart, Store, Home, Details, DashBoard, Account, Checkout, OrderConfirmation, AdminOverview, AdminOrders, AdminOrderDetail, AdminHeroSlides, AdminProducts, AdminProductForm, AdminFeaturedSneakers, AdminClassics, AdminLatestReleases, AdminUsers, TrackOrder, OrderDetails, Policies, ForgotPassword, ResetPassword, CheckEmail, VerifyEmail, Wishlist };

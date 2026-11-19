@@ -78,6 +78,69 @@ const waitForCode = async (harness, orderNumber, count) => {
   throw new Error("tracking code email not delivered");
 };
 
+// Waits for the latest email with this subject to this address.
+const waitForMail = async (harness, to, subjectPattern, count = 1) => {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const mails = (await (await fetch(`${harness.url}/__e2e/outbox`)).json()).filter((mail) => mail.to === to && subjectPattern.test(mail.subject));
+    if (mails.length >= count) return mails[count - 1];
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`email "${subjectPattern}" to ${to} not delivered`);
+};
+
+// IDE-152: register -> check email -> blocked sign-in -> verify link -> sign in.
+const runAccountJourney = async (browser, harness, { name, ...contextOptions }) => {
+  const problems = [];
+  const context = await browser.newContext(contextOptions);
+  const page = await context.newPage();
+  watch(page, `${name}/account`, problems);
+  const email = `${name}.new@e2e.test`;
+  const password = "e2e-account-password";
+
+  await page.goto(`${harness.url}/register`);
+  await page.getByLabel("Name").fill("E2E New Customer");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel("Confirm Password").fill(password);
+  await page.getByRole("button", { name: "Register" }).click();
+  await page.waitForURL("**/check-email");
+  await page.getByRole("heading", { name: "Check your email." }).waitFor();
+  await page.getByText(email).waitFor();
+  await page.getByRole("button", { name: /resend link in \d+s/i }).waitFor();
+  await expectNoA11yIssues(page, `${name} check email`);
+  await page.screenshot({ path: path.join(OUT, `${name}-0-check-email.png`), fullPage: true });
+  assert.equal(await page.evaluate(() => localStorage.getItem("user")), null, "registration does not sign in");
+  pass(`${name}: registration shows check-email with address, deadline and resend cooldown; no session`);
+
+  await page.goto(`${harness.url}/login`);
+  await page.getByPlaceholder("Enter Email").fill(email);
+  await page.getByPlaceholder("Enter Password").fill(password);
+  await page.getByRole("button", { name: /login/i }).click();
+  await page.waitForURL("**/check-email");
+  pass(`${name}: sign-in before verification is refused and returns to check-email`);
+
+  const mail = await waitForMail(harness, email, /Verify your EscoWear email/);
+  const link = mail.text.match(/https?:\/\/\S+\/verify-email\?token=[a-f0-9]{64}/)[0];
+  await page.goto(link);
+  await page.getByRole("button", { name: "Verify my email" }).waitFor();
+  assert.equal(new URL(page.url()).search, "", "token removed from the address bar");
+  await expectNoA11yIssues(page, `${name} verify email`);
+  await page.getByRole("button", { name: "Verify my email" }).click();
+  await page.getByRole("heading", { name: "You're verified." }).waitFor();
+  pass(`${name}: emailed link verifies on click, token stripped from URL`);
+
+  await page.goto(`${harness.url}/login`);
+  await page.getByPlaceholder("Enter Email").fill(email);
+  await page.getByPlaceholder("Enter Password").fill(password);
+  await page.getByRole("button", { name: /login/i }).click();
+  await page.waitForURL("**/account");
+  pass(`${name}: verified account signs in normally`);
+
+  await context.close();
+  assert.deepEqual(problems.expected4xx, ["403 /api/users/login"]);
+  assert.deepEqual([...problems], [], problems.join("\n"));
+};
+
 // Customer pays (outside the site) then uploads screenshot + transaction ID.
 const uploadProof = async (page, proofPng, shot) => {
   await page.getByText(/E2E TEST CHANNEL/).waitFor({ timeout: 10000 }).catch(async (error) => {
@@ -138,6 +201,13 @@ const runJourney = async (browser, harness, { name, ...contextOptions }) => {
   // Keyboard submit: focus the button and press Enter.
   await page.getByRole("button", { name: "Place order request" }).focus();
   await page.keyboard.press("Enter");
+  // IDE-152: guests confirm their email with a 6-digit code first.
+  const codeField = page.getByLabel("6-digit code");
+  await codeField.waitFor();
+  await expectNoA11yIssues(page, `${name} checkout email code`);
+  const codeMail = await waitForMail(harness, `${name}.customer@e2e.test`, /checkout code/);
+  await codeField.fill(codeMail.text.match(/is: (\d{6})/)[1]);
+  await codeField.press("Enter");
   await page.getByRole("heading", { name: "Order received — awaiting our email" }).waitFor();
   const orderNumber = (await page.locator(".order-confirmation-reference strong").textContent()).trim();
   assert.match(orderNumber, /^EW-/);
@@ -145,7 +215,7 @@ const runJourney = async (browser, harness, { name, ...contextOptions }) => {
   await page.getByText(/not paid and not yet confirmed/i).waitFor();
   await expectNoA11yIssues(page, `${name} confirmation`);
   await shot(page, "2-confirmation");
-  pass(`${name}: keyboard submit creates ${orderNumber}, received-only receipt, cart cleared`);
+  pass(`${name}: keyboard submit + emailed checkout code creates ${orderNumber}, received-only receipt, cart cleared`);
 
   const confirmationUrl = page.url();
   const stranger = await browser.newContext(contextOptions);
@@ -296,7 +366,10 @@ const runJourney = async (browser, harness, { name, ...contextOptions }) => {
   console.log(`Harness data store: ${harness.database}`);
   const browser = await chromium.launch();
   try {
-    for (const viewport of VIEWPORTS) await runJourney(browser, harness, viewport);
+    for (const viewport of VIEWPORTS) {
+      await runAccountJourney(browser, harness, viewport);
+      await runJourney(browser, harness, viewport);
+    }
     console.log(`\n${results.length} checks passed. Screenshots: ${OUT}`);
   } finally {
     await browser.close();

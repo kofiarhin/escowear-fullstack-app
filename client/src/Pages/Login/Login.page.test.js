@@ -95,3 +95,35 @@ describe("postLoginPath", () => {
     expect(postLoginPath(admin, { from: { pathname: "/checkout" } })).toBe("/admin");
   });
 });
+
+test("an unverified new account is sent to the check-email page without signing in", async () => {
+  render(
+    <Provider store={createStore(reducers, applyMiddleware(thunkMiddleware))}>
+      <MemoryRouter initialEntries={["/login"]}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/check-email" element={<p>Check email page</p>} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>
+  );
+  global.fetch.mockResolvedValueOnce({
+    ok: false,
+    json: async () => ({ error: "Please verify your email address before signing in.", code: "EMAIL_NOT_VERIFIED", verification: { pendingToken: "pending-1", email: "ama@example.test" } }),
+  });
+  await userEvent.type(screen.getByPlaceholderText("Enter Email"), "ama@example.test");
+  await userEvent.type(screen.getByPlaceholderText("Enter Password"), "a-long-password");
+  await userEvent.click(screen.getByRole("button", { name: /login/i }));
+  expect(await screen.findByText("Check email page")).toBeInTheDocument();
+  expect(localStorage.getItem("user")).toBeNull();
+  expect(JSON.parse(sessionStorage.getItem("escowear-pending-verification-v1")).pendingToken).toBe("pending-1");
+});
+
+test("an expired unverified account sees why it cannot sign in", async () => {
+  renderLogin();
+  global.fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: "This account was not verified in time and has expired. Please register again.", code: "ACCOUNT_EXPIRED" }) });
+  await userEvent.type(screen.getByPlaceholderText("Enter Email"), "ama@example.test");
+  await userEvent.type(screen.getByPlaceholderText("Enter Password"), "a-long-password");
+  await userEvent.click(screen.getByRole("button", { name: /login/i }));
+  expect(await screen.findByText(/not verified in time/i)).toBeInTheDocument();
+});

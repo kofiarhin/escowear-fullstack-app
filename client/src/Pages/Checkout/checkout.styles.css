@@ -303,3 +303,50 @@
     min-width: 0;
   }
 }
+
+/* Guest email confirmation step (IDE-152). */
+.checkout-form .checkout-email-code {
+  padding: 20px 22px 4px;
+  border-left: 4px solid var(--border-strong);
+  background: var(--surface-raised);
+}
+
+.checkout-email-code .checkout-hint {
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
+}
+
+.checkout-email-code input {
+  max-width: 12rem;
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  letter-spacing: 0.3em;
+}
+
+.checkout-email-code-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 18px;
+}
+
+.checkout-link-button {
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checkout-link-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.checkout-link-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}

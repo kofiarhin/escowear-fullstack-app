@@ -8,6 +8,8 @@ import { formatGBP } from "../../utils/money";
 import { apiRequest, authHeader, NetworkError } from "../../utils/api";
 import { saveOrderAccess, saveProofAccess } from "../../utils/orderAccess";
 import { fetchCheckoutStatus } from "../../utils/checkoutStatus";
+import { requestCheckoutCode, verifyCheckoutCode } from "../../utils/verification";
+import EmailCodeStep from "./EmailCodeStep";
 import {
   GHANA_REGIONS,
   buildOrderPayload,
@@ -53,6 +55,11 @@ const Checkout = () => {
   const [status, setStatus] = useState({ state: "idle", message: "" });
   const submitting = useRef(false);
   const formRef = useRef(null);
+  // Guests confirm their email with a one-time code bound to this exact order
+  // attempt (email + Idempotency-Key). The proof lives in memory only.
+  const [emailStep, setEmailStep] = useState(null);
+  const emailProof = useRef(null);
+  const codeInputRef = useRef(null);
   // null = not known yet; false = the shop is not taking orders yet.
   const [checkoutOpen, setCheckoutOpen] = useState(null);
 
@@ -106,9 +113,81 @@ const Checkout = () => {
     if (first) formRef.current?.querySelector(`[name="${first}"]`)?.focus();
   };
 
+  const hasEmailProof = (payload, key) =>
+    emailProof.current?.key === key && emailProof.current.email === payload.customer.email.toLowerCase();
+
+  const startEmailStep = async (payload, key, notice = "") => {
+    submitting.current = true;
+    setStatus({ state: "submitting", message: "Sending a code to your email…" });
+    try {
+      const { ok, status: httpStatus, data } = await requestCheckoutCode(payload.customer.email, key);
+      if (ok) {
+        setEmailStep({ payload, key, email: payload.customer.email, code: "", error: "", notice });
+        setStatus({ state: "idle", message: "" });
+        setTimeout(() => codeInputRef.current?.focus(), 0);
+        return;
+      }
+      if (httpStatus === 422 && data?.fields?.email) {
+        setErrors((current) => ({ ...current, email: data.fields.email }));
+        setStatus({ state: "invalid", message: "Please correct the highlighted fields." });
+        focusFirstError({ email: true });
+      } else if (httpStatus === 429) {
+        setStatus({ state: "error", message: "Too many code requests. Please wait a few minutes and try again." });
+      } else {
+        setStatus({ state: "error", message: "We couldn't send a code to your email. Please try again." });
+      }
+    } catch {
+      setStatus({ state: "error", message: "We couldn't reach EscoWear to send your code. Your cart has been kept — please try again." });
+    } finally {
+      submitting.current = false;
+    }
+  };
+
+  const resendCode = () => {
+    if (!emailStep || submitting.current) return;
+    startEmailStep(emailStep.payload, emailStep.key, "We sent a new code. Earlier codes no longer work.");
+  };
+
+  const confirmEmailCode = async () => {
+    const { payload, key, code } = emailStep;
+    if (!/^\d{6}$/.test(code)) {
+      setEmailStep((current) => ({ ...current, error: "Enter the 6-digit code from your email", notice: "" }));
+      codeInputRef.current?.focus();
+      return;
+    }
+    submitting.current = true;
+    setStatus({ state: "submitting", message: "Checking your code…" });
+    let verified = false;
+    try {
+      const { ok, status: httpStatus, data } = await verifyCheckoutCode(payload.customer.email, key, code);
+      if (ok && data?.proof) {
+        emailProof.current = { key, email: payload.customer.email.toLowerCase(), proof: data.proof };
+        verified = true;
+      } else {
+        const message =
+          httpStatus === 429 ? "Too many attempts. Please wait a few minutes and try again." : "That code is not valid or has expired. Check it or send a new code.";
+        setEmailStep((current) => ({ ...current, error: message, notice: "" }));
+        setStatus({ state: "idle", message: "" });
+        codeInputRef.current?.focus();
+      }
+    } catch {
+      setStatus({ state: "error", message: "We couldn't reach EscoWear to check your code. Please try again." });
+    } finally {
+      submitting.current = false;
+    }
+    if (verified) {
+      setEmailStep(null);
+      await placeOrder(payload, key);
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (submitting.current) return;
+    if (emailStep) {
+      await confirmEmailCode();
+      return;
+    }
 
     const clientErrors = validateCheckoutForm(form);
     setErrors(clientErrors);
@@ -121,14 +200,23 @@ const Checkout = () => {
 
     const payload = buildOrderPayload(form, items);
     const key = idempotencyKeyFor(payload);
+    if (!user && !hasEmailProof(payload, key)) {
+      await startEmailStep(payload, key);
+      return;
+    }
+    await placeOrder(payload, key);
+  };
+
+  const placeOrder = async (payload, key) => {
     submitting.current = true;
     setStatus({ state: "submitting", message: "Placing your order…" });
+    const proofHeader = !user && emailProof.current?.key === key ? { "X-Checkout-Email-Proof": emailProof.current.proof } : {};
 
     try {
       const { ok, status: httpStatus, data } = await apiRequest("/api/orders", {
         method: "POST",
         body: payload,
-        headers: { "Idempotency-Key": key, ...authHeader(user) },
+        headers: { "Idempotency-Key": key, ...authHeader(user), ...proofHeader },
       });
 
       if (ok && data?.orderId && data?.orderNumber && (httpStatus === 201 || httpStatus === 200)) {
@@ -153,6 +241,11 @@ const Checkout = () => {
               : data?.error || "Please correct the highlighted fields.",
         });
         focusFirstError(mapped.formErrors);
+      } else if (httpStatus === 403 && data?.code === "EMAIL_VERIFICATION_REQUIRED") {
+        // The proof expired or no longer matches: confirm the email again.
+        emailProof.current = null;
+        submitting.current = false;
+        await startEmailStep(payload, key, "Please confirm your email again to place your order.");
       } else if (httpStatus === 401 && user) {
         // A stored sign-in that has expired must not block checkout.
         dispatch(logoutUser());
@@ -184,6 +277,7 @@ const Checkout = () => {
   };
 
   const isSubmitting = status.state === "submitting";
+  const detailsLocked = isSubmitting || Boolean(emailStep);
   const input = (field, props = {}, hasHint = false) => (
     <input
       id={`checkout-${field}`}
@@ -192,7 +286,7 @@ const Checkout = () => {
       onChange={update(field)}
       aria-invalid={errors[field] ? "true" : undefined}
       aria-describedby={describedBy(`checkout-${field}`, hasHint, errors[field])}
-      disabled={isSubmitting}
+      disabled={detailsLocked}
       {...props}
     />
   );
@@ -206,7 +300,7 @@ const Checkout = () => {
           <p className="checkout-account">Signed in as {user.email}. This order will appear in your account.</p>
         ) : (
           <p className="checkout-account">
-            Checking out as a guest — no account needed.{" "}
+            Checking out as a guest — no account needed. We'll email you a code to confirm your address.{" "}
             <Link to="/login" state={{ from: "/checkout" }}>
               Sign in
             </Link>{" "}
@@ -263,7 +357,7 @@ const Checkout = () => {
                   onChange={update("region")}
                   aria-invalid={errors.region ? "true" : undefined}
                   aria-describedby={describedBy("checkout-region", false, errors.region)}
-                  disabled={isSubmitting}
+                  disabled={detailsLocked}
                   required
                 >
                   <option value="">Select a region</option>
@@ -300,7 +394,7 @@ const Checkout = () => {
                 onChange={update("termsAccepted")}
                 aria-invalid={errors.termsAccepted ? "true" : undefined}
                 aria-describedby={describedBy("checkout-termsAccepted", false, errors.termsAccepted)}
-                disabled={isSubmitting}
+                disabled={detailsLocked}
               />
               <label htmlFor="checkout-termsAccepted">
                 I understand this is an order request, not a payment, and agree that EscoWear may use my details to process
@@ -324,12 +418,29 @@ const Checkout = () => {
             </div>
           </fieldset>
 
+          {emailStep && (
+            <EmailCodeStep
+              email={emailStep.email}
+              code={emailStep.code}
+              error={emailStep.error}
+              notice={emailStep.notice}
+              busy={isSubmitting}
+              inputRef={codeInputRef}
+              onCodeChange={(code) => setEmailStep((current) => ({ ...current, code, error: "" }))}
+              onResend={resendCode}
+              onCancel={() => {
+                setEmailStep(null);
+                setStatus({ state: "idle", message: "" });
+              }}
+            />
+          )}
+
           <div id="checkout-status" className={`checkout-status is-${status.state}`} role={status.state === "error" || status.state === "invalid" ? "alert" : "status"} aria-live="polite">
             {status.message}
           </div>
 
           <button className="checkout-button checkout-button-dark" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
-            {isSubmitting ? "Placing order…" : "Place order request"}
+            {isSubmitting ? (emailStep ? "Checking code…" : "Placing order…") : emailStep ? "Verify code and place order" : "Place order request"}
           </button>
         </form>
 

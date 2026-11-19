@@ -1,0 +1,82 @@
+/* Builds on the account recovery panel styles. */
+.verify-email-address {
+  overflow-wrap: anywhere;
+}
+
+.verify-facts {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.verify-facts div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.verify-facts dt {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.verify-help {
+  margin: 0 0 18px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.verify-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.verify-primary,
+.verify-secondary {
+  min-height: 52px;
+  padding: 0.9rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.verify-primary {
+  flex: 1 1 200px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.verify-primary:hover:not(:disabled) {
+  background: var(--accent-hover-strong);
+}
+
+.verify-secondary {
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
+}
+
+.verify-primary:disabled,
+.verify-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.verify-change {
+  margin-bottom: 18px;
+}
+
+.verify-status:empty {
+  display: none;
+}

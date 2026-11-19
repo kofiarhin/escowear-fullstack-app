@@ -21,14 +21,14 @@ const userReducer = (state = initialState, action) => {
         error: action.payload,
       };
     case "REGISTER_USER_SUCCESS":
-      return { ...state, isPending: false, user: action.payload };
+      return { ...state, isPending: false, error: "" };
     case "REGISTER_USER_PENDING":
-      return { ...state, isPending: true, user: action.payload };
+      return { ...state, isPending: true, error: "" };
     case "LOGOUT_USER":
       localStorage.removeItem("user");
       return { ...state, user: null };
     case "LOGIN_PENDING":
-      return { ...state, isPending: true };
+      return { ...state, isPending: true, error: "" };
     case "LOGIN_SUCCESS":
       localStorage.setItem("user", JSON.stringify(action.payload));
       return { ...state, isPending: false, user: action.payload };
@@ -36,7 +36,7 @@ const userReducer = (state = initialState, action) => {
       return {
         ...state,
         isPending: false,
-        error: "invalid email/password combination",
+        error: action.payload ?? "invalid email/password combination",
       };
     default:
       return state;

@@ -12,6 +12,32 @@ import "./adminUsers.styles.css";
 // Text is always shown; colour only reinforces the account state.
 const AccountBadge = ({ blocked }) => <span className={`admin-badge ${blocked ? "is-tone-attention" : "is-tone-done"}`}>{blocked ? "Blocked" : "Active"}</span>;
 
+const VERIFICATION_LABELS = {
+  not_required: ["Existing account", "is-tone-closed"],
+  verified: ["Verified", "is-tone-done"],
+  pending: ["Pending", "is-tone-progress"],
+  expired: ["Expired", "is-tone-attention"],
+};
+const MAIL_LABELS = { sent: "Email accepted by mail server", queued: "Email queued", sending: "Email sending", failed: "Email not delivered" };
+
+// Email verification for accounts created after IDE-152. Existing accounts
+// have no requirement and are never removed automatically.
+const VerificationCell = ({ verification }) => {
+  const info = verification || { state: "not_required" };
+  const [label, tone] = VERIFICATION_LABELS[info.state] || VERIFICATION_LABELS.not_required;
+  const mail = info.deliveryEmail ? MAIL_LABELS[info.deliveryEmail.state] : info.state === "verified" || info.state === "not_required" ? "" : "No email sent yet";
+  return (
+    <div className="admin-users__verification">
+      <span className={`admin-badge ${tone}`}>{label}</span>
+      {info.state === "pending" && info.deadline && <span className="admin-muted">Verify by {formatDateTime(info.deadline)}</span>}
+      {info.state === "verified" && info.verifiedAt && <span className="admin-muted">{formatDateTime(info.verifiedAt)}</span>}
+      {mail && info.state !== "verified" && <span className="admin-muted">{mail}</span>}
+      {info.finalWarningAt && info.state !== "verified" && <span className="admin-muted">Final reminder {formatDateTime(info.finalWarningAt)}</span>}
+      {info.deletionPaused && <strong className="admin-users__paused">Deletion paused: verification email not delivered</strong>}
+    </div>
+  );
+};
+
 const AdminUsers = () => {
   const { user } = useSelector((state) => state.userReducer);
   const dispatch = useDispatch();
@@ -96,6 +122,15 @@ const AdminUsers = () => {
       failed: "The account could not be updated.",
     });
 
+  const resendVerification = (account) =>
+    runAction(account, {
+      confirmText: `Send a new verification link to ${account.email}? Earlier links will stop working. The deadline does not change.`,
+      path: `/api/admin/users/${account.id}/resend-verification`,
+      method: "POST",
+      done: `A new verification link is queued for ${account.email}.`,
+      failed: "The verification email could not be sent.",
+    });
+
   const remove = (account) =>
     runAction(account, {
       confirmText: `Delete ${account.email}? This permanently removes the account. Their orders are kept.`,
@@ -107,7 +142,7 @@ const AdminUsers = () => {
 
   return (
     <AdminGate user={user}>
-      <AdminLayout className="admin-users" title="Users" description="See who has an account, and block or delete customer accounts. Admin accounts are managed from the server.">
+      <AdminLayout className="admin-users" title="Users" description="See who has an account and whether new accounts have verified their email, and block or delete customer accounts. Admin accounts are managed from the server.">
         <form
           className="admin-filters admin-users__filters"
           role="search"
@@ -171,6 +206,7 @@ const AdminUsers = () => {
                       <th scope="col">Role</th>
                       <th scope="col">Joined</th>
                       <th scope="col">Status</th>
+                      <th scope="col">Email verification</th>
                       <th scope="col">Actions</th>
                     </tr>
                   </thead>
@@ -187,12 +223,20 @@ const AdminUsers = () => {
                           <td className="admin-users__status-cell" data-label="Status">
                             <AccountBadge blocked={account.blocked} />
                           </td>
+                          <td data-label="Email verification">
+                            <VerificationCell verification={account.verification} />
+                          </td>
                           <td className="is-full" data-label="Actions">
                             {manageable ? (
                               <div className="admin-users__actions">
                                 <button type="button" className="admin-button" disabled={Boolean(busyId)} aria-busy={busy} onClick={() => toggleBlock(account)} aria-label={`${account.blocked ? "Unblock" : "Block"} ${account.email}`}>
                                   {busy ? "Saving…" : account.blocked ? "Unblock" : "Block"}
                                 </button>
+                                {account.verification?.state === "pending" && (
+                                  <button type="button" className="admin-button" disabled={Boolean(busyId)} onClick={() => resendVerification(account)} aria-label={`Resend verification email to ${account.email}`}>
+                                    Resend link
+                                  </button>
+                                )}
                                 <button type="button" className="admin-link-button" disabled={Boolean(busyId)} onClick={() => remove(account)} aria-label={`Delete ${account.email}`}>
                                   Delete
                                 </button>
