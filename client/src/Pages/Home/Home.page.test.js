@@ -28,9 +28,13 @@ const classicNames = ["Air Force 1", "Dunk", "Air Max", "Samba", "Spezial", "Cam
 const classicProducts = classicSearches.map((search, index) => ({ _id: `classic-${index}`, name: `${classicNames[index]} catalogue pair`, image: `https://example.test/classic-${index}.jpg` }));
 const defaultClassics = { items: classicSearches.map((searchTerm, index) => ({ title: classicNames[index], searchTerm, product: classicProducts[index] })), configured: false, version: 0 };
 
+// Before an admin saves, /api/latest-releases returns the newest four catalogue products.
+const defaultLatest = { items: products.slice(0, 4), configured: false, version: 0 };
+
 // Each homepage request is answered independently so one can fail alone.
-const respond = (productBody, { ok = true, featured = featuredPicks, featuredOk = true, classics = defaultClassics, classicsResponse } = {}) => (path) => {
+const respond = (productBody, { ok = true, featured = featuredPicks, featuredOk = true, classics = defaultClassics, classicsResponse, latest = defaultLatest, latestResponse } = {}) => (path) => {
   if (path === "/api/hero-slides") return Promise.resolve({ ok: true, json: async () => ({ items: [] }) });
+  if (path === "/api/latest-releases") return latestResponse ? latestResponse() : Promise.resolve({ ok: true, json: async () => latest });
   if (path === "/api/featured-sneakers") return Promise.resolve({ ok: featuredOk, json: async () => (featuredOk ? featured : { error: "Unable to load featured sneakers" }) });
   if (path === "/api/classics") return classicsResponse ? classicsResponse() : Promise.resolve({ ok: true, json: async () => classics });
   return Promise.resolve({ ok, json: async () => productBody });
@@ -66,10 +70,13 @@ test("shows the admin-selected featured sneakers in order and the newest catalog
 
   const latestLinks = await within(latest).findAllByRole("link", { name: /catalogue runner/i });
   expect(latestLinks.map((link) => link.getAttribute("href"))).toEqual(["/details/product-1", "/details/product-2", "/details/product-3", "/details/product-4"]);
+  expect(within(latest).getByText("Pulled directly from the Escowear catalogue")).toBeInTheDocument();
+  expect(within(latest).getByRole("link", { name: "See every release" })).toHaveAttribute("href", "/store");
   expect(within(featured).getByText("3,258")).toBeInTheDocument();
   expect(within(featured).getByRole("link", { name: /shop all sneakers/i })).toHaveAttribute("href", "/store");
   expect(global.fetch).toHaveBeenCalledWith("/api/products?limit=4&page=1");
   expect(global.fetch).toHaveBeenCalledWith("/api/featured-sneakers", expect.objectContaining({ signal: expect.any(AbortSignal) }));
+  expect(global.fetch).toHaveBeenCalledWith("/api/latest-releases", expect.objectContaining({ signal: expect.any(AbortSignal) }));
 });
 
 test("never renders more than four featured sneakers", async () => {
@@ -108,15 +115,65 @@ test("an empty featured selection shows the empty state instead of catalogue pro
   expect(within(featured).queryByRole("link", { name: /catalogue runner/i })).not.toBeInTheDocument();
 });
 
-test("a catalogue failure does not hide the featured selection", async () => {
+test("a catalogue count failure hides only the count, not featured or latest releases", async () => {
   global.fetch = jest.fn(respond({}, { ok: false }));
   renderHome();
 
   const featured = screen.getByRole("region", { name: /featured sneakers/i });
   const latest = screen.getByRole("region", { name: /latest releases/i });
   expect(await within(featured).findByText("Catalogue Runner 12")).toBeInTheDocument();
-  expect(await within(latest).findByRole("alert")).toBeInTheDocument();
-  expect(within(featured).queryByRole("alert")).not.toBeInTheDocument();
+  expect(await within(latest).findByText("Catalogue Runner 1")).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.queryByText(/pairs in the catalogue/i)).not.toBeInTheDocument();
+});
+
+test("shows admin-saved latest releases in order with product cards, prices and detail links", async () => {
+  const picked = [9, 3, 7, 1, 8, 2, 6, 5].map((index) => products[index - 1]);
+  global.fetch = jest.fn(respond(catalogue, { latest: { items: [...picked, makeProduct(20)], configured: true, version: 4 } }));
+  renderHome();
+
+  const latest = screen.getByRole("region", { name: /latest releases/i });
+  const links = await within(latest).findAllByRole("link", { name: /catalogue runner/i });
+  // Never more than eight, in the saved order.
+  expect(links.map((link) => link.getAttribute("href"))).toEqual(picked.map((item) => `/details/${item._id}`));
+  expect(within(latest).getByText("£109.00")).toBeInTheDocument();
+  expect(within(latest).getAllByRole("button", { name: /save .* to wishlist/i })).toHaveLength(8);
+  expect(within(latest).getByText("Hand-picked from the Escowear catalogue")).toBeInTheDocument();
+  expect(within(latest).queryByText(/pulled directly/i)).not.toBeInTheDocument();
+  expect(within(latest).getByRole("link", { name: "See every release" })).toHaveAttribute("href", "/store");
+  // Featured keeps its own selection.
+  const featured = screen.getByRole("region", { name: /featured sneakers/i });
+  expect(within(featured).getAllByRole("link", { name: /catalogue runner/i }).map((link) => link.getAttribute("href"))).toEqual(["/details/product-12", "/details/product-10", "/details/product-11", "/details/product-13"]);
+});
+
+test("a single saved latest release renders one card", async () => {
+  global.fetch = jest.fn(respond(catalogue, { latest: { items: [products[4]], configured: true, version: 1 } }));
+  renderHome();
+  const latest = screen.getByRole("region", { name: /latest releases/i });
+  const links = await within(latest).findAllByRole("link", { name: /catalogue runner/i });
+  expect(links.map((link) => link.getAttribute("href"))).toEqual(["/details/product-5"]);
+});
+
+test("an intentionally empty latest releases selection shows the empty state, not catalogue products", async () => {
+  global.fetch = jest.fn(respond(catalogue, { latest: { items: [], configured: true, version: 2 } }));
+  renderHome();
+  const latest = screen.getByRole("region", { name: /latest releases/i });
+  expect(await within(latest).findByText(/new releases are on the way/i)).toBeInTheDocument();
+  expect(within(latest).getByRole("link", { name: /browse all sneakers/i })).toHaveAttribute("href", "/store");
+  expect(within(latest).queryByRole("link", { name: /catalogue runner/i })).not.toBeInTheDocument();
+  expect(await screen.findByText("Catalogue Runner 12")).toBeInTheDocument();
+});
+
+test("aborts the latest releases request on unmount", async () => {
+  let resolveLatest;
+  global.fetch = jest.fn(respond(catalogue, { latestResponse: () => new Promise((resolve) => { resolveLatest = resolve; }) }));
+  const { unmount } = renderHome();
+  expect(screen.getByRole("status", { name: "Loading latest releases" })).toBeInTheDocument();
+  expect(await screen.findByText("Catalogue Runner 12")).toBeInTheDocument();
+  const [, options] = global.fetch.mock.calls.find(([path]) => path === "/api/latest-releases");
+  unmount();
+  expect(options.signal.aborted).toBe(true);
+  await act(async () => resolveLatest({ ok: true, json: async () => defaultLatest }));
 });
 
 test("links brand and classic discovery to live catalogue searches", async () => {
@@ -266,21 +323,26 @@ test("aborts the Classics request on unmount", async () => {
   await act(async () => resolveClassics({ ok: true, json: async () => defaultClassics }));
 });
 
-test("offers a retry when the catalogue request fails", async () => {
-  global.fetch = jest.fn(respond({}, { ok: false }));
+test("a latest releases failure retries on its own without hiding Featured or the Classics", async () => {
+  global.fetch = jest.fn(respond(catalogue, { latestResponse: () => Promise.resolve({ ok: false, json: async () => ({ error: "Unable to load latest releases" }) }) }));
   renderHome();
 
   const latest = screen.getByRole("region", { name: /latest releases/i });
   const alert = await within(latest).findByRole("alert");
-  global.fetch.mockImplementation(respond({ items: products, pagination: { total: 9, page: 1, limit: 4, pages: 3 } }));
-  await userEvent.click(within(alert).getByRole("button", { name: /try again/i }));
+  expect(alert).toHaveTextContent("Unable to load latest releases");
+  expect(await screen.findByText("Catalogue Runner 12")).toBeInTheDocument();
+  expect(await classicsNav()).toBeInTheDocument();
+  expect(within(latest).queryByText(/from the escowear catalogue/i)).not.toBeInTheDocument();
 
-  expect(await screen.findByText("Catalogue Runner 1")).toBeInTheDocument();
+  global.fetch.mockImplementation(respond(catalogue));
+  await userEvent.click(within(alert).getByRole("button", { name: /try again/i }));
+  expect(await within(latest).findByText("Catalogue Runner 1")).toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(global.fetch.mock.calls.filter(([path]) => path === "/api/products?limit=4&page=1")).toHaveLength(1);
 });
 
 test("shows an empty state that routes to the store when no sneakers are available", async () => {
-  global.fetch = jest.fn(respond({ items: [], pagination: { total: 0, page: 1, limit: 4, pages: 0 } }, { featured: { items: [], version: 0 } }));
+  global.fetch = jest.fn(respond({ items: [], pagination: { total: 0, page: 1, limit: 4, pages: 0 } }, { featured: { items: [], version: 0 }, latest: { items: [], configured: false, version: 0 } }));
   renderHome();
 
   expect(await screen.findByText(/no sneakers are available/i)).toBeInTheDocument();

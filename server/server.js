@@ -11,6 +11,7 @@ const { createAdminRouter } = require("./routes/adminRoute");
 const { createHeroSlidesRouter } = require("./routes/heroSlidesRoute");
 const { createFeaturedSneakersRouter } = require("./routes/featuredSneakersRoute");
 const { createClassicsRouter } = require("./routes/classicsRoute");
+const { createLatestReleasesRouter } = require("./routes/latestReleasesRoute");
 const path = require("path");
 
 // `deps` lets tests inject in-memory models; production uses the defaults.
@@ -44,6 +45,7 @@ const createApp = (deps = {}) => {
   app.use("/api/hero-slides", createHeroSlidesRouter(deps.heroSlides || {}));
   app.use("/api/featured-sneakers", createFeaturedSneakersRouter(deps.featuredSneakers || {}));
   app.use("/api/classics", createClassicsRouter(deps.classics || {}));
+  app.use("/api/latest-releases", createLatestReleasesRouter(deps.latestReleases || {}));
   app.use("/api/orders", createOrdersRouter(deps.orders));
   app.use("/images", imagesRoute);
   app.use("/api/users", deps.users ? usersRoute.createUsersRouter(deps.users) : usersRoute);

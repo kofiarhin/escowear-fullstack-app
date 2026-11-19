@@ -30,6 +30,7 @@ const connectTestDb = async () => {
     PaymentProof: require("../../Models/PaymentProof.model"),
     HeroSlide: require("../../Models/HeroSlide.model"),
     FeaturedSneakers: require("../../Models/FeaturedSneakers.model"),
+    HomepageLatestReleases: require("../../Models/HomepageLatestReleases.model"),
     RateLimit: require("../../Models/RateLimit.model"),
   };
   try {
