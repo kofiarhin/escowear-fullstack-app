@@ -9,12 +9,12 @@ import { brandLinks, howSteps } from "./homeContent";
 import useFeaturedSneakers, { FEATURED_LIMIT } from "./useFeaturedSneakers";
 import BrandLogo from "./BrandLogo";
 import useHomepageClassics, { CLASSICS_LIMIT } from "./useHomepageClassics";
+import useLatestReleases, { LATEST_DEFAULT_COUNT } from "./useLatestReleases";
 import { getProductImage } from "../../utils/product";
 
+// The first catalogue page only supplies the Featured "pairs in the catalogue"
+// count; Featured, Classics and Latest Releases each load their own selection.
 const HOME_PRODUCT_QUERY = { limit: 4, page: 1 };
-// Latest Releases shows the 4 newest catalogue products. Featured is
-// admin-curated, so no catalogue offset is needed.
-const LATEST_OFFSET = 0;
 
 const ArrowIcon = () => (
   <svg className="home-arrow" viewBox="0 0 18 18" aria-hidden="true">
@@ -46,23 +46,18 @@ const ProductSkeletons = ({ label, className, count }) => (
 
 const Home = () => {
   const dispatch = useDispatch();
-  const { products, status, error, pagination } = useSelector(
+  const { status, pagination } = useSelector(
     (state) => state.productsReducer
   );
 
   const featured = useFeaturedSneakers();
   const classics = useHomepageClassics();
+  const latest = useLatestReleases();
 
   useEffect(() => {
     dispatch(getProducts(HOME_PRODUCT_QUERY));
   }, [dispatch]);
 
-  const latestSneakers = products.slice(LATEST_OFFSET, LATEST_OFFSET + HOME_PRODUCT_QUERY.limit);
-  const catalogueRequest = {
-    status,
-    error,
-    retry: () => dispatch(getProducts(HOME_PRODUCT_QUERY)),
-  };
   // Store and Home share products state; only trust a total fetched with the homepage query.
   const catalogueTotal =
     status === "success" && pagination?.limit === HOME_PRODUCT_QUERY.limit
@@ -223,15 +218,19 @@ const Home = () => {
             <h2 id="latest-title">Latest releases</h2>
           </div>
           <div className="home-heading__aside">
-            <p className="home-heading__meta">Pulled directly from the Escowear catalogue</p>
+            {latest.status === "success" && (
+              <p className="home-heading__meta">
+                {latest.configured ? "Hand-picked from the Escowear catalogue" : "Pulled directly from the Escowear catalogue"}
+              </p>
+            )}
             <Link to="/store" className="home-link">See every release</Link>
           </div>
         </header>
-        {renderProducts(latestSneakers, {
-          request: catalogueRequest,
+        {renderProducts(latest.items, {
+          request: latest,
           label: "Loading latest releases",
           className: "home-latest__grid",
-          skeletons: HOME_PRODUCT_QUERY.limit - LATEST_OFFSET,
+          skeletons: LATEST_DEFAULT_COUNT,
           emptyCopy: "New releases are on the way.",
         })}
       </section>

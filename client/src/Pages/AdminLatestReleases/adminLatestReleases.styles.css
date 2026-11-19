@@ -1,0 +1,4 @@
+.latest-admin__note{margin:12px 0;padding:12px 14px;border:1px solid var(--border);background:var(--surface-raised);color:var(--text-muted)}
+.latest-admin .featured-admin__slot.is-choosing{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.latest-admin .featured-admin__preview-grid small{overflow-wrap:anywhere}
+@media(min-width:1200px){.latest-admin .featured-admin__slot{grid-template-columns:28px 64px minmax(0,1fr) 200px}}

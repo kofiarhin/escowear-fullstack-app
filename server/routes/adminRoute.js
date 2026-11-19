@@ -7,6 +7,7 @@ const PaymentProof = require("../Models/PaymentProof.model");
 const HeroSlide = require("../Models/HeroSlide.model");
 const FeaturedSneakers = require("../Models/FeaturedSneakers.model");
 const HomepageClassics = require("../Models/HomepageClassics.model");
+const HomepageLatestReleases = require("../Models/HomepageLatestReleases.model");
 const Product = require("../Models/Product.model");
 const ProductImageUpload = require("../Models/ProductImageUpload.model");
 const { createAuth } = require("../middlewares/auth.middleware");
@@ -19,6 +20,7 @@ const { getOrderConfig } = require("../config/orders");
 const { createHeroSlidesController } = require("../controllers/heroSlidesController");
 const { createFeaturedSneakersController } = require("../controllers/featuredSneakersController");
 const { createClassicsController } = require("../controllers/classicsController");
+const { createLatestReleasesController } = require("../controllers/latestReleasesController");
 const { createAdminProductsController } = require("../controllers/adminProductsController");
 const { createAdminStatsController } = require("../controllers/adminStatsController");
 const { createAdminUsersController } = require("../controllers/adminUsersController");
@@ -26,7 +28,7 @@ const { createProductImageStorage } = require("../services/productImageStorage")
 
 // Every route here requires a logged-in user whose stored role is "admin".
 const createAdminRouter = (deps = {}) => {
-  const models = { Order, OrderEvent, EmailOutbox, User, PaymentProof, HeroSlide, FeaturedSneakers, HomepageClassics, Product, ProductImageUpload, ...deps.models };
+  const models = { Order, OrderEvent, EmailOutbox, User, PaymentProof, HeroSlide, FeaturedSneakers, HomepageClassics, HomepageLatestReleases, Product, ProductImageUpload, ...deps.models };
   const config = deps.config || getOrderConfig();
   const { auth, requireAdmin } = createAuth(models.User);
   const storage = deps.proofStorage || createProofStorage({ rootDir: config.proofUploadDir });
@@ -37,6 +39,7 @@ const createAdminRouter = (deps = {}) => {
   const heroSlides = createHeroSlidesController({ HeroSlide: models.HeroSlide, Product: models.Product });
   const featured = createFeaturedSneakersController({ FeaturedSneakers: models.FeaturedSneakers, Product: models.Product });
   const classics = createClassicsController({ HomepageClassics: models.HomepageClassics, Product: models.Product });
+  const latestReleases = createLatestReleasesController({ HomepageLatestReleases: models.HomepageLatestReleases, Product: models.Product });
   const products = createAdminProductsController({ Product: models.Product, ProductImageUpload: models.ProductImageUpload, imageStorage: deps.imageStorage || createProductImageStorage({ env: deps.env }), logger: deps.logger });
   const stats = createAdminStatsController({ Order: models.Order, Product: models.Product, HeroSlide: models.HeroSlide, FeaturedSneakers: models.FeaturedSneakers, logger: deps.logger });
   const users = createAdminUsersController({ User: models.User, logger: deps.logger });
@@ -58,6 +61,8 @@ const createAdminRouter = (deps = {}) => {
   router.put("/featured-sneakers", featured.saveFeatured);
   router.get("/classics", classics.getAdminClassics);
   router.put("/classics", classics.saveClassics);
+  router.get("/latest-releases", latestReleases.getAdminLatestReleases);
+  router.put("/latest-releases", latestReleases.saveLatestReleases);
   router.get("/products", products.listProducts);
   router.get("/products/brands", products.listBrands);
   router.get("/products/:id", products.getProduct);
