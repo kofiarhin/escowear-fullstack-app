@@ -185,9 +185,11 @@ const createEmailVerificationService = ({
   // An address held by an expired, never-verified account can be registered
   // again; the stale account is removed atomically first.
   const removeExpiredHolder = async (email, time) => {
-    const holder = await User.findOne({ email, ...unverifiedNewCustomer(), verificationDeadline: { $lte: time } }).lean();
+    // Accounts an admin blocked are kept for the admin to resolve.
+    const stale = { email, ...unverifiedNewCustomer(), blocked: { $ne: true }, verificationDeadline: { $lte: time } };
+    const holder = await User.findOne(stale).lean();
     if (!holder) return false;
-    const result = await User.deleteOne({ _id: holder._id, ...unverifiedNewCustomer(), verificationDeadline: { $lte: time } });
+    const result = await User.deleteOne({ ...stale, _id: holder._id });
     if (!result.deletedCount) return false;
     await withdrawQueuedLinks(holder._id, "Account expired");
     logger.log(`Expired unverified account ${holder._id} replaced by a new registration`);
@@ -337,24 +339,34 @@ const createEmailVerificationService = ({
   };
 
   // Day-6 reminder: a fresh link that is not counted against the customer's
-  // resend limit. Claimed atomically so it is queued at most once.
+  // resend limit. The link is built before anything changes, and the claim
+  // takes the same optimistic lock as a resend, so the two cannot interleave
+  // and leave the reminder with a dead link. If queuing fails, the claim is
+  // undone so the next run tries again.
   const queueFinalWarning = async (user, time) => {
     const link = newLinkToken(user, time);
+    const url = linkFor(link.token);
+    const lock = user.lastVerificationEmailAt ? new Date(user.lastVerificationEmailAt) : { $exists: false };
     const claimed = await User.findOneAndUpdate(
-      { _id: user._id, ...unverifiedNewCustomer(), finalWarningQueuedAt: { $exists: false }, verificationDeadline: { $gt: time } },
-      { $set: { finalWarningQueuedAt: time, emailVerificationTokenHash: link.hash, emailVerificationExpires: link.expires } },
+      { _id: user._id, email: user.email, lastVerificationEmailAt: lock, ...unverifiedNewCustomer(), finalWarningQueuedAt: { $exists: false }, verificationDeadline: { $gt: time } },
+      { $set: { finalWarningQueuedAt: time, lastVerificationEmailAt: time, emailVerificationTokenHash: link.hash, emailVerificationExpires: link.expires } },
       { new: true }
     ).lean();
     if (!claimed) return false;
-    await withdrawQueuedLinks(user._id, "Superseded by the final reminder");
-    const { message } = await enqueueEmail(EmailOutbox, {
-      dedupeKey: `account_final_warning:${user._id}`,
-      userId: user._id,
-      kind: "account_final_warning",
-      to: claimed.email,
-      context: { name: claimed.name, link: linkFor(link.token), deadline: claimed.verificationDeadline },
-    });
-    await User.updateOne({ _id: user._id }, { $set: { verificationLatestEmailId: message._id } });
+    try {
+      await withdrawQueuedLinks(user._id, "Superseded by the final reminder");
+      const { message } = await enqueueEmail(EmailOutbox, {
+        dedupeKey: `account_final_warning:${user._id}:${time.getTime()}`,
+        userId: user._id,
+        kind: "account_final_warning",
+        to: claimed.email,
+        context: { name: claimed.name, link: url, deadline: claimed.verificationDeadline },
+      });
+      await User.updateOne({ _id: user._id }, { $set: { verificationLatestEmailId: message._id } });
+    } catch (error) {
+      await User.updateOne({ _id: user._id, finalWarningQueuedAt: time }, { $unset: { finalWarningQueuedAt: 1 } });
+      throw error;
+    }
     return true;
   };
 

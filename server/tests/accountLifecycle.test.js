@@ -199,3 +199,72 @@ test("expired queued verification emails are never sent", async () => {
   assert.equal(message.payload.text, "[removed: expired]");
   assert.ok(Types.ObjectId.isValid(String(message.userId)));
 });
+
+test("cleanup still reaches accepted accounts when more than a batch of paused accounts has built up", async () => {
+  const ctx = setup();
+  for (let index = 0; index < 120; index += 1) {
+    await ctx.models.User.create({
+      name: "Paused", email: `paused-${index}@example.test`, password: "x", role: "customer",
+      verificationRequired: true, verificationDeadline: new Date(START.getTime() + 7 * 24 * 60 * 60 * 1000),
+      verificationDeliveryEmailId: new Types.ObjectId(),
+    });
+  }
+  const accepted = await ctx.register("accepted@example.test");
+  await ctx.accept();
+  ctx.at(7 * DAY);
+  const result = await ctx.tick();
+  assert.equal(result.accepted, 1);
+  assert.equal(result.deleted, 1);
+  assert.equal(result.paused, 120);
+  assert.equal(ctx.find(accepted._id), undefined);
+});
+
+test("one-time link and code bodies are removed when delivery fails for good, and cannot be retried", async () => {
+  const ctx = setup();
+  await ctx.register("fails@example.test");
+  await ctx.register("stuck@example.test");
+  const failing = { send: async () => { throw new Error("SMTP down"); } };
+  const stuck = ctx.models.EmailOutbox.docs.find((message) => message.to === "stuck@example.test");
+  stuck.state = "sending";
+  stuck.lockedUntil = new Date(START.getTime() - 1000);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    ctx.at(attempt * 2 * 60 * 60 * 1000);
+    await processOutboxBatch({ EmailOutbox: ctx.models.EmailOutbox, Order: ctx.models.Order, transport: failing, now: ctx.now, logger: silentLogger });
+  }
+  for (const message of ctx.models.EmailOutbox.docs) {
+    assert.equal(message.state, "failed");
+    assert.equal(message.payload.text, "[removed: not delivered]");
+  }
+  const { retryFailedEmail } = require("../services/emailOutbox");
+  assert.equal(await retryFailedEmail(ctx.models.EmailOutbox, ctx.models.EmailOutbox.docs[0]._id), null);
+});
+
+test("a failed reminder is undone and retried; a reminder never overrides a concurrent resend", async () => {
+  const ctx = setup();
+  const user = await ctx.register();
+  ctx.at(6 * DAY + 60 * 1000);
+  const originalCreate = ctx.models.EmailOutbox.create;
+  ctx.models.EmailOutbox.create = async () => {
+    throw new Error("database unavailable");
+  };
+  assert.equal((await ctx.tick()).warned, 0);
+  assert.equal(ctx.find(user._id).finalWarningQueuedAt, undefined, "claim undone so the next run retries");
+  ctx.models.EmailOutbox.create = originalCreate;
+  assert.equal((await ctx.tick()).warned, 1);
+
+  // A reminder working from a stale read loses to a resend that landed first.
+  const other = await ctx.register("other@example.test");
+  const stale = { ...ctx.find(other._id) };
+  ctx.at(6 * DAY + 3 * 60 * 1000);
+  await ctx.service.resend(ctx.service.pendingResponse(ctx.find(other._id)).pendingToken);
+  assert.equal(await ctx.service.queueFinalWarning(stale, ctx.now()), false);
+});
+
+test("a blocked, expired account is not replaced by a new registration", async () => {
+  const ctx = setup();
+  const user = await ctx.register();
+  ctx.find(user._id).blocked = true;
+  ctx.at(7 * DAY);
+  await assert.rejects(ctx.register(), (error) => error.code === "EMAIL_IN_USE");
+  assert.ok(ctx.find(user._id));
+});

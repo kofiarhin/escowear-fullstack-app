@@ -122,3 +122,9 @@ test("signed-in customers with a verified or existing account need no email code
     assert.equal(response.status, 201);
   }
 });
+
+test("production configuration always requires the guest email code", () => {
+  const { getOrderConfig } = require("../config/orders");
+  assert.equal(getOrderConfig({}).guestEmailVerification, true);
+  assert.equal(getOrderConfig({ ESCOWEAR_GUEST_EMAIL_VERIFICATION: "false" }).guestEmailVerification, true);
+});

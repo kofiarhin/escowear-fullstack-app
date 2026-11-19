@@ -13,20 +13,30 @@ const { unverifiedNewCustomer } = require("./emailVerificationService");
 
 const BATCH = 100;
 
+// Visits every matching user in _id order, one bounded batch at a time.
+const eachPage = async (User, filter, visit) => {
+  let lastId = null;
+  for (;;) {
+    const page = await User.find(lastId ? { ...filter, _id: { $gt: lastId } } : filter)
+      .sort({ _id: 1 })
+      .limit(BATCH)
+      .lean();
+    if (!page.length) return;
+    await visit(page);
+    if (page.length < BATCH) return;
+    lastId = page[page.length - 1]._id;
+  }
+};
+
 const runAccountLifecycleTick = async ({ User, EmailOutbox, verificationService, now = () => new Date(), dryRun = false, logger = console }) => {
   const time = now();
   const result = { accepted: 0, warned: 0, expired: 0, deleted: 0, wouldDelete: 0, paused: 0 };
 
   // 1. Record SMTP acceptance of the delivery-check email on the user, so the
-  //    delete predicate below needs no cross-collection read.
-  const awaiting = await User.find({
-    ...unverifiedNewCustomer(),
-    verificationEmailAcceptedAt: { $exists: false },
-    verificationDeliveryEmailId: { $exists: true },
-  })
-    .limit(BATCH)
-    .lean();
-  if (awaiting.length) {
+  //    delete predicate below needs no cross-collection read. Pages through
+  //    every waiting account: paused accounts whose email failed stay in this
+  //    set, so a single fixed batch could starve newer accepted ones.
+  await eachPage(User, { ...unverifiedNewCustomer(), verificationEmailAcceptedAt: { $exists: false }, verificationDeliveryEmailId: { $exists: true } }, async (awaiting) => {
     const messages = await EmailOutbox.find({ _id: { $in: awaiting.map((user) => user.verificationDeliveryEmailId) }, state: "sent" }).lean();
     const sentById = new Map(messages.map((message) => [String(message._id), message]));
     for (const user of awaiting) {
@@ -40,24 +50,19 @@ const runAccountLifecycleTick = async ({ User, EmailOutbox, verificationService,
       );
       if (updated.modifiedCount) result.accepted += 1;
     }
-  }
+  });
 
   // 2. Final warning about 24 hours before the deadline.
   const warnBefore = new Date(time.getTime() + VERIFICATION.finalWarningBeforeMs);
-  const dueWarnings = await User.find({
-    ...unverifiedNewCustomer(),
-    finalWarningQueuedAt: { $exists: false },
-    verificationDeadline: { $gt: time, $lte: warnBefore },
-  })
-    .limit(BATCH)
-    .lean();
-  for (const user of dueWarnings) {
-    try {
-      if (await verificationService.queueFinalWarning(user, time)) result.warned += 1;
-    } catch (error) {
-      logger.error(`Final verification warning for account ${user._id} failed: ${error.message}`);
+  await eachPage(User, { ...unverifiedNewCustomer(), finalWarningQueuedAt: { $exists: false }, verificationDeadline: { $gt: time, $lte: warnBefore } }, async (dueWarnings) => {
+    for (const user of dueWarnings) {
+      try {
+        if (await verificationService.queueFinalWarning(user, time)) result.warned += 1;
+      } catch (error) {
+        logger.error(`Final verification warning for account ${user._id} failed: ${error.message}`);
+      }
     }
-  }
+  });
 
   // 3. Expire: links stop working and the account can no longer sign in, even
   //    while deletion is paused or delayed.

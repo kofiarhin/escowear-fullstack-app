@@ -117,6 +117,8 @@ const runAccountJourney = async (browser, harness, { name, ...contextOptions }) 
   await page.getByPlaceholder("Enter Password").fill(password);
   await page.getByRole("button", { name: /login/i }).click();
   await page.waitForURL("**/check-email");
+  // Let the status request finish so leaving the page does not abort it.
+  await page.getByText(/of 3 resends left/).waitFor();
   pass(`${name}: sign-in before verification is refused and returns to check-email`);
 
   const mail = await waitForMail(harness, email, /Verify your EscoWear email/);
