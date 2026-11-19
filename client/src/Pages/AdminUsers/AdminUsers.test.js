@@ -30,11 +30,12 @@ afterEach(() => { localStorage.clear(); jest.restoreAllMocks(); });
 
 test("lists users with role, status and only customer actions", async () => {
   renderAdmin();
-  const row = (await screen.findByText("ama@example.test")).closest("tr");
+  await screen.findByText("ama@example.test");
+  const row = screen.getByRole("row", { name: /ama@example\.test/ });
   expect(within(row).getByText("Active")).toBeInTheDocument();
   expect(within(row).getByRole("button", { name: "Block ama@example.test" })).toBeInTheDocument();
   expect(within(row).getByRole("button", { name: "Delete ama@example.test" })).toBeInTheDocument();
-  const adminRow = screen.getByText("admin@example.test").closest("tr");
+  const adminRow = screen.getByRole("row", { name: /admin@example\.test/ });
   expect(within(adminRow).queryByRole("button")).not.toBeInTheDocument();
   expect(within(adminRow).getByText("Protected")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Users" })).toHaveAttribute("aria-current", "page");
