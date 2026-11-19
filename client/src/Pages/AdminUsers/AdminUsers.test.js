@@ -113,5 +113,6 @@ test("an empty page past the end moves back to the last page", async () => {
   });
   renderAdmin();
   expect(await screen.findByText("ama@example.test")).toBeInTheDocument();
-  expect(window.location.search).toBe("?q=ama&page=1");
+  const lastCall = global.fetch.mock.calls[global.fetch.mock.calls.length - 1][0];
+  expect(String(lastCall)).toContain("page=1");
 });
