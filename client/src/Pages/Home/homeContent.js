@@ -9,8 +9,9 @@ export const brandLinks = [
   { name: "On Running", logo: "on", to: "/store?search=on%20running" },
 ];
 
-// The search term also loads a representative product via /api/products?search=...&limit=1.
-// No product URLs are pinned: images follow the current catalogue.
+// Built-in classic silhouettes for the header menu and the homepage's offline
+// fallback. The homepage cards themselves are admin-managed via /api/classics,
+// whose defaults (server/controllers/classicsController.js) match this list.
 export const classicLinks = [
   { name: "Air Force 1", search: "air force", to: "/store?search=air%20force" },
   { name: "Dunk", search: "dunk", to: "/store?search=dunk" },

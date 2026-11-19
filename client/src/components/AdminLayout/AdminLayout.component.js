@@ -15,15 +15,17 @@ export const ADMIN_SECTIONS = [
   { id: "orders", to: "/admin/orders", label: "Orders", icon: <Icon><path d="M5 4h14v16H5zM8.5 9h7M8.5 13h7M8.5 17h4" /></Icon> },
   { id: "products", to: "/admin/products", label: "Products", icon: <Icon><path d="M3 15c3 0 5-2 7-5l3 3c2 1 5 1 8 1v3H3z" /></Icon> },
   { id: "featured", to: "/admin/products/featured", label: "Featured sneakers", icon: <Icon><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></Icon> },
+  { id: "classics", to: "/admin/products/classics", label: "Classics", icon: <Icon><path d="M4 5h7v6H4zM13 5h7v6h-7zM4 13h7v6H4zM13 13h7v6h-7z" /></Icon> },
   { id: "hero", to: "/admin/hero-slides", label: "Hero videos", icon: <Icon><path d="M3 5h18v14H3zM3 15l5-4 4 3 3-2 6 4" /></Icon> },
 ];
 
-// /admin/products/featured sits under /admin/products, so match the most
+// /admin/products/featured and /classics sit under /admin/products, so match the most
 // specific section first instead of relying on prefix matching.
 export const sectionFor = (pathname) => {
   const path = pathname.replace(/\/+$/, "") || "/";
   if (path === "/admin") return "overview";
   if (path.startsWith("/admin/products/featured")) return "featured";
+  if (path.startsWith("/admin/products/classics")) return "classics";
   const match = ADMIN_SECTIONS.find((section) => section.id !== "overview" && path.startsWith(section.to));
   return match ? match.id : null;
 };

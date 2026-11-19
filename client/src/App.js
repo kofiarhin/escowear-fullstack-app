@@ -22,6 +22,7 @@ import {
   AdminProducts,
   AdminProductForm,
   AdminFeaturedSneakers,
+  AdminClassics,
   TrackOrder,
   OrderDetails,
   Policies,
@@ -117,6 +118,7 @@ const App = () => {
           <Route path="/admin/hero-slides" element={<AdminHeroSlides />} />
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/products/featured" element={<AdminFeaturedSneakers />} />
+          <Route path="/admin/products/classics" element={<AdminClassics />} />
           <Route path="/admin/products/new" element={<AdminProductForm />} />
           <Route path="/admin/products/:id/edit" element={<AdminProductForm />} />
           <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
