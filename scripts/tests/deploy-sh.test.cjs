@@ -34,8 +34,8 @@ function fixture({ productionRoot = '', fullDocker = false } = {}) {
 [ "$1 $2 $3" = "remote get-url origin" ] && { echo ${REMOTE}.git; exit 0; }
 exec ${realGit} "$@"
 `, 0o755);
-  // fullDocker simulates a running service so deploy.sh reaches the image checks. Its
-  // "tag" fails on purpose, so a test can never reach the container swap or health URLs.
+  // fullDocker simulates a running service so deploy.sh reaches the image checks. Tagging
+  // the rollback image fails on purpose, so a test never reaches the swap or health URLs.
   write(path.join(bin, 'docker'), `#!/bin/sh
 echo "$* token=\${ESCOWEAR_GITHUB_TOKEN:+leaked} file=\${ESCOWEAR_GITHUB_TOKEN_FILE:+leaked}" >> ${dockerLog}
 case "$*" in *"config --services"*) echo web; exit 0 ;; esac
@@ -46,10 +46,14 @@ case "$*" in
   *"com.docker.compose.service"*) echo web ;;
   *"{{.State.Running}}"*) echo true ;;
   "inspect -f {{.Image}} cid123") echo sha256:0123456789abcdef ;;
+  pull*) exit "\${STUB_PULL_EXIT:-0}" ;;
+  *"org.opencontainers.image.revision"*) echo "\${STUB_REVISION:-$(git rev-parse HEAD)}" ;;
+  *".RepoDigests"*) echo kofiarhin/escowear@sha256:feedface ;;
+  *".Config.Env"*) echo PATH=/usr/bin; echo "ESCOWEAR_BUILD_POLICIES_STATUS=\${STUB_BUILT_POLICIES:-hidden}" ;;
   "image inspect"*) exit 1 ;;
   *"config --format json"*) echo '{"services":{"web":{"environment":{}}}}' ;;
   *"find /app"*) exit "\${STUB_PERMISSION_EXIT:-0}" ;;
-  tag*) exit 99 ;;
+  "tag sha256:"*) exit 99 ;;
 esac
 exit 0
 `, 0o755);
@@ -82,7 +86,7 @@ exit 0
   const tokenFile = path.join(root, 'token');
   write(tokenFile, `${TOKEN}\n`, 0o600);
 
-  const run = env => spawnSync('bash', [path.join(repo, 'scripts/deploy.sh')], {
+  const run = (env, args = []) => spawnSync('bash', [path.join(repo, 'scripts/deploy.sh'), ...args], {
     cwd: repo, encoding: 'utf8', env: { PATH: `${bin}:${process.env.PATH}`, HOME: root, ...env },
   });
   const dockerCalls = () => fs.readFileSync(dockerLog, 'utf8');
@@ -144,7 +148,7 @@ test('deploy refuses before preserving or swapping when runtime files fail the p
   assert.match(calls, /run --rm --network none --entrypoint sh escowear:release-[0-9a-f]{12} -c out="\$\(find \/app /);
   assert.doesNotMatch(calls, /--user/);
   assert.ok(calls.indexOf('node --test') < calls.indexOf('find /app'), 'permission check runs after server tests');
-  assert.doesNotMatch(calls, /^tag |up -d/m);
+  assert.doesNotMatch(calls, /^tag sha256:|up -d/m);
 });
 
 test('deploy continues past the permission check when runtime files are correct', () => {
@@ -155,6 +159,66 @@ test('deploy continues past the permission check when runtime files are correct'
   assert.match(result.stdout, /Preserving previous image/);
   assert.match(f.dockerCalls(), /^tag sha256:0123456789abcdef escowear:rollback-/m);
   assert.doesNotMatch(f.dockerCalls(), /up -d/);
+});
+
+test('deploy pulls the image CI published for the exact commit and never builds on Beast', () => {
+  const f = fixture({ fullDocker: true });
+  const result = f.run({ ESCOWEAR_GITHUB_TOKEN: TOKEN });
+  const calls = f.dockerCalls();
+  const release = `escowear:release-${f.tip.slice(0, 12)}`;
+  assert.match(result.stdout, new RegExp(`Pulling kofiarhin/escowear:${f.tip}`));
+  assert.match(result.stdout, /Pulled kofiarhin\/escowear@sha256:feedface/);
+  assert.match(calls, new RegExp(`^pull --quiet kofiarhin/escowear:${f.tip} `, 'm'));
+  assert.match(calls, new RegExp(`^tag kofiarhin/escowear:${f.tip} ${release} `, 'm'));
+  // Tests and the permission check run against the pulled release, as before.
+  assert.match(calls, new RegExp(`run --rm --network none --entrypoint sh ${release} -c node --test`));
+  assert.doesNotMatch(calls, /^build |compose .* build /m);
+  assert.match(result.stdout, /Preserving previous image/);
+  assert.doesNotMatch(calls, /up -d/);
+});
+
+test('refuses a pulled image whose revision label is not the requested commit', () => {
+  const f = fixture({ fullDocker: true });
+  const result = f.run({ ESCOWEAR_GITHUB_TOKEN: TOKEN, STUB_REVISION: 'a'.repeat(40) });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Pulled image was built from 'aaaaaaaaaaaa', not [0-9a-f]{12}; not deploying/);
+  assert.match(f.dockerCalls(), new RegExp(`^image rm kofiarhin/escowear:${f.tip} `, 'm'));
+  assert.doesNotMatch(f.dockerCalls(), /^tag |up -d/m);
+});
+
+test('a failed pull stops before anything is preserved or replaced and names the fallback', () => {
+  const f = fixture({ fullDocker: true });
+  const result = f.run({ ESCOWEAR_GITHUB_TOKEN: TOKEN, STUB_PULL_EXIT: '1' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Could not pull kofiarhin\/escowear:[0-9a-f]{40}.*npm run deploy:build/);
+  assert.doesNotMatch(f.dockerCalls(), /^tag |up -d|^build /m);
+});
+
+test('refuses an image built with a different policy status than the runtime .env', () => {
+  const f = fixture({ fullDocker: true });
+  const result = f.run({ ESCOWEAR_GITHUB_TOKEN: TOKEN, STUB_BUILT_POLICIES: 'published' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /built with policy status 'published' but \.env sets 'hidden'; not deploying/);
+  assert.doesNotMatch(f.dockerCalls(), /^tag sha256|up -d/m);
+});
+
+test('--build keeps the manual Beast build path and never pulls', () => {
+  const f = fixture({ fullDocker: true });
+  const result = f.run({ ESCOWEAR_GITHUB_TOKEN: TOKEN }, ['--build']);
+  const calls = f.dockerCalls();
+  assert.match(result.stdout, /ci-stub token=ok/);
+  assert.match(calls, /^build --target frontend-test -t escowear:test-[0-9a-f]{12} \. /m);
+  assert.match(calls, /compose .* build web /);
+  assert.doesNotMatch(calls, /^pull /m);
+  assert.match(result.stdout, /Preserving previous image/);
+  assert.doesNotMatch(calls, /up -d/);
+});
+
+test('rejects unknown modes', () => {
+  const f = fixture();
+  const result = f.run({ ESCOWEAR_GITHUB_TOKEN: TOKEN }, ['--pull']);
+  assert.match(result.stderr, /Use --build, --check or --rollback/);
+  assert.equal(git(f.repo, 'rev-parse', 'HEAD'), f.first);
 });
 
 // Runs the real DEPLOY_PERMISSION_CHECK_COMMAND from deploy.conf against throwaway trees,
