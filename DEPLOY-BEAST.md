@@ -43,7 +43,7 @@ sudo docker logs --tail 100 escowear-web-1
 
 ## Deployment and rollback rules
 
-Any future application release needs a reviewed Git commit, a versioned/tested image, and **separate approval** before changing the running container or host Nginx/DNS/HTTPS. Never automatically run `docker compose up -d --build` against production. Use the existing [release overlay and instructions](deploy/beast/README.md) as a reference, but re-check the actual live image, ports, disk, Compose config, and Nginx site first.
+Releases are deployed by `scripts/deploy.sh` from `/home/ubuntu/deploy/escowear`, pulling the image GitHub Actions published to Docker Hub (`kofiarhin/escowear:<sha>`); see [CI and deployment](docs/ci-deploy.md). Any future application release needs a reviewed Git commit, a versioned/tested image, and **separate approval** before changing the running container or host Nginx/DNS/HTTPS. Never automatically run `docker compose up -d --build` against production. Use the existing [release overlay and instructions](deploy/beast/README.md) as a reference, but re-check the actual live image, ports, disk, Compose config, and Nginx site first.
 
 For rollback, preserve the previously tested image identifier and deployment configuration. Roll back only the Escowear Compose service and its Nginx site after approval; never restart unrelated services, prune shared images/volumes, or overwrite MongoDB.
 

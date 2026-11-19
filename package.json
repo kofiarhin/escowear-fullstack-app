@@ -23,6 +23,7 @@
     "email:check": "node server/scripts/emailCheck.js",
     "release:check": "node server/scripts/releaseCheck.js",
     "deploy": "bash scripts/deploy.sh",
+    "deploy:build": "bash scripts/deploy.sh --build",
     "deploy:check": "bash scripts/deploy.sh --check",
     "deploy:rollback": "bash scripts/deploy.sh --rollback"
   },

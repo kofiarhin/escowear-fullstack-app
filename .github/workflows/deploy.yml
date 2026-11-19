@@ -1,8 +1,9 @@
 name: Deploy
 
-# Deploys master to Beast after both CI and CSS lint pass for the same commit.
+# Deploys master to Beast after both CI and CSS lint pass for the same commit:
+# gate → publish the release image to Docker Hub once → Beast pulls that exact image.
 # Inactive until the repository variable ESCOWEAR_AUTO_DEPLOY is set to "true".
-# Manual runs only perform the read-only Beast preflight; they never deploy.
+# Manual runs only perform the read-only Beast preflight; they never publish or deploy.
 on:
   workflow_run:
     workflows: [CI, CSS lint]
@@ -14,9 +15,14 @@ permissions:
   contents: read
   actions: read
 
+env:
+  # The site's legal policies are published in production (verified on Beast 2026-11-19,
+  # IDE-155). deploy.sh refuses an image whose status differs from Beast's .env.
+  POLICIES_STATUS: published
+
 jobs:
-  deploy:
-    name: deploy
+  gate:
+    name: gate
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
       (github.event_name == 'workflow_run' &&
@@ -26,13 +32,9 @@ jobs:
        github.event.workflow_run.head_branch == 'master' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    environment: production
-    # One deployment at a time; a newer queued request replaces an older queued one.
-    # Job-level, so skipped runs never cancel a queued deployment.
-    concurrency:
-      group: escowear-production-${{ github.event_name }}
-      cancel-in-progress: false
+    timeout-minutes: 10
+    outputs:
+      decision: ${{ steps.gate.outputs.decision || 'check' }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         if: github.event_name == 'workflow_run'
@@ -48,8 +50,146 @@ jobs:
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: node scripts/deploy-gate.cjs "$GITHUB_REPOSITORY" "$SHA"
 
+  publish:
+    name: publish image
+    needs: gate
+    if: needs.gate.outputs.decision == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Master-only environment, so DOCKERHUB_TOKEN can be scoped to it (docs/ci-deploy.md).
+    environment: production
+    # One publish at a time; a newer queued request replaces an older queued one.
+    concurrency:
+      group: escowear-publish
+      cancel-in-progress: false
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      # Beast pulls DEPLOY_REGISTRY_IMAGE and runs the same test commands; share one source.
+      - name: Read deployment settings
+        run: |
+          source scripts/deploy.conf
+          [[ "$DEPLOY_REGISTRY_IMAGE" =~ ^[a-z0-9][a-z0-9._/-]*$ ]] || { echo "::error::Invalid DEPLOY_REGISTRY_IMAGE"; exit 1; }
+          echo "IMAGE=$DEPLOY_REGISTRY_IMAGE" >> "$GITHUB_ENV"
+
+      # CI and CSS lint can both pass the gate for one commit; publish each commit once.
+      # Asks the registry directly so no Docker credentials exist on disk during the build.
+      - name: Check whether this commit is already published
+        id: existing
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          [[ -n "$DOCKERHUB_USERNAME" && -n "$DOCKERHUB_TOKEN" ]] || { echo "::error::DOCKERHUB_USERNAME or DOCKERHUB_TOKEN is not configured"; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ && "$(git rev-parse HEAD)" == "$SHA" ]] || { echo "::error::Checkout is not the approved commit"; exit 1; }
+          token="$(curl -fsS -u "$DOCKERHUB_USERNAME:$DOCKERHUB_TOKEN" \
+            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$IMAGE:pull" | jq -r .token)" \
+            || { echo "::error::Docker Hub authentication failed"; exit 1; }
+          [[ -n "$token" && "$token" != null ]] || { echo "::error::Docker Hub returned no registry token"; exit 1; }
+          echo "::add-mask::$token"
+          status="$(curl -sS -o /dev/null -w '%{http_code}' -I -H "Authorization: Bearer $token" \
+            -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+            "https://registry-1.docker.io/v2/$IMAGE/manifests/$SHA")"
+          case "$status" in
+            200) echo "exists=true" >> "$GITHUB_OUTPUT"; echo "::notice::$IMAGE:$SHA is already published; not rebuilding" ;;
+            404) echo "exists=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::Docker Hub manifest lookup returned HTTP $status"; exit 1 ;;
+          esac
+
+      # Same owner-only modes as CI and Beast, so the image never depends on checkout modes.
+      - name: Use Beast's owner-only checkout permissions
+        if: steps.existing.outputs.exists == 'false'
+        run: chmod -R go-rwx .
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: steps.existing.outputs.exists == 'false'
+
+      # Built once and loaded locally; tested before any registry credential is used.
+      - name: Build release image
+        if: steps.existing.outputs.exists == 'false'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          push: false
+          provenance: false
+          tags: ${{ env.IMAGE }}:${{ env.SHA }}
+          build-args: REACT_APP_POLICIES_STATUS=${{ env.POLICIES_STATUS }}
+          labels: |
+            org.opencontainers.image.revision=${{ env.SHA }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=escowear-release
+          cache-to: type=gha,scope=escowear-release,mode=max
+
+      - name: Backend tests in the release image (no network)
+        if: steps.existing.outputs.exists == 'false'
+        run: |
+          source scripts/deploy.conf
+          docker run --rm --network none --entrypoint sh "$IMAGE:$SHA" -c "$DEPLOY_BACKEND_TEST_COMMAND"
+
+      - name: Runtime files readable, not writable, by the app user
+        if: steps.existing.outputs.exists == 'false'
+        run: |
+          source scripts/deploy.conf
+          docker run --rm --network none --entrypoint sh "$IMAGE:$SHA" -c "$DEPLOY_PERMISSION_CHECK_COMMAND"
+
+      - name: Push to Docker Hub
+        if: steps.existing.outputs.exists == 'false'
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin docker.io >/dev/null
+          trap 'docker logout docker.io >/dev/null' EXIT
+          docker push --quiet "$IMAGE:$SHA"
+          digest="$(docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$IMAGE:$SHA" | grep -m1 "^$IMAGE@sha256:")" \
+            || { echo "::error::Pushed image has no registry digest"; exit 1; }
+          echo "::notice::Published $IMAGE:$SHA ($digest)"
+          printf '%s\n\n%s\n' "Published \`$IMAGE:$SHA\`" "Digest \`$digest\`" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: deploy
+    needs: [gate, publish]
+    # Manual runs send only "check"; automatic runs need the image published for this SHA.
+    if: >-
+      !cancelled() &&
+      ((github.event_name == 'workflow_dispatch' && needs.gate.result == 'success') ||
+       (needs.gate.outputs.decision == 'deploy' && needs.publish.result == 'success'))
+    runs-on: ubuntu-latest
+    # Covers a Beast build too: the first deploy after IDE-155 still runs the old deploy.sh.
+    timeout-minutes: 45
+    environment: production
+    # One deployment at a time; a newer queued request replaces an older queued one.
+    # Job-level, so skipped runs never cancel a queued deployment.
+    concurrency:
+      group: escowear-production-${{ github.event_name }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        if: github.event_name == 'workflow_run'
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      # Publishing takes minutes; master may have moved on meanwhile. Beast would refuse
+      # the outdated SHA anyway, but skip quietly instead of reporting a failed deploy.
+      - name: Recheck that the commit is still the master tip
+        id: recheck
+        if: github.event_name == 'workflow_run'
+        env:
+          ESCOWEAR_GITHUB_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: node scripts/deploy-gate.cjs "$GITHUB_REPOSITORY" "$SHA"
+
+      # Beast derives the image from the SHA (kofiarhin/escowear:<sha>), so the restricted
+      # SSH interface stays "check" | "deploy <sha>".
       - name: Run on Beast
-        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.decision == 'deploy'
+        if: github.event_name == 'workflow_dispatch' || steps.recheck.outputs.decision == 'deploy'
         env:
           SSH_KEY: ${{ secrets.BEAST_SSH_PRIVATE_KEY }}
           KNOWN_HOSTS: ${{ secrets.BEAST_SSH_KNOWN_HOSTS }}
@@ -61,10 +201,17 @@ jobs:
           printf '%s\n' "$SSH_KEY" > ~/.ssh/escowear_deploy
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/beast_known_hosts
           chmod 600 ~/.ssh/escowear_deploy ~/.ssh/beast_known_hosts
+          rc=0
           ssh -i ~/.ssh/escowear_deploy -o IdentitiesOnly=yes -o BatchMode=yes \
             -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/beast_known_hosts \
             -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
-            "escowear-deploy@$HOST" "$REQUEST"
+            "escowear-deploy@$HOST" "$REQUEST" || rc=$?
+          if [[ $rc -ne 0 ]]; then
+            echo "::error::Beast refused or failed '$REQUEST' (exit $rc); production keeps the previous release or was rolled back. Full log is on Beast."
+            printf '%s\n' "Beast \`$REQUEST\`: **FAILED** (exit $rc)" >> "$GITHUB_STEP_SUMMARY"
+            exit "$rc"
+          fi
+          printf '%s\n' "Beast \`$REQUEST\`: succeeded" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove SSH key
         if: always()

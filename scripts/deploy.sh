@@ -19,6 +19,7 @@ read -r -a dk <<< "$DEPLOY_DOCKER"
 [[ "$DEPLOY_PROJECT" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || fail "Invalid project"
 [[ "$DEPLOY_SERVICE" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || fail "Invalid service"
 [[ "$DEPLOY_IMAGE" =~ ^[a-z0-9][a-z0-9._/-]*$ ]] || fail "Invalid image"
+[[ "$DEPLOY_REGISTRY_IMAGE" =~ ^[a-z0-9][a-z0-9._/-]*$ && "$DEPLOY_REGISTRY_IMAGE" != "$DEPLOY_IMAGE" ]] || fail "Invalid registry image"
 [[ "$DEPLOY_KEEP_RELEASES" =~ ^[0-9]+$ && "$DEPLOY_KEEP_RELEASES" -ge 3 ]] || fail "Keep at least 3 releases"
 [[ "$DEPLOY_HEALTH_RETRIES" =~ ^[0-9]+$ && "$DEPLOY_HEALTH_RETRIES" -gt 0 ]] || fail "Invalid retries"
 [[ "$DEPLOY_HEALTH_DELAY" =~ ^[0-9]+$ ]] || fail "Invalid delay"
@@ -48,8 +49,10 @@ mapfile -t services < <("${compose[@]}" config --services)
 [[ " ${services[*]} " == *" $DEPLOY_SERVICE "* ]] || fail "Compose service not found"
 
 mode="${1:-deploy}"
-case "$mode" in deploy|--check|--rollback) ;; *) fail "Use --check or --rollback" ;; esac
-if [[ "$mode" == deploy ]]; then
+# deploy: pull the image CI published for the commit (default, used by automation).
+# --build: manual fallback that builds and tests the image on Beast instead.
+case "$mode" in deploy|--build|--check|--rollback) ;; *) fail "Use --build, --check or --rollback" ;; esac
+if [[ "$mode" == deploy || "$mode" == --build ]]; then
   log "Fetching latest $DEPLOY_BRANCH"
   git fetch --quiet origin "$DEPLOY_BRANCH"
   target="refs/remotes/origin/$DEPLOY_BRANCH"
@@ -145,20 +148,44 @@ if [[ "$("${dk[@]}" image inspect -f '{{.Id}}' "$release" 2>/dev/null || true)" 
 fi
 rollback_ref="$DEPLOY_IMAGE:rollback-$(date -u +%Y%m%d%H%M%S)-${old_image:7:12}"
 
-# No host npm dependencies needed; tests run in Docker's locked environments.
-log "Running frontend tests and lint in Docker"
-"${dk[@]}" build --target frontend-test -t "$DEPLOY_IMAGE:test-${commit:0:12}" .
 overlay "$state/candidate.yaml" "$release"
 "${compose[@]}" -f "$state/candidate.yaml" config --quiet
-log "Building $release"
-"${compose[@]}" -f "$state/candidate.yaml" build "$DEPLOY_SERVICE"
+if [[ "$mode" == --build ]]; then
+  # No host npm dependencies needed; tests run in Docker's locked environments.
+  log "Running frontend tests and lint in Docker"
+  "${dk[@]}" build --target frontend-test -t "$DEPLOY_IMAGE:test-${commit:0:12}" .
+  log "Building $release"
+  "${compose[@]}" -f "$state/candidate.yaml" build "$DEPLOY_SERVICE"
+else
+  # The image was built and tested once in GitHub Actions; never rebuild it here.
+  published="$DEPLOY_REGISTRY_IMAGE:$commit"
+  log "Pulling $published"
+  "${dk[@]}" pull --quiet "$published" >/dev/null \
+    || fail "Could not pull $published; check the Deploy workflow's publish job and Beast's registry login (manual fallback: npm run deploy:build)"
+  revision="$("${dk[@]}" image inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$published")"
+  [[ "$revision" == "$commit" ]] || { "${dk[@]}" image rm "$published" >/dev/null 2>&1 || true; fail "Pulled image was built from '${revision:0:12}', not ${commit:0:12}; not deploying"; }
+  digest="$("${dk[@]}" image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$published" | grep -m1 "^$DEPLOY_REGISTRY_IMAGE@sha256:" || true)"
+  log "Pulled ${digest:-$published}"
+  # From here on the release is the local name, exactly as for a Beast-built image.
+  "${dk[@]}" tag "$published" "$release"
+  "${dk[@]}" image rm "$published" >/dev/null || log "Could not untag $published; cleanup will retry"
+fi
 log "Running server tests without network access"
 "${dk[@]}" run --rm --network none --entrypoint sh "$release" -c "$DEPLOY_BACKEND_TEST_COMMAND"
 log "Checking runtime file permissions as the app user"
 "${dk[@]}" run --rm --network none --entrypoint sh "$release" -c "$DEPLOY_PERMISSION_CHECK_COMMAND" \
   || fail "Runtime files are unreadable or writable by the app user; not deploying"
 
-checkout="$("${compose[@]}" config --format json | node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>console.log(JSON.parse(s).services[process.argv[1]].environment.ESCOWEAR_CHECKOUT_OPEN||"false"))' "$DEPLOY_SERVICE")"
+runtime_env() {
+  "${compose[@]}" config --format json | node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>console.log(JSON.parse(s).services[process.argv[1]].environment[process.argv[2]]||process.argv[3]))' "$DEPLOY_SERVICE" "$1" "$2"
+}
+# The server refuses to start when its policy status differs from the one the site was
+# built with; refuse here instead, before the live container is touched.
+policies="$(runtime_env ESCOWEAR_POLICIES_STATUS hidden)"
+built_policies="$("${dk[@]}" image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$release" | sed -n 's/^ESCOWEAR_BUILD_POLICIES_STATUS=//p')"
+[[ "$built_policies" == "$policies" ]] \
+  || fail "Image was built with policy status '${built_policies:-unset}' but .env sets '$policies'; not deploying"
+checkout="$(runtime_env ESCOWEAR_CHECKOUT_OPEN false)"
 if [[ "$checkout" == true ]]; then
   log "Checking checkout readiness"
   "${compose[@]}" -f "$state/candidate.yaml" run --rm --no-deps -T --entrypoint node "$DEPLOY_SERVICE" server/scripts/releaseCheck.js
@@ -212,5 +239,11 @@ mapfile -t test_tags < <("${dk[@]}" image ls --format '{{.Repository}}:{{.Tag}}'
 for tag in "${test_tags[@]}"; do
   [[ "$tag" == "$DEPLOY_IMAGE:test-"* ]] || continue
   "${dk[@]}" image rm "$tag" >/dev/null 2>&1 || log "Skipped in-use test image $tag"
+done
+# Registry names are retagged as releases at once; drop any left by an interrupted run.
+mapfile -t pulled_tags < <("${dk[@]}" image ls --format '{{.Repository}}:{{.Tag}}' --filter "reference=$DEPLOY_REGISTRY_IMAGE:*")
+for tag in "${pulled_tags[@]}"; do
+  [[ "$tag" == "$DEPLOY_REGISTRY_IMAGE:"* ]] || continue
+  "${dk[@]}" image rm "$tag" >/dev/null 2>&1 || log "Skipped in-use pulled image $tag"
 done
 log "DEPLOYED $release (previous image retained: $rollback_ref)"
