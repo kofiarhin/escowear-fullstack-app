@@ -319,6 +319,7 @@ test("admins see verification state and can resend for pending accounts only", a
   const resent = await ctx.request("POST", `/api/admin/users/${id}/resend-verification`, { token: adminToken });
   assert.equal(resent.status, 200);
   assert.equal(resent.body.item.verification.latestEmail.state, "queued");
+  assert.match(verificationEmails(ctx).at(-1).payload.text, /https:\/\/shop\.example\.test\/verify-email\?token=/, "admin resend uses the configured public URL");
   assert.equal((await ctx.request("POST", `/api/admin/users/${id}/resend-verification`, { token: adminToken })).status, 429);
   assert.equal(userDoc(ctx).verificationEmailSends, undefined, "admin resends do not use the customer's limit");
 
