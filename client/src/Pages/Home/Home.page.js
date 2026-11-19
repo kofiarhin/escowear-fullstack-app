@@ -5,10 +5,10 @@ import "./home.styles.css";
 import Product from "../../components/Product/Product.component";
 import HeroCarousel from "../../components/HeroCarousel/HeroCarousel.component";
 import { getProducts } from "../../redux/actions/products.actions";
-import { brandLinks, classicLinks, howSteps } from "./homeContent";
+import { brandLinks, howSteps } from "./homeContent";
 import useFeaturedSneakers, { FEATURED_LIMIT } from "./useFeaturedSneakers";
 import BrandLogo from "./BrandLogo";
-import useClassicProducts from "./useClassicProducts";
+import useHomepageClassics, { CLASSICS_LIMIT } from "./useHomepageClassics";
 import { getProductImage } from "../../utils/product";
 
 const HOME_PRODUCT_QUERY = { limit: 4, page: 1 };
@@ -24,6 +24,7 @@ const ArrowIcon = () => (
 
 const formatCount = (value) => new Intl.NumberFormat("en-GB").format(value);
 const padIndex = (index) => String(index + 1).padStart(2, "0");
+const storeSearchPath = (term) => `/store?search=${encodeURIComponent(term)}`;
 
 const handleClassicImageError = ({ currentTarget: image }) => {
   if (image.getAttribute("src") === "/images/default.jpg") {
@@ -50,7 +51,7 @@ const Home = () => {
   );
 
   const featured = useFeaturedSneakers();
-  const classicProducts = useClassicProducts();
+  const classics = useHomepageClassics();
 
   useEffect(() => {
     dispatch(getProducts(HOME_PRODUCT_QUERY));
@@ -162,38 +163,56 @@ const Home = () => {
                 Court staples and terrace icons from Nike and adidas.
               </p>
             </div>
-            <Link to="/store?search=nike" className="home-button home-button--light">
-              Shop the classics <ArrowIcon />
-            </Link>
+            {/* Cards are admin-chosen across brands, so the section CTA opens the full
+                store; the empty state carries its own link instead. */}
+            {(classics.status === "pending" || classics.items.length > 0) && (
+              <Link to="/store" className="home-button home-button--light">
+                Shop the classics <ArrowIcon />
+              </Link>
+            )}
           </header>
 
-          <nav aria-label="Shop classic silhouettes">
-            <ol className="home-classics__grid">
-              {classicLinks.map((classic) => (
-                <li key={classic.name}>
-                  <Link to={classic.to} className="home-classics__card" aria-labelledby={`classic-${classic.search.replace(/ /g, "-")}`}>
-                    <span className="home-classics__image">
-                      {classicProducts[classic.search] === undefined ? (
-                        <span className="home-classics__loading" role="status" aria-label={`Loading ${classic.name} image`} />
-                      ) : (
+          {classics.status === "pending" && (
+            <div className="home-classics__grid" role="status" aria-label="Loading the classics" aria-busy="true">
+              {Array.from({ length: CLASSICS_LIMIT }, (_, item) => (
+                <div className="home-classics__card" key={item} aria-hidden="true">
+                  <span className="home-classics__image"><span className="home-classics__loading" /></span>
+                  <span className="home-classics__caption" />
+                </div>
+              ))}
+            </div>
+          )}
+          {classics.status !== "pending" && classics.items.length === 0 && (
+            <div className="home-message">
+              <p>New classics are on the way.</p>
+              <Link to="/store">Browse all sneakers</Link>
+            </div>
+          )}
+          {classics.items.length > 0 && (
+            <nav aria-label="Shop classic silhouettes">
+              <ol className="home-classics__grid">
+                {classics.items.map((classic, index) => (
+                  <li key={`${index}-${classic.product?._id || classic.searchTerm}`}>
+                    <Link to={storeSearchPath(classic.searchTerm)} className="home-classics__card" aria-labelledby={`classic-${index}`}>
+                      <span className="home-classics__image">
                         <img
-                          src={getProductImage(classicProducts[classic.search] || {})}
-                          alt={classicProducts[classic.search]?.name || `${classic.name} sneaker`}
+                          src={getProductImage(classic.product || {})}
+                          alt={classic.product?.name || `${classic.title} sneaker`}
                           loading="lazy"
                           decoding="async"
                           onError={handleClassicImageError}
                         />
-                      )}
-                    </span>
-                    <span className="home-classics__caption">
-                      <span className="home-classics__name" id={`classic-${classic.search.replace(/ /g, "-")}`}>{classic.name}</span>
-                      <ArrowIcon />
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ol>
-          </nav>
+                      </span>
+                      <span className="home-classics__caption">
+                        <span className="home-classics__name" id={`classic-${index}`}>{classic.title}</span>
+                        <ArrowIcon />
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
         </div>
       </section>
 

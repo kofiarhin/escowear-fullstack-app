@@ -26,6 +26,7 @@ const createModels = () => ({
   PaymentProof: createMemoryModel({ uniques: ["idempotencyKeyHash"] }),
   HeroSlide: createMemoryModel({ uniques: ["productId"] }),
   FeaturedSneakers: createMemoryModel({ uniques: ["_id"] }),
+  HomepageClassics: createMemoryModel({ uniques: ["_id"] }),
   ProductImageUpload: createMemoryModel({ uniques: ["publicId"] }),
 });
 
@@ -76,6 +77,7 @@ const startTestApp = async ({ config: configOverrides = {}, deps = {}, models = 
     products: { Product: models.Product },
     heroSlides: { Product: models.Product, HeroSlide: models.HeroSlide },
     featuredSneakers: { Product: models.Product, FeaturedSneakers: models.FeaturedSneakers },
+    classics: { Product: models.Product, HomepageClassics: models.HomepageClassics },
     orders: { models, config, logger: silentLogger, ...deps.orders },
     admin: { models, config, logger: silentLogger, ...deps.admin },
     users: userDeps,

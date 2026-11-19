@@ -1,0 +1,11 @@
+.classics-admin__note{margin:12px 0;padding:12px 14px;border:1px solid var(--border);background:var(--surface-raised);color:var(--text-muted)}
+.classics-admin__card{align-items:start}
+.classics-admin__card.is-choosing{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.classics-admin__fields{gap:10px}
+.classics-admin__fields small{overflow-wrap:anywhere}
+.classics-admin__product{margin:0;color:var(--text-muted);overflow-wrap:anywhere}
+.classics-admin__product strong{color:var(--text)}
+.classics-admin__preview-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.classics-admin__preview-grid small{overflow-wrap:anywhere}
+@media(min-width:1200px){.classics-admin__card{grid-template-columns:28px 64px minmax(0,1fr) 150px}.classics-admin__card .featured-admin__slot-actions{flex-direction:column}}
+@media(max-width:900px){.classics-admin__preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

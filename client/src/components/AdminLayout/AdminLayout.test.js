@@ -29,6 +29,7 @@ test.each([
   ["/admin/products/new", "Products"],
   ["/admin/products/123/edit", "Products"],
   ["/admin/products/featured", "Featured sneakers"],
+  ["/admin/products/classics", "Classics"],
   ["/admin/hero-slides", "Hero videos"],
 ])("layout marks only the current section at %s", (path, label) => {
   renderLayout(path);
