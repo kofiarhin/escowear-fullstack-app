@@ -88,10 +88,7 @@ const AdminClassics = () => {
   }, [changed]);
   useEffect(() => () => searchRef.current?.abort(), []);
 
-  const runSearch = async (event) => {
-    event.preventDefault();
-    const term = query.trim();
-    if (!term) { setSearch({ state: "invalid", term: "", results: [] }); return; }
+  const searchFor = async (term) => {
     // Abort the previous search so an older response can never overwrite a newer one.
     searchRef.current?.abort();
     const controller = new AbortController();
@@ -106,6 +103,14 @@ const AdminClassics = () => {
       if (error?.name !== "AbortError") setSearch({ state: "error", term, results: [] });
     }
   };
+  const runSearch = (event) => {
+    event.preventDefault();
+    const term = query.trim();
+    if (!term) { setSearch({ state: "invalid", term: "", results: [] }); return; }
+    searchFor(term);
+  };
+  // Retry repeats the search that failed, even if the input has changed since.
+  const retrySearch = () => searchFor(search.term);
 
   const edit = (next) => { setCards(next); setStatus(null); };
   const update = (index, changes) => edit(cards.map((card, position) => (position === index ? { ...card, ...changes } : card)));
@@ -244,7 +249,7 @@ const AdminClassics = () => {
               {full && target === null && <p className="admin-muted">All six cards are used. Remove a card to add another.</p>}
               {search.state === "invalid" && <p className="admin-error" role="alert">Enter a name or brand to search.</p>}
               {search.state === "loading" && <p role="status">Searching…</p>}
-              {search.state === "error" && <div role="alert"><p>Search failed.</p><button type="button" className="admin-button" onClick={runSearch}>Retry search</button></div>}
+              {search.state === "error" && <div role="alert"><p>Search failed.</p><button type="button" className="admin-button" onClick={retrySearch}>Retry search</button></div>}
               {search.state === "ready" && search.results.length === 0 && <p>No published products match “{search.term}”.</p>}
               {search.state === "ready" && search.results.length > 0 && (
                 <ul className="featured-admin__results" aria-label="Search results">

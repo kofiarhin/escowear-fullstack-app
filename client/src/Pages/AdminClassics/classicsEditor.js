@@ -18,7 +18,7 @@ const textError = (value, label, max) => {
 export const cardErrors = (card) => ({
   title: textError(card.title, "Title", TITLE_MAX),
   searchTerm: textError(card.searchTerm, "Search term", SEARCH_TERM_MAX),
-  product: card.productId ? null : "Choose a product for this card's image.",
+  product: card.productId ? null : "No product chosen, so this card is hidden on the homepage and cannot be saved. Choose a product or remove the card.",
 });
 
 export const hasErrors = (errors) => Object.values(errors).some(Boolean);

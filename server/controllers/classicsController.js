@@ -94,10 +94,11 @@ const createClassicsController = ({ HomepageClassics: ClassicsModel = HomepageCl
   const storedEntries = (entries = []) =>
     entries.map((entry) => ({ title: entry.title, searchTerm: entry.searchTerm, productId: String(entry.productId).toLowerCase() }));
 
-  // Defaults resolve their representative product from the live catalogue; a
-  // term with no unused published match keeps its card with no product. Search
-  // also matches brand and category, so one product can match several terms;
-  // skipping used ids keeps the defaults saveable (duplicates are rejected).
+  // Defaults resolve their representative product from the live catalogue. A
+  // term with no unused published match has no product: it is hidden publicly
+  // and shown to admins to fix. Search also matches brand and category, so one
+  // product can match several terms; skipping used ids keeps the defaults
+  // saveable (duplicates are rejected).
   const defaultEntries = async () => {
     const matches = await Promise.all(
       DEFAULT_CLASSICS.map(({ searchTerm }) => ProductModel.find(buildProductFilter({ search: searchTerm })).sort({ createdAt: -1, _id: -1 }).limit(MAX_CLASSICS).lean())
@@ -151,11 +152,11 @@ const createClassicsController = ({ HomepageClassics: ClassicsModel = HomepageCl
     try {
       const config = await readConfig();
       const byId = await productsFor(config, { status: { $ne: "draft" } });
-      // Saved cards whose product is now draft or deleted are hidden rather than
-      // back-filled; unsaved defaults keep their card even without a product.
+      // Cards without a published product are hidden rather than back-filled:
+      // saved cards whose product became draft/deleted, and defaults with no match.
       const items = config.entries
         .map((entry) => ({ title: entry.title, searchTerm: entry.searchTerm, product: entry.productId ? byId.get(entry.productId) || null : null }))
-        .filter((entry) => entry.product || !config.configured)
+        .filter((entry) => entry.product)
         .slice(0, MAX_CLASSICS)
         .map((entry) => ({ ...entry, product: entry.product ? publicProduct(entry.product) : null }));
       return send(res, 200, { items, configured: config.configured, version: config.version });

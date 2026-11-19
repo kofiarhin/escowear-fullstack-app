@@ -130,7 +130,7 @@ test("unsaved defaults can be saved as-is once every card has a product", async 
   });
   renderAt("/admin/products/classics");
   expect(await screen.findByText(/these are the built-in classics/i)).toBeInTheDocument();
-  expect(screen.getByText("Choose a product for this card's image.")).toBeInTheDocument();
+  expect(screen.getByText(/no product chosen, so this card is hidden on the homepage/i)).toBeInTheDocument();
   expect(screen.getByText("No product chosen")).toBeInTheDocument();
   expect(saveButton()).toBeDisabled();
 
@@ -214,6 +214,27 @@ test("server rejections and network failures keep the edits with actionable erro
   await userEvent.click(saveButton());
   expect(await screen.findByText(/check your connection/i)).toBeInTheDocument();
   expect(titles()).toEqual(["Samba", "Dunk"]);
+});
+
+test("retrying a failed search repeats that search even after the input changes", async () => {
+  let searches = 0;
+  mockApi({
+    [`GET ${ENDPOINT}`]: () => json(200, adminBody([], [])),
+    "GET /api/products": () => { searches += 1; return searches === 1 ? json(500, { error: "Unable to load products" }) : json(200, { items: [product(3)] }); },
+  });
+  renderAt("/admin/products/classics");
+  await screen.findByText(/no cards\. after saving/i);
+  const input = screen.getByLabelText("Name or brand");
+  await userEvent.type(input, "jordan{enter}");
+  expect(await screen.findByText("Search failed.")).toBeInTheDocument();
+  await userEvent.clear(input);
+  await userEvent.click(screen.getByRole("button", { name: "Retry search" }));
+  expect(await screen.findByRole("button", { name: "Add: Runner 3" })).toBeEnabled();
+  expect(screen.queryByText(/enter a name or brand/i)).not.toBeInTheDocument();
+  expect(global.fetch.mock.calls.filter(([path]) => String(path).startsWith("/api/products?")).map(([path]) => path)).toEqual([
+    "/api/products?search=jordan&limit=10",
+    "/api/products?search=jordan&limit=10",
+  ]);
 });
 
 test("load failures offer a retry and non-admin responses are denied", async () => {

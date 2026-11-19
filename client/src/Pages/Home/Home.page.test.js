@@ -143,7 +143,7 @@ test("links brand and classic discovery to live catalogue searches", async () =>
 
   const classics = await screen.findByRole("navigation", { name: /shop classic silhouettes/i });
   expect(within(classics).getByRole("link", { name: /air force 1/i })).toHaveAttribute("href", "/store?search=air%20force");
-  expect(screen.getByRole("link", { name: /shop the classics/i })).toHaveAttribute("href", "/store?search=nike");
+  expect(screen.getByRole("link", { name: /shop the classics/i })).toHaveAttribute("href", "/store");
 
   expect(screen.getByRole("region", { name: /latest releases/i })).toHaveAttribute("id", "latest-releases");
   expect(screen.getByRole("region", { name: /how escowear works/i })).toHaveAttribute("id", "how-it-works");
@@ -181,7 +181,8 @@ test("renders the default Classics from one request with catalogue photos and se
   // One Classics request replaces the old per-silhouette product searches.
   expect(global.fetch.mock.calls.filter(([path]) => path === "/api/classics")).toHaveLength(1);
   expect(global.fetch.mock.calls.filter(([path]) => String(path).includes("search="))).toHaveLength(0);
-  expect(within(section).getByRole("link", { name: /shop the classics/i })).toHaveAttribute("href", "/store?search=nike");
+  // Cards span brands, so the section CTA opens the full store rather than one brand.
+  expect(within(section).getByRole("link", { name: /shop the classics/i })).toHaveAttribute("href", "/store");
 });
 
 test("shows admin-saved Classics in order with encoded search links and no product-detail links", async () => {
@@ -218,6 +219,8 @@ test("an intentionally empty Classics selection shows an empty state, not defaul
   expect(await within(section).findByText(/new classics are on the way/i)).toBeInTheDocument();
   expect(within(section).getByRole("link", { name: /browse all sneakers/i })).toHaveAttribute("href", "/store");
   expect(screen.queryByRole("navigation", { name: /shop classic silhouettes/i })).not.toBeInTheDocument();
+  // The empty state's own link replaces the section CTA.
+  expect(within(section).queryByRole("link", { name: /shop the classics/i })).not.toBeInTheDocument();
   expect(await screen.findByText("Catalogue Runner 1")).toBeInTheDocument();
 });
 

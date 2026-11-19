@@ -163,9 +163,13 @@ const Home = () => {
                 Court staples and terrace icons from Nike and adidas.
               </p>
             </div>
-            <Link to="/store?search=nike" className="home-button home-button--light">
-              Shop the classics <ArrowIcon />
-            </Link>
+            {/* Cards are admin-chosen across brands, so the section CTA opens the full
+                store; the empty state carries its own link instead. */}
+            {(classics.status === "pending" || classics.items.length > 0) && (
+              <Link to="/store" className="home-button home-button--light">
+                Shop the classics <ArrowIcon />
+              </Link>
+            )}
           </header>
 
           {classics.status === "pending" && (

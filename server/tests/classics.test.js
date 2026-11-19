@@ -19,7 +19,7 @@ const setup = async (t) => {
   return { ctx, admin, token, addProducts, card, save };
 };
 
-test("before the first save, defaults resolve one published product per term without creating config", async (t) => {
+test("before the first save, defaults resolve one published product per term and hide terms without one", async (t) => {
   const { ctx, token } = await setup(t);
   const older = await ctx.models.Product.create(sampleProduct({ name: "Nike Air Force 1 '07", createdAt: new Date("2026-01-01") }));
   const newer = await ctx.models.Product.create(sampleProduct({ name: "Nike Air Force 1 Low", createdAt: new Date("2026-06-01"), image: "", images: ["", "https://example.test/af1.jpg"] }));
@@ -30,16 +30,14 @@ test("before the first save, defaults resolve one published product per term wit
   assert.equal(publicRead.status, 200);
   assert.equal(publicRead.body.configured, false);
   assert.equal(publicRead.body.version, 0);
-  assert.deepEqual(publicRead.body.items.map((item) => [item.title, item.searchTerm]), [
-    ["Air Force 1", "air force"], ["Dunk", "dunk"], ["Air Max", "air max"], ["Samba", "samba"], ["Spezial", "spezial"], ["Campus", "campus"],
-  ]);
+  // Dunk, Air Max, Spezial and Campus have no published match, so no placeholder cards.
+  assert.deepEqual(publicRead.body.items.map((item) => [item.title, item.searchTerm]), [["Air Force 1", "air force"], ["Samba", "samba"]]);
   // Newest match wins, the cover falls back to the first gallery image, drafts never appear.
   assert.deepEqual(publicRead.body.items[0].product, { _id: String(newer._id), name: "Nike Air Force 1 Low", image: "https://example.test/af1.jpg" });
-  assert.equal(publicRead.body.items[3].product._id, String(samba._id));
-  assert.equal(publicRead.body.items[1].product, null);
+  assert.equal(publicRead.body.items[1].product._id, String(samba._id));
   assert.notEqual(publicRead.body.items[0].product._id, String(older._id));
   // Only tile fields are public.
-  assert.deepEqual(Object.keys(publicRead.body.items[3].product).sort(), ["_id", "image", "name"]);
+  assert.deepEqual(Object.keys(publicRead.body.items[1].product).sort(), ["_id", "image", "name"]);
 
   const adminRead = await ctx.request("GET", "/api/admin/classics", { token });
   assert.equal(adminRead.status, 200);
@@ -59,7 +57,8 @@ test("defaults never reuse one product for two cards, so they stay saveable", as
 
   const items = (await ctx.request("GET", "/api/classics")).body.items;
   assert.equal(items[0].product._id, String(shared._id));
-  assert.equal(items[2].product._id, String(airMax._id));
+  assert.deepEqual(items.map((item) => item.title), ["Air Force 1", "Air Max"]);
+  assert.equal(items[1].product._id, String(airMax._id));
 
   const adminRead = await ctx.request("GET", "/api/admin/classics", { token });
   const entries = adminRead.body.item.entries.filter((entry) => entry.productId);
