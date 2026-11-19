@@ -29,7 +29,7 @@ afterEach(() => {
 test("site menu exposes all admin destinations and closes on navigation", () => {
   const { close } = renderMenu("admin");
   const nav = screen.getByRole("navigation", { name: "Admin navigation" });
-  expect(within(nav).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/admin", "/admin/orders", "/admin/products", "/admin/products/featured", "/admin/products/classics", "/admin/hero-slides"]);
+  expect(within(nav).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/admin", "/admin/orders", "/admin/products", "/admin/products/featured", "/admin/products/classics", "/admin/users", "/admin/hero-slides"]);
   fireEvent.click(within(nav).getByRole("link", { name: "Admin overview" }));
   expect(close).toHaveBeenCalledWith(false);
 });

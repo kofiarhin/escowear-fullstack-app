@@ -191,4 +191,33 @@ test("IDE-116 admin manual payment on real MongoDB", { skip: skipReason() }, asy
       await ctx.close();
     }
   });
+  await t.test("IDE-150 admin block, unblock, search and delete use valid MongoDB updates", async () => {
+    await db.reset();
+    const ctx = await startTestApp({ models });
+    try {
+      const admin = await ctx.addUser({ role: "admin" });
+      const token = userToken(admin._id);
+      const customer = await ctx.addUser({ email: "ama.mensah@example.test" });
+      await ctx.addUser({ email: "amaXmensah@example.test" });
+
+      const search = await ctx.request("GET", "/api/admin/users?q=AMA.MENSAH", { token });
+      assert.deepEqual(search.body.items.map((user) => user.email), ["ama.mensah@example.test"]);
+
+      assert.equal((await ctx.request("PATCH", `/api/admin/users/${customer._id}/block`, { token, body: { blocked: true } })).status, 200);
+      let stored = await models.User.findById(customer._id).lean();
+      assert.equal(stored.blocked, true);
+      assert.ok(stored.blockedAt instanceof Date);
+      assert.equal(stored.sessionVersion, 1);
+
+      assert.equal((await ctx.request("PATCH", `/api/admin/users/${customer._id}/block`, { token, body: { blocked: false } })).status, 200);
+      stored = await models.User.findById(customer._id).lean();
+      assert.equal(stored.blocked, false);
+      assert.equal("blockedAt" in stored, false);
+
+      assert.equal((await ctx.request("DELETE", `/api/admin/users/${customer._id}`, { token })).status, 204);
+      assert.equal(await models.User.countDocuments({ _id: customer._id }), 0);
+    } finally {
+      await ctx.close();
+    }
+  });
 });

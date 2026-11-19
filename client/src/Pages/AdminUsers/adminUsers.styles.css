@@ -1,0 +1,17 @@
+.admin-users__search {
+  flex: 1 1 280px;
+}
+
+.admin-users__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+}
+
+@media (max-width: 760px) {
+  /* User cards read: email, then status, then the rest. */
+  .admin-table .admin-users__status-cell {
+    order: -1;
+  }
+}

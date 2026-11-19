@@ -31,6 +31,10 @@ const userSchema = new mongoose.Schema(
       enum: ["customer", "admin"],
       default: "customer",
     },
+    // Set by an admin from /admin/users. A blocked account cannot sign in or
+    // use an existing session.
+    blocked: { type: Boolean, default: false },
+    blockedAt: { type: Date },
   },
   {
     timestamps: true,

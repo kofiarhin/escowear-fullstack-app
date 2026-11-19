@@ -21,6 +21,7 @@ const { createFeaturedSneakersController } = require("../controllers/featuredSne
 const { createClassicsController } = require("../controllers/classicsController");
 const { createAdminProductsController } = require("../controllers/adminProductsController");
 const { createAdminStatsController } = require("../controllers/adminStatsController");
+const { createAdminUsersController } = require("../controllers/adminUsersController");
 const { createProductImageStorage } = require("../services/productImageStorage");
 
 // Every route here requires a logged-in user whose stored role is "admin".
@@ -38,6 +39,7 @@ const createAdminRouter = (deps = {}) => {
   const classics = createClassicsController({ HomepageClassics: models.HomepageClassics, Product: models.Product });
   const products = createAdminProductsController({ Product: models.Product, ProductImageUpload: models.ProductImageUpload, imageStorage: deps.imageStorage || createProductImageStorage({ env: deps.env }), logger: deps.logger });
   const stats = createAdminStatsController({ Order: models.Order, Product: models.Product, HeroSlide: models.HeroSlide, FeaturedSneakers: models.FeaturedSneakers, logger: deps.logger });
+  const users = createAdminUsersController({ User: models.User, logger: deps.logger });
   const limiter = createRateLimiter({ windowMs: 60 * 1000, max: 120, keyFn: (req) => String(req.user?._id || req.ip) });
   const uploadLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, keyFn: (req) => String(req.user?._id || req.ip), message: "Too many image uploads, please try again later" });
 
@@ -45,6 +47,9 @@ const createAdminRouter = (deps = {}) => {
   router.use(auth, requireAdmin, limiter);
   router.get("/stats", stats.getStats);
   router.get("/orders", controller.listOrders);
+  router.get("/users", users.listUsers);
+  router.patch("/users/:id/block", users.setBlocked);
+  router.delete("/users/:id", users.deleteUser);
   router.get("/hero-slides", heroSlides.listAdminSlides);
   router.post("/hero-slides", heroSlides.createSlide);
   router.patch("/hero-slides/:id", heroSlides.updateSlide);

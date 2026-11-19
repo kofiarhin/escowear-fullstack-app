@@ -68,6 +68,9 @@ const loginUser = async (req, res) => {
       const auth = await bcrypt.compare(password, user.password);
 
       if (auth) {
+        // Only revealed after a correct password, so it cannot be used to probe
+        // which emails are registered.
+        if (user.blocked) return res.status(403).json({ error: "This account has been blocked", code: "ACCOUNT_BLOCKED" });
         const { _id, email, name } = user;
         // `role` only drives what the UI shows; every admin API re-checks it server-side.
         return res

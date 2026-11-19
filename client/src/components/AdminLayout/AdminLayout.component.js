@@ -16,6 +16,7 @@ export const ADMIN_SECTIONS = [
   { id: "products", to: "/admin/products", label: "Products", icon: <Icon><path d="M3 15c3 0 5-2 7-5l3 3c2 1 5 1 8 1v3H3z" /></Icon> },
   { id: "featured", to: "/admin/products/featured", label: "Featured sneakers", icon: <Icon><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></Icon> },
   { id: "classics", to: "/admin/products/classics", label: "Classics", icon: <Icon><path d="M4 5h7v6H4zM13 5h7v6h-7zM4 13h7v6H4zM13 13h7v6h-7z" /></Icon> },
+  { id: "users", to: "/admin/users", label: "Users", icon: <Icon><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.8M18 14.3c2.1.7 3.5 2.8 3.5 5.7" /></Icon> },
   { id: "hero", to: "/admin/hero-slides", label: "Hero videos", icon: <Icon><path d="M3 5h18v14H3zM3 15l5-4 4 3 3-2 6 4" /></Icon> },
 ];
 

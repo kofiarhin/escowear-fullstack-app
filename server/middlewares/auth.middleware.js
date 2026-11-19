@@ -26,7 +26,9 @@ const createAuth = (UserModel = User) => {
       return { error: 401, message: "Unauthorized - invalid token" };
     }
     const user = await UserModel.findOne({ _id: payload.id });
-    if (!user) return { error: 404, message: "authorization - user not found" };
+    // 401 (not 404) so a session whose account was deleted by an admin is
+    // signed out by the client like any other revoked session.
+    if (!user) return { error: 401, message: "Unauthorized - account not found", code: "ACCOUNT_NOT_FOUND" };
     // Legacy tokens have no session version and map to version zero. A reset
     // increments the stored version atomically with the new password, which
     // revokes every earlier token without changing normal JWT expiry rules.
@@ -35,6 +37,7 @@ const createAuth = (UserModel = User) => {
     if (!Number.isSafeInteger(tokenSessionVersion) || tokenSessionVersion < 0 || tokenSessionVersion !== userSessionVersion) {
       return { error: 401, message: "Unauthorized - session expired", code: "SESSION_REVOKED" };
     }
+    if (user.blocked) return { error: 403, message: "This account has been blocked", code: "ACCOUNT_BLOCKED" };
     return { user, issuedAt: typeof payload.iat === "number" ? payload.iat : 0 };
   };
 
