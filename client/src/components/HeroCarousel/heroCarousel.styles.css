@@ -169,7 +169,7 @@
   max-width: 11.5ch;
   margin-bottom: 24px;
   font-family: var(--font-display);
-  font-size: clamp(3rem, 5.65vw, 6.7rem);
+  font-size: clamp(2.6rem, 4.9vw, 5.8rem);
   font-weight: 900;
   letter-spacing: -.065em;
   line-height: .98;
@@ -289,7 +289,7 @@
 @keyframes hero-shimmer { to { background-position: -200% 0; } }
 @media (max-width: 900px) and (min-width: 761px) {
   .hero-carousel__copy { margin-left: 65px; width: 47%; }
-  .hero-carousel h1 { font-size: clamp(3rem, 6.3vw, 5.6rem); }
+  .hero-carousel h1 { font-size: clamp(2.6rem, 5.6vw, 4.8rem); }
   .hero-carousel__media { right: -5%; width: 72%; }
 }
 @media (max-width: 760px) {
@@ -330,7 +330,7 @@
   .hero-carousel h1 {
     max-width: 13ch;
     margin-bottom: 14px;
-    font-size: clamp(2rem, 9vw, 2.75rem);
+    font-size: clamp(1.9rem, 8.4vw, 2.5rem);
     line-height: .94;
   }
   .hero-carousel__copy > p:not(.hero-carousel__eyebrow) {

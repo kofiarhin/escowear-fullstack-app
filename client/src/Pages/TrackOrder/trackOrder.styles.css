@@ -6,7 +6,7 @@
 }
 
 .track-order .title {
-  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  font-size: var(--type-page-compact);
 }
 
 .track-order-lead {

@@ -137,6 +137,14 @@
   --font-condensed: "Barlow Condensed", "Arial Narrow", sans-serif;
   --font-mono: "Barlow Condensed", "Arial Narrow", sans-serif;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Heading scale, largest to smallest. Shared so storefront, admin and
+     footer headings keep one hierarchy; mobile overrides stay per component. */
+  --type-display: clamp(2.5rem, 5.4vw, 5.8rem);
+  --type-page: clamp(2.1rem, 4.4vw, 4rem);
+  --type-page-compact: clamp(1.9rem, 3.8vw, 3rem);
+  --type-section: clamp(1.75rem, 2.8vw, 2.8rem);
+  --type-admin-title: clamp(1.75rem, 3vw, 2.6rem);
 }
 
 * {
@@ -225,7 +233,7 @@ ul {
 .title {
   margin-bottom: 2rem;
   font-family: var(--font-display);
-  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-size: var(--type-page);
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -0.06em;
