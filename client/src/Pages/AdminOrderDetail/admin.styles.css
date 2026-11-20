@@ -28,7 +28,7 @@
 
 .admin .title {
   margin-bottom: 12px;
-  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-size: var(--type-admin-title);
   overflow-wrap: anywhere;
 }
 

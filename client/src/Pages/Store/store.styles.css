@@ -21,7 +21,7 @@
   max-width: 1000px;
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: clamp(3.6rem, 8vw, 8rem);
+  font-size: var(--type-display);
 }
 
 .store-count {
@@ -138,7 +138,7 @@
   gap: 12px;
   border-block: 1px solid var(--border);
   font-family: var(--font-display);
-  font-size: clamp(1.8rem, 4vw, 3.8rem);
+  font-size: clamp(1.6rem, 3.2vw, 3rem);
   letter-spacing: -0.04em;
   line-height: 0.95;
   text-align: center;
@@ -230,7 +230,7 @@
 
 @media (max-width: 520px) {
   .store-heading .title {
-    font-size: 3.5rem;
+    font-size: 2.4rem;
   }
 
   .store .categories button {
