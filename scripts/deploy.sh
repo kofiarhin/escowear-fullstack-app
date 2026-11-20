@@ -208,42 +208,9 @@ fi
 mv -f "$state/candidate.yaml" "$state/active.yaml"
 rm -f "$state/restore.yaml"
 log "Healthy. Cleaning old service containers and images"
-
-active="$("${compose[@]}" ps -q "$DEPLOY_SERVICE" | head -n 1)"
-while IFS= read -r id; do
-  [[ -n "$id" && "$id" != "$active" ]] || continue
-  [[ "$("${dk[@]}" inspect -f '{{.State.Running}}' "$id")" == false ]] || continue
-  oneoff="$("${dk[@]}" inspect -f '{{index .Config.Labels "com.docker.compose.oneoff"}}' "$id")"
-  [[ "$oneoff" == "False" || "$oneoff" == "false" ]] || continue
-  "${dk[@]}" rm "$id" >/dev/null || log "Skipped container $id"
-done < <("${dk[@]}" ps -aq --filter "label=com.docker.compose.project=$DEPLOY_PROJECT" --filter "label=com.docker.compose.service=$DEPLOY_SERVICE" --filter status=exited)
-
-# Only image names belonging to this project are eligible; never prune Docker globally.
-mapfile -t tags < <("${dk[@]}" image ls --format '{{.Repository}}:{{.Tag}}' --filter "reference=$DEPLOY_IMAGE:release-*")
-kept=0
-for tag in "${tags[@]}"; do
-  [[ "$tag" == "$DEPLOY_IMAGE:release-"* ]] || continue
-  if [[ "$tag" == "$release" ]]; then kept=$((kept+1)); continue; fi
-  kept=$((kept+1))
-  (( kept <= DEPLOY_KEEP_RELEASES )) && continue
-  "${dk[@]}" image rm "$tag" >/dev/null 2>&1 || log "Skipped in-use image $tag"
-done
-mapfile -t tags < <("${dk[@]}" image ls --format '{{.Repository}}:{{.Tag}}' --filter "reference=$DEPLOY_IMAGE:rollback-*")
-for tag in "${tags[@]}"; do
-  [[ "$tag" == "$DEPLOY_IMAGE:rollback-"* && "$tag" != "$rollback_ref" ]] || continue
-  "${dk[@]}" image rm "$tag" >/dev/null 2>&1 || log "Skipped in-use rollback image $tag"
-done
-# Remove only this project's disposable test images, including leftovers from
-# interrupted deployments. Docker refuses to remove images still in use.
-mapfile -t test_tags < <("${dk[@]}" image ls --format '{{.Repository}}:{{.Tag}}' --filter "reference=$DEPLOY_IMAGE:test-*")
-for tag in "${test_tags[@]}"; do
-  [[ "$tag" == "$DEPLOY_IMAGE:test-"* ]] || continue
-  "${dk[@]}" image rm "$tag" >/dev/null 2>&1 || log "Skipped in-use test image $tag"
-done
-# Registry names are retagged as releases at once; drop any left by an interrupted run.
-mapfile -t pulled_tags < <("${dk[@]}" image ls --format '{{.Repository}}:{{.Tag}}' --filter "reference=$DEPLOY_REGISTRY_IMAGE:*")
-for tag in "${pulled_tags[@]}"; do
-  [[ "$tag" == "$DEPLOY_REGISTRY_IMAGE:"* ]] || continue
-  "${dk[@]}" image rm "$tag" >/dev/null 2>&1 || log "Skipped in-use pulled image $tag"
-done
+# Runs only here, after the health checks passed. The release is already live, so a
+# cleanup problem is reported but never turns a successful deploy into a failure.
+if ! bash "$ROOT/scripts/deploy-cleanup.sh" "$release" "$rollback_ref"; then
+  log "WARNING: image cleanup did not finish; the deployment itself succeeded"
+fi
 log "DEPLOYED $release (previous image retained: $rollback_ref)"

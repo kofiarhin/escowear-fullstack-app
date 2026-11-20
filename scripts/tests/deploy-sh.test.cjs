@@ -22,7 +22,7 @@ function write(file, content, mode = 0o644) {
   fs.writeFileSync(file, content, { mode });
 }
 
-function fixture({ productionRoot = '', fullDocker = false } = {}) {
+function fixture({ productionRoot = '', fullDocker = false, swap = false } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'escowear-deploysh-test-'));
   const origin = path.join(root, 'origin.git');
   const repo = path.join(root, 'repo');
@@ -35,7 +35,8 @@ function fixture({ productionRoot = '', fullDocker = false } = {}) {
 exec ${realGit} "$@"
 `, 0o755);
   // fullDocker simulates a running service so deploy.sh reaches the image checks. Tagging
-  // the rollback image fails on purpose, so a test never reaches the swap or health URLs.
+  // the rollback image fails on purpose unless swap is set, so most tests never reach the
+  // swap. With swap, health URLs are local files and STUB_HEALTH sets the container health.
   write(path.join(bin, 'docker'), `#!/bin/sh
 echo "$* token=\${ESCOWEAR_GITHUB_TOKEN:+leaked} file=\${ESCOWEAR_GITHUB_TOKEN_FILE:+leaked}" >> ${dockerLog}
 case "$*" in *"config --services"*) echo web; exit 0 ;; esac
@@ -45,6 +46,8 @@ case "$*" in
   *"com.docker.compose.project"*) echo escowear ;;
   *"com.docker.compose.service"*) echo web ;;
   *"{{.State.Running}}"*) echo true ;;
+  *"{{if .State.Health}}"*) echo "\${STUB_HEALTH:-starting}" ;;
+  "image inspect escowear:rollback-"*) [ "${swap}" = true ] || exit 1 ;;
   "inspect -f {{.Image}} cid123") echo sha256:0123456789abcdef ;;
   pull*) exit "\${STUB_PULL_EXIT:-0}" ;;
   *"org.opencontainers.image.revision"*) echo "\${STUB_REVISION:-$(git rev-parse HEAD)}" ;;
@@ -53,7 +56,7 @@ case "$*" in
   "image inspect"*) exit 1 ;;
   *"config --format json"*) echo '{"services":{"web":{"environment":{}}}}' ;;
   *"find /app"*) exit "\${STUB_PERMISSION_EXIT:-0}" ;;
-  "tag sha256:"*) exit 99 ;;
+  "tag sha256:"*) [ "${swap}" = true ] || exit 99 ;;
 esac
 exit 0
 `, 0o755);
@@ -64,7 +67,16 @@ exit 0
   write(path.join(repo, 'scripts/deploy.sh'), fs.readFileSync(path.join(ROOT, 'scripts/deploy.sh'), 'utf8'), 0o755);
   write(path.join(repo, 'scripts/deploy.conf'), fs.readFileSync(path.join(ROOT, 'scripts/deploy.conf'), 'utf8')
     .replace(/^DEPLOY_DOCKER=.*$/m, `DEPLOY_DOCKER="${path.join(bin, 'docker')}"`)
-    .replace(/^DEPLOY_PRODUCTION_ROOT=.*$/m, `DEPLOY_PRODUCTION_ROOT=${productionRoot}`));
+    .replace(/^DEPLOY_PRODUCTION_ROOT=.*$/m, `DEPLOY_PRODUCTION_ROOT=${productionRoot}`)
+    .replace(/^DEPLOY_HEALTH_URL=.*$/m, `DEPLOY_HEALTH_URL=file://${path.join(root, 'health')}`)
+    .replace(/^DEPLOY_PUBLIC_URL=.*$/m, `DEPLOY_PUBLIC_URL=file://${path.join(root, 'health')}`)
+    .replace(/^DEPLOY_HEALTH_RETRIES=.*$/m, 'DEPLOY_HEALTH_RETRIES=2')
+    .replace(/^DEPLOY_HEALTH_DELAY=.*$/m, 'DEPLOY_HEALTH_DELAY=0'));
+  write(path.join(root, 'health'), 'ok\n');
+  // Records each call; the real cleanup has its own tests (deploy-cleanup.test.cjs).
+  const cleanupLog = path.join(root, 'cleanup.log');
+  write(path.join(repo, 'scripts/deploy-cleanup.sh'),
+    `echo "$*" >> ${cleanupLog}\necho "[deploy] cleanup-stub"\nexit "\${STUB_CLEANUP_EXIT:-0}"\n`, 0o755);
   write(path.join(repo, 'scripts/check-ci.cjs'),
     "console.log(`[deploy] ci-stub token=${process.env.ESCOWEAR_GITHUB_TOKEN === 'test-token-never-printed' ? 'ok' : 'missing'} " +
     "file=${process.env.ESCOWEAR_GITHUB_TOKEN_FILE ? 'leaked' : 'none'} sha=${process.argv[3]}`);\n");
@@ -90,7 +102,8 @@ exit 0
     cwd: repo, encoding: 'utf8', env: { PATH: `${bin}:${process.env.PATH}`, HOME: root, ...env },
   });
   const dockerCalls = () => fs.readFileSync(dockerLog, 'utf8');
-  return { repo, first, second, tip, tokenFile, run, dockerCalls };
+  const cleanupCalls = () => (fs.existsSync(cleanupLog) ? fs.readFileSync(cleanupLog, 'utf8') : '');
+  return { repo, first, second, tip, tokenFile, run, dockerCalls, cleanupCalls };
 }
 
 test('automated deploy fast-forwards to the requested tip; only the CI check gets the token', () => {
@@ -212,6 +225,46 @@ test('--build keeps the manual Beast build path and never pulls', () => {
   assert.doesNotMatch(calls, /^pull /m);
   assert.match(result.stdout, /Preserving previous image/);
   assert.doesNotMatch(calls, /up -d/);
+});
+
+test('cleanup runs once, after health checks pass, with the live and rollback images', () => {
+  const f = fixture({ fullDocker: true, swap: true });
+  const result = f.run({ ESCOWEAR_GITHUB_TOKEN: TOKEN, STUB_HEALTH: 'healthy' });
+  assert.equal(result.status, 0, result.stderr);
+  const release = `escowear:release-${f.tip.slice(0, 12)}`;
+  assert.match(f.cleanupCalls(), new RegExp(`^${release} escowear:rollback-\\d{14}-0123456789ab\\n$`));
+  const out = result.stdout;
+  assert.ok(out.indexOf('Healthy.') < out.indexOf('cleanup-stub'), 'cleanup runs after the health checks');
+  assert.match(out, new RegExp(`DEPLOYED ${release}`));
+  assert.doesNotMatch(out, /WARNING/);
+});
+
+test('a cleanup failure is a warning; the healthy deploy still succeeds', () => {
+  const f = fixture({ fullDocker: true, swap: true });
+  const result = f.run({ ESCOWEAR_GITHUB_TOKEN: TOKEN, STUB_HEALTH: 'healthy', STUB_CLEANUP_EXIT: '3' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /WARNING: image cleanup did not finish; the deployment itself succeeded/);
+  assert.match(result.stdout, /DEPLOYED escowear:release-/);
+});
+
+test('a failed deploy rolls back and never cleans up', () => {
+  const f = fixture({ fullDocker: true, swap: true });
+  const result = f.run({ ESCOWEAR_GITHUB_TOKEN: TOKEN, STUB_HEALTH: 'unhealthy' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Health checks failed; rollback attempted/);
+  assert.match(result.stdout, /Restoring escowear:rollback-/);
+  assert.equal(f.cleanupCalls(), '');
+  assert.doesNotMatch(result.stdout, /Cleaning old|cleanup-stub|DEPLOYED/);
+});
+
+test('a successful rollback never cleans up', () => {
+  const f = fixture({ fullDocker: true, swap: true });
+  write(path.join(f.repo, '.deploy-state/previous-image'), 'escowear:rollback-20261120010203-0123456789ab\n', 0o600);
+  const result = f.run({ STUB_HEALTH: 'healthy' }, ['--rollback']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Previous release restored and healthy/);
+  assert.equal(f.cleanupCalls(), '');
+  assert.doesNotMatch(result.stdout, /Cleaning old|cleanup-stub/);
 });
 
 test('rejects unknown modes', () => {

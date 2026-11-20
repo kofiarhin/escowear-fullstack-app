@@ -60,7 +60,7 @@ A failure at any step stops the run and fails the workflow: a failed publish ski
 | Push credentials | Variable `DOCKERHUB_USERNAME` and secret `DOCKERHUB_TOKEN` (read & write on this repository only), read only by the publish job, which runs in the master-only `production` environment. No Docker credential is on disk while repository code builds: the existence check calls the registry API directly, and `docker login` happens only after the image is built and tested, followed by `docker logout`. **Keep `DOCKERHUB_TOKEN` as a `production` environment secret, not a repository secret**: a repository secret is readable by any workflow run from a branch in this repository, and an existing `<sha>` tag is trusted without a rebuild. |
 | Pull credentials | Root's Docker login on Beast (`sudo docker login`, stored in `/root/.docker/config.json`), used by `deploy.sh` through `sudo docker`. Use a **read-only** Docker Hub token here, separate from the GitHub push token. |
 | Cache | BuildKit layers are cached in GitHub Actions (`scope=escowear-release`), so unchanged layers (such as `npm ci`) are reused between releases. |
-| Retention on Beast | The pulled image is retagged as `escowear:release-<sha12>` and the registry name removed; the usual cleanup keeps the last 3 releases and one rollback image. Docker Hub keeps every published SHA; prune it there manually if storage matters. |
+| Retention on Beast | The pulled image is retagged as `escowear:release-<sha12>` and the registry name removed; the post-deploy cleanup (below) keeps the last 3 releases and the rollback image. Docker Hub keeps every published SHA; prune it there manually if storage matters. |
 
 The restricted SSH interface is unchanged (`check` or `deploy <sha>`); Beast derives the image name from the SHA, so no image reference crosses the SSH boundary.
 
@@ -69,6 +69,38 @@ The restricted SSH interface is unchanged (`check` or `deploy <sha>`); Beast der
 **Outdated commits.** The deploy job reruns the gate just before SSH, so a commit that master overtook while its image was being published is skipped as `superseded` instead of failing.
 
 **Setup** (each step needs Kofi's approval): the private Docker Hub repository `kofiarhin/escowear`; `DOCKERHUB_USERNAME` (variable) and `DOCKERHUB_TOKEN` (`production` environment secret, read & write); on Beast, `sudo docker login -u kofiarhin` with a separate **read-only** token. Check Beast's pull access read-only with `sudo docker manifest inspect kofiarhin/escowear:<published sha>`.
+
+### Deployment alerts (Telegram)
+
+The Deploy workflow's `notify` job sends one Telegram message per automatic production run (`scripts/notify-deploy.cjs`), using the repository secrets `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`. Each message has the status, the full commit SHA, a UTC timestamp and the Actions run URL.
+
+| Result | Alert |
+|---|---|
+| Beast deployed the commit | ✅ success |
+| Gate, publish or deploy job failed | ❌ failure, naming the stage and what it means for production |
+| Gate, publish or deploy job cancelled by hand (or, depending on how GitHub reports it, timed out) | ⚠️ cancelled |
+| Gate decided `wait`, `superseded` or `blocked`; deploy skipped as `superseded`; a cancelled run whose commit is no longer the master tip (a queued request replaced by a newer one, which alerts itself); manual `check` run | none |
+
+Alerts are best effort. The job is `continue-on-error`, and the script turns any Telegram problem (missing secret, API error, timeout) into a workflow warning and exits 0. A failed alert never changes the deployment result. Beast runs `deploy.sh` detached, so when the deploy job fails on a dropped connection or is cancelled, the release may still finish; those alerts say to check the Beast deploy log before acting. The token and chat ID are passed only as step environment variables and are never printed; the run's logs are public. If CI and CSS lint ever both pass the gate for one commit, the second deploy is an `ALREADY DEPLOYED` no-op and still reports success, so one commit can produce two success alerts.
+
+### Image cleanup on Beast
+
+After a deployment passes its health checks, `deploy.sh` runs `scripts/deploy-cleanup.sh <live release> <rollback image>`. Cleanup never runs after a failed deploy (the script exits at the failure or rollback first) or in `--rollback` mode.
+
+- **Removes**: stopped, non-one-off `escowear/web` containers; `escowear:release-<sha12>` tags beyond the newest 3 (`DEPLOY_KEEP_RELEASES`); `escowear:rollback-*` tags other than the current rollback image; `escowear:test-<sha12>`; leftover `kofiarhin/escowear:<sha>` pull tags.
+- **Always keeps**: the live release, the rollback image saved in `.deploy-state/previous-image`, and every image used by any container on the host (any project, running or stopped). It also keeps any image name not in the list above, including dangling images and manual leftovers such as `escowear:permtest-*`. It runs `docker image rm <tag>` without `-f` and never prunes Docker globally.
+- **Fails closed**: if the live image, the rollback image, the container list or the image list cannot be read, it removes no images. (Stopped `escowear/web` containers may already have been removed by then.)
+- **Never fails a deploy**: the release is already live, so a cleanup error is logged as `WARNING: image cleanup did not finish` and `deploy.sh` still reports `DEPLOYED`.
+
+Preview without changing anything (as `ubuntu`, in `/home/ubuntu/deploy/escowear`):
+
+```bash
+bash scripts/deploy-cleanup.sh --dry-run "escowear:release-$(git rev-parse --short=12 HEAD)" "$(cat .deploy-state/previous-image)"
+```
+
+The preview is conservative: it does not remove stopped containers, so images those containers use are kept in the preview but may be removed in a real run.
+
+The deploy that merges this change still runs the previous `deploy.sh` (see *First deploy after this change*), which has the older inline cleanup. The new cleanup applies from the deploy after that. Alerts apply from the merge's own Deploy run.
 
 ### Least privilege
 
